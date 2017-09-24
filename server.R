@@ -1862,52 +1862,96 @@ print(plotInput())
   })
   
   
-  output$qualSelect1 <- renderUI({
+  output$qualSelect1a <- renderUI({
       
       
-      checkboxGroupInput('qual_select1', 'Select',
+      checkboxGroupInput('qual_select1a', 'Select',
       choices=qualitativeSelect1(), selected = NULL)
   })
   
-  output$qualSelect2 <- renderUI({
+  output$qualSelect2a <- renderUI({
       
       
-      checkboxGroupInput('qual_select2', 'Select',
+      checkboxGroupInput('qual_select2a', 'Select',
       choices=qualitativeSelect2(), selected = NULL)
   })
   
-  output$qualSelect3 <- renderUI({
+  output$qualSelect3a <- renderUI({
       
       
-      checkboxGroupInput('qual_select3', 'Select',
+      checkboxGroupInput('qual_select3a', 'Select',
       choices=qualitativeSelect3(), selected = NULL)
   })
   
-  output$qualSelect4 <- renderUI({
+  output$qualSelect4a <- renderUI({
       
       
-      checkboxGroupInput('qual_select4', 'Select',
+      checkboxGroupInput('qual_select4a', 'Select',
       choices=qualitativeSelect4(), selected = NULL)
   })
   
   
-  output$qualSelect5 <- renderUI({
+  output$qualSelect5a <- renderUI({
       
       
-      checkboxGroupInput('qual_select5', 'Select',
-      choices=qualitativeSelect5(), selected = NULL)
+      checkboxGroupInput('qual_select5a', 'Select',
+      choices=qualitativeSelect5(), selected = qualitativeSelect5())
   })
   
-  output$qualSelect6 <- renderUI({
+  output$qualSelect6a <- renderUI({
       
       
-      checkboxGroupInput('qual_select6', 'Select',
-      choices=qualitativeSelect6(), selected = NULL)
+      checkboxGroupInput('qual_select6a', 'Select',
+      choices=qualitativeSelect6(), selected = qualitativeSelect6())
+  })
+  
+  
+  output$qualSelect1b <- renderUI({
+      
+      
+      checkboxGroupInput('qual_select1b', 'Select',
+      choices=qualitativeSelect1(), selected = NULL)
+  })
+  
+  output$qualSelect2b <- renderUI({
+      
+      
+      checkboxGroupInput('qual_select2b', 'Select',
+      choices=qualitativeSelect2(), selected = NULL)
+  })
+  
+  output$qualSelect3b <- renderUI({
+      
+      
+      checkboxGroupInput('qual_select3b', 'Select',
+      choices=qualitativeSelect3(), selected = NULL)
+  })
+  
+  output$qualSelect4b <- renderUI({
+      
+      
+      checkboxGroupInput('qual_select4b', 'Select',
+      choices=qualitativeSelect4(), selected = NULL)
+  })
+  
+  
+  output$qualSelect5b <- renderUI({
+      
+      
+      checkboxGroupInput('qual_select5b', 'Select',
+      choices=qualitativeSelect5(), selected = qualitativeSelect5())
+  })
+  
+  output$qualSelect6b <- renderUI({
+      
+      
+      checkboxGroupInput('qual_select6b', 'Select',
+      choices=qualitativeSelect6(), selected = qualitativeSelect6())
   })
 
 
 
-dataMerge2 <- reactive({
+dataMerge1a <- reactive({
     
     spectra.line.table <- dataMerge()
     quality.table <- values[["DF"]]
@@ -1927,13 +1971,69 @@ dataMerge2 <- reactive({
 
     
     filter(spectra.line.table,
-    Qualitative1 %in% input$qual_select1,
-    Qualitative2 %in% input$qual_select2,
-    Qualitative3 %in% input$qual_select3,
-    Qualitative4 %in% input$qual_select4,
-    Qualitative5 %in% input$qual_select5,
-    Qualitative6 %in% input$qual_select6
+    Qualitative1 %in% input$qual_select1a,
+    Qualitative2 %in% input$qual_select2a,
+    Qualitative3 %in% input$qual_select3a,
+    Qualitative4 %in% input$qual_select4a,
+    Qualitative5 %in% input$qual_select5a,
+    Qualitative6 %in% input$qual_select6a
     )
+    
+})
+
+dataMerge1b <- reactive({
+    
+    spectra.line.table <- dataMerge()
+    quality.table <- values[["DF"]]
+    
+    spectra.line.table$Qualitative1 <- quality.table$Qualitative1
+    spectra.line.table$Qualitative2 <- quality.table$Qualitative2
+    spectra.line.table$Qualitative3 <- quality.table$Qualitative3
+    spectra.line.table$Qualitative4 <- quality.table$Qualitative4
+    spectra.line.table$Qualitative5 <- quality.table$Qualitative5
+    spectra.line.table$Qualitative6 <- quality.table$Qualitative6
+    
+    
+    
+    spectra.line.table$Quantitative <- quality.table$Quantitative
+    
+    
+    
+    
+    filter(spectra.line.table,
+    Qualitative1 %in% input$qual_select1b,
+    Qualitative2 %in% input$qual_select2b,
+    Qualitative3 %in% input$qual_select3b,
+    Qualitative4 %in% input$qual_select4b,
+    Qualitative5 %in% input$qual_select5b,
+    Qualitative6 %in% input$qual_select6b
+    )
+    
+})
+
+mergedHold <- reactive({
+    
+    merged.table <- merge(dataMerge1a(), dataMerge1b(), all=TRUE)
+    merged.table$Spectrum
+    
+})
+
+output$clipsubsetfinal <- renderUI({
+    
+    checkboxGroupInput("show_rows", label="Choose Samples", choices=mergedHold(), selected=mergedHold())
+    
+})
+
+
+dataMerge2 <- reactive({
+    
+    merged.table <- merge(dataMerge1a(), dataMerge1b(), all=TRUE)
+    
+    filter(merged.table,
+    Spectrum %in% input$show_rows
+    )
+    
+
     
 })
 
@@ -1941,13 +2041,51 @@ dataMerge2 <- reactive({
 
 
 
+dataMerge1aTableOutput <- reactive({
+    spectra.line.table <- dataMerge1a()
+    select.line.table <- datatable(spectra.line.table)
+    select.line.table
+})
+
+output$mydatamerge1a <- renderDataTable({
+    
+    dataMerge1aTableOutput()
+    
+})
+
+output$downloadsubseta <- downloadHandler(
+filename = function() { paste(paste(c(input$projectname, "_", "SubsetA"), collapse=''), '.csv', sep=',') },
+content = function(file
+) {
+    write.csv(dataMerge1a(), file)
+}
+)
 
 
 
+dataMerge1bTableOutput <- reactive({
+    spectra.line.table <- dataMerge1b()
+    select.line.table <- datatable(spectra.line.table)
+    select.line.table
+})
+
+output$mydatamerge1b <- renderDataTable({
+    
+    dataMerge1bTableOutput()
+    
+})
+
+output$downloadsubsetb <- downloadHandler(
+filename = function() { paste(paste(c(input$projectname, "_", "SubsetB"), collapse=''), '.csv', sep=',') },
+content = function(file
+) {
+    write.csv(dataMerge1b(), file)
+}
+)
 
 
 
-dataMergeTableOutput <- reactive({
+dataMerge2TableOutput <- reactive({
     spectra.line.table <- dataMerge2()
     select.line.table <- datatable(spectra.line.table)
     select.line.table
@@ -1955,9 +2093,17 @@ dataMergeTableOutput <- reactive({
 
 output$mydatamerge2 <- renderDataTable({
     
-    dataMergeTableOutput()
+    dataMerge2TableOutput()
     
 })
+
+output$downloadsubsetfinal <- downloadHandler(
+filename = function() { paste(paste(c(input$projectname, "_", "Subset"), collapse=''), '.csv', sep=',') },
+content = function(file
+) {
+    write.csv(dataMerge2(), file)
+}
+)
 
 
 
@@ -3739,7 +3885,7 @@ observeEvent(input$timeseriesact1, {
       geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
       
       cluster.ratio.ellipse.plot <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], colour=as.factor(ratio.frame$Cluster))) +
+      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.factor(ratio.frame$Cluster))) +
       geom_point(aes(colour=as.factor(ratio.frame$Cluster), shape=as.factor(ratio.frame$Cluster)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       scale_shape_manual("Cluster", values=1:nlevels(as.factor(as.factor(ratio.frame$Cluster)))) +
@@ -3770,7 +3916,7 @@ observeEvent(input$timeseriesact1, {
       geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
       
       qualitative.ratio.ellipse.plot.1 <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], colour=as.factor(ratio.frame$Qualitative))) +
+      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.factor(ratio.frame$Qualitative))) +
       geom_point(aes(colour=as.factor(ratio.frame$Qualitative1), shape=as.factor(ratio.frame$Qualitative1)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       scale_shape_manual("Qualitative1", values=1:nlevels(ratio.frame$Qualitative1)) +
@@ -3802,7 +3948,7 @@ observeEvent(input$timeseriesact1, {
       geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
       
       qualitative.ratio.ellipse.plot.2 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], colour=as.factor(ratio.frame$Qualitative2))) +
+      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.factor(ratio.frame$Qualitative2))) +
       geom_point(aes(colour=as.factor(ratio.frame$Qualitative2), shape=as.factor(ratio.frame$Qualitative2)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       scale_shape_manual("Qualitative2", values=1:nlevels(ratio.frame$Qualitative2)) +
@@ -3833,7 +3979,7 @@ observeEvent(input$timeseriesact1, {
       geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
       
       qualitative.ratio.ellipse.plot.3 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], colour=as.factor(ratio.frame$Qualitative3))) +
+      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.factor(ratio.frame$Qualitative3))) +
       geom_point(aes(colour=as.factor(ratio.frame$Qualitative3), shape=as.factor(ratio.frame$Qualitative3)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       scale_shape_manual("Qualitative3", values=1:nlevels(ratio.frame$Qualitative3)) +
@@ -3864,7 +4010,7 @@ observeEvent(input$timeseriesact1, {
       geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
       
       qualitative.ratio.ellipse.plot.4 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], colour=as.factor(ratio.frame$Qualitative4))) +
+      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.factor(ratio.frame$Qualitative4))) +
       geom_point(aes(colour=as.factor(ratio.frame$Qualitative4), shape=as.factor(ratio.frame$Qualitative4)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       scale_shape_manual("Qualitative4", values=1:nlevels(ratio.frame$Qualitative4)) +

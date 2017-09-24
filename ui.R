@@ -199,20 +199,8 @@ uiOutput('defaultlines')
 mainPanel(
 tabsetPanel(
 id = 'dataset',
-tabPanel('Spectral Lines', dataTableOutput('mytable1')),
-tabPanel('Add Categories', rHandsontableOutput('hot')),
-tabPanel('Subset Data', splitLayout(cellWidths=c("10%", "10%", "10%", "10%", "10%", "10%"),
-uiOutput('qualSelect1'),
-uiOutput('qualSelect2'),
-uiOutput('qualSelect3'),
-uiOutput('qualSelect4'),
-uiOutput('qualSelect5'),
-uiOutput('qualSelect6')
-
-)
-),
-tabPanel('Subsetted Table', dataTableOutput('mydatamerge2'))
-
+tabPanel('All Data', dataTableOutput('mytable1')),
+tabPanel('Add Categories', rHandsontableOutput('hot'))
 
 ))
 )
@@ -223,6 +211,69 @@ tabPanel('Subsetted Table', dataTableOutput('mydatamerge2'))
 
 )),
 
+tabPanel("Subset A",
+fluidRow(
+sidebarLayout(
+
+sidebarPanel(
+downloadButton("downloadsubseta", label = "Download")
+),
+
+mainPanel(
+tabsetPanel(
+id = 'dataset',
+tabPanel('Subset Data A', splitLayout(cellWidths=c("10%", "10%", "10%", "10%", "10%", "10%"),
+uiOutput('qualSelect1a'),
+uiOutput('qualSelect2a'),
+uiOutput('qualSelect3a'),
+uiOutput('qualSelect4a'),
+uiOutput('qualSelect5a'),
+uiOutput('qualSelect6a')
+)
+),
+tabPanel('Subsetted Table A', dataTableOutput('mydatamerge1a'))
+)
+)))),
+
+
+tabPanel("Subset B",
+fluidRow(
+sidebarLayout(
+
+sidebarPanel(
+downloadButton("downloadsubsetb", label = "Download")
+),
+
+mainPanel(
+tabsetPanel(
+id = 'dataset',
+tabPanel('Subset Data B', splitLayout(cellWidths=c("10%", "10%", "10%", "10%", "10%", "10%"),
+uiOutput('qualSelect1b'),
+uiOutput('qualSelect2b'),
+uiOutput('qualSelect3b'),
+uiOutput('qualSelect4b'),
+uiOutput('qualSelect5b'),
+uiOutput('qualSelect6b')
+)
+),
+tabPanel('Subsetted Table B', dataTableOutput('mydatamerge1b'))
+)
+)))),
+
+tabPanel("Subset Table",
+fluidRow(
+sidebarLayout(
+
+sidebarPanel(
+downloadButton("downloadsubsetfinal", label = "Download"),
+uiOutput('clipsubsetfinal')
+),
+
+mainPanel(
+tabsetPanel(
+id = 'dataset',
+tabPanel('Subsetted Table', dataTableOutput('mydatamerge2'))
+))))),
 
 tabPanel("PCA",
 div(class="outer",
