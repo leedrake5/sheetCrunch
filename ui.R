@@ -129,12 +129,35 @@ selected="Fe.table"),
 
 tags$hr(),
 
-fileInput('calfileinput', 'Load Cal File', accept='.quant', multiple=FALSE),
+fileInput('calfileinput1', 'Load Cal File', accept='.quant', multiple=FALSE),
 
-checkboxInput('usecalfile', "Use Cal File")
+checkboxInput('usecalfile', "Use Cal File"),
 
+
+
+
+tags$hr(),
+tags$hr(),
+
+fileInput('file2', 'Choose Spectra', multiple=TRUE,
+accept=c('text/csv',
+'text/comma-separated-values,text/plain',
+'.csv')),
+
+fileInput('calfileinput2', 'Load Cal File', accept='.quant', multiple=FALSE),
+
+tags$hr(),
+tags$hr(),
+
+fileInput('file3', 'Choose Spectra', multiple=TRUE,
+accept=c('text/csv',
+'text/comma-separated-values,text/plain',
+'.csv')),
+
+fileInput('calfileinput3', 'Load Cal File', accept='.quant', multiple=FALSE)
 
 ),
+
 
 
 
@@ -248,11 +271,11 @@ tabPanel('PCA Plot',
 # we don't change its position
 div(
 style = "position:relative",
-plotOutput("xrfpcaplot",
+plotOutput("xrfpcaplot", height = 1200,
 hover = hoverOpts("plot_hoverpca", delay = 100, delayType = "debounce")),
 uiOutput("hover_infopca")
-),
-height = 900, width= 1000
+)
+
 
 ),
 tabPanel("Table", DT::dataTableOutput('xrfpcatable'))
@@ -412,7 +435,7 @@ downloadButton('downloadPlot5', "Plot")
 
 mainPanel(
 tabPanel('Ternary Plot', plotOutput('ternaryplot',
-dblclick = "plot1_dblclick", height = 700, width= 1200,
+dblclick = "plot1_dblclick", height = 1200, 
 brush = brushOpts(
 id = "plot1_brush",
 resetOnNew = TRUE
@@ -479,11 +502,10 @@ mainPanel(
 tabPanel('Element Ratios',
 div(
 style = "position:relative",
-plotOutput("elementratiotimeseries",
+plotOutput("elementratiotimeseries", height = 1200,
 hover = hoverOpts("plot_hoverratio", delay = 100, delayType = "debounce")),
 uiOutput("hover_inforatio")
-),
-height = 900, width= 1000
+)
 
 
 
