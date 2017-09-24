@@ -3,9 +3,9 @@ library(reshape2)
 library(TTR)
 library(dplyr)
 library(data.table)
-library(ggtern)
 library(shiny)
 library(ggplot2)
+library(ggtern)
 library(random)
 library(rhandsontable)
 library(random)
@@ -1579,19 +1579,7 @@ choiceLines <- reactive({
       point <- nearPoints(point.table,  coordinfo=hover,   threshold = 5, maxpoints = 1, addDist = TRUE)
       #if (nrow(point) == 0) return(NULL)
       
-      my.ggp <- plotInput2()
-      
-      xmin <- ggplot_build(my.ggp)$layout$panel_ranges[[1]]$x.range[1]
-      xmax <- ggplot_build(my.ggp)$layout$panel_ranges[[1]]$x.range[2]
-      ymin <- ggplot_build(my.ggp)$layout$panel_ranges[[1]]$y.range[1]
-      ymax <- ggplot_build(my.ggp)$layout$panel_ranges[[1]]$y.range[2]
-      
-      x.range <- xmax-xmin
-      y.range <- ymax-ymin
-      
 
-      x.reciprocal <- 1/x.range
-      y.reciprocal <- 1/y.range
 
       
       # calculate point position INSIDE the image as percent of total dimensions
@@ -1604,12 +1592,6 @@ choiceLines <- reactive({
       top_px <- hover$range$top + top_pct * (hover$range$bottom - hover$range$top)
       
       
-      
-      point.filter <- filter(point.table,
-      PC1 %in% (xmin+x.range)*hover$x,
-      PC2 %in% (ymin+y.range)*hover$y
-      )
-      
       # create style property fot tooltip
       # background color is set so tooltip is a bit transparent
       # z-index is set so we are sure are tooltip will be on top
@@ -1621,9 +1603,7 @@ choiceLines <- reactive({
       style = style,
       p(HTML(paste0("<b> Spectrum: </b>", point$Spectrum, "<br/>",
       "<b> PC1: </b>", point$PC1, "<br/>",
-      "<b> PC2: </b>", point$PC2, "<br/>",
-      "<b> Distance from left: </b>", left_pct, "<b>, from top: </b>", top_pct
-
+      "<b> PC2: </b>", point$PC2, "<br/>"
 
       )))
       )
@@ -2848,8 +2828,11 @@ observeEvent(input$timeseriesact1, {
       
       ratio.frame <- subset(ratio.frame, !((ratio.frame[,3]/ratio.frame[,4]) < input$ylimrangeratio[1] | (ratio.frame[,3]/ratio.frame[,4]) > input$ylimrangeratio[2]))
       
+      ratio.frame$X <- ratio.frame[,1]/ratio.frame[,2]
+      ratio.frame$Y <- ratio.frame[,3]/ratio.frame[,4]
       
-      black.ratio.plot <- qplot(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], xlab = ratio.names.x, ylab = ratio.names.y ) +
+      
+      black.ratio.plot <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
       geom_point(lwd=input$spotsize2) +
       theme_light() +
       theme(axis.text.x = element_text(size=15)) +
@@ -2858,9 +2841,10 @@ observeEvent(input$timeseriesact1, {
       theme(axis.title.y = element_text(size=15, angle=90)) +
       theme(plot.title=element_text(size=20)) +
       theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15))
+      theme(legend.text=element_text(size=15)) +
+      geom_point(colour="grey30", size=input$spotsize2-2)
       
-      cluster.ratio.plot <- qplot(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], xlab = ratio.names.x, ylab = ratio.names.y ) +
+      cluster.ratio.plot <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
       geom_point(aes(colour=as.factor(ratio.frame$Cluster), shape=as.factor(ratio.frame$Cluster)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       scale_shape_manual("Cluster", values=1:nlevels(as.factor(as.factor(ratio.frame$Cluster)))) +
@@ -2872,9 +2856,10 @@ observeEvent(input$timeseriesact1, {
       theme(axis.title.y = element_text(size=15, angle=90)) +
       theme(plot.title=element_text(size=20)) +
       theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15))
+      theme(legend.text=element_text(size=15)) +
+      geom_point(colour="grey30", size=input$spotsize2-2)
       
-      cluster.ratio.ellipse.plot <- qplot(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], xlab = ratio.names.x, ylab = ratio.names.y ) +
+      cluster.ratio.ellipse.plot <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
       stat_ellipse(aes(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], colour=as.factor(ratio.frame$Cluster))) +
       geom_point(aes(colour=as.factor(ratio.frame$Cluster), shape=as.factor(ratio.frame$Cluster)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
@@ -2887,9 +2872,10 @@ observeEvent(input$timeseriesact1, {
       theme(axis.title.y = element_text(size=15, angle=90)) +
       theme(plot.title=element_text(size=20)) +
       theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15))
+      theme(legend.text=element_text(size=15)) +
+      geom_point(colour="grey30", size=input$spotsize2-2)
       
-      qualitative.ratio.plot.1 <- qplot(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], xlab = ratio.names.x, ylab = ratio.names.y ) +
+      qualitative.ratio.plot.1 <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
       geom_point(aes(colour=as.factor(ratio.frame$Qualitative1), shape=as.factor(ratio.frame$Qualitative1)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       scale_shape_manual("Qualitative1", values=1:nlevels(ratio.frame$Qualitative1)) +
@@ -2901,9 +2887,10 @@ observeEvent(input$timeseriesact1, {
       theme(axis.title.y = element_text(size=15, angle=90)) +
       theme(plot.title=element_text(size=20)) +
       theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15))
+      theme(legend.text=element_text(size=15)) +
+      geom_point(colour="grey30", size=input$spotsize2-2)
       
-      qualitative.ratio.ellipse.plot.1 <- qplot(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], xlab = ratio.names.x, ylab = ratio.names.y ) +
+      qualitative.ratio.ellipse.plot.1 <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
       stat_ellipse(aes(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], colour=as.factor(ratio.frame$Qualitative))) +
       geom_point(aes(colour=as.factor(ratio.frame$Qualitative1), shape=as.factor(ratio.frame$Qualitative1)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
@@ -2916,10 +2903,11 @@ observeEvent(input$timeseriesact1, {
       theme(axis.title.y = element_text(size=15, angle=90)) +
       theme(plot.title=element_text(size=20)) +
       theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15))
+      theme(legend.text=element_text(size=15)) +
+      geom_point(colour="grey30", size=input$spotsize2-2)
       
       
-      qualitative.ratio.plot.2 <- qplot(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], xlab = ratio.names.x, ylab = ratio.names.y ) +
+      qualitative.ratio.plot.2 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
       geom_point(aes(colour=as.factor(ratio.frame$Qualitative2), shape=as.factor(ratio.frame$Qualitative2)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       scale_shape_manual("Qualitative2", values=1:nlevels(ratio.frame$Qualitative2)) +
@@ -2931,9 +2919,10 @@ observeEvent(input$timeseriesact1, {
       theme(axis.title.y = element_text(size=15, angle=90)) +
       theme(plot.title=element_text(size=20)) +
       theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15))
+      theme(legend.text=element_text(size=15)) +
+      geom_point(colour="grey30", size=input$spotsize2-2)
       
-      qualitative.ratio.ellipse.plot.2 <- qplot(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], xlab = ratio.names.x, ylab = ratio.names.y ) +
+      qualitative.ratio.ellipse.plot.2 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
       stat_ellipse(aes(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], colour=as.factor(ratio.frame$Qualitative2))) +
       geom_point(aes(colour=as.factor(ratio.frame$Qualitative2), shape=as.factor(ratio.frame$Qualitative2)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
@@ -2946,9 +2935,10 @@ observeEvent(input$timeseriesact1, {
       theme(axis.title.y = element_text(size=15, angle=90)) +
       theme(plot.title=element_text(size=20)) +
       theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15))
+      theme(legend.text=element_text(size=15)) +
+      geom_point(colour="grey30", size=input$spotsize2-2)
       
-      qualitative.ratio.plot.3 <- qplot(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], xlab = ratio.names.x, ylab = ratio.names.y ) +
+      qualitative.ratio.plot.3 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
       geom_point(aes(colour=as.factor(ratio.frame$Qualitative3), shape=as.factor(ratio.frame$Qualitative3)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       scale_shape_manual("Qualitative3", values=1:nlevels(ratio.frame$Qualitative3)) +
@@ -2960,9 +2950,10 @@ observeEvent(input$timeseriesact1, {
       theme(axis.title.y = element_text(size=15, angle=90)) +
       theme(plot.title=element_text(size=20)) +
       theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15))
+      theme(legend.text=element_text(size=15)) +
+      geom_point(colour="grey30", size=input$spotsize2-2)
       
-      qualitative.ratio.ellipse.plot.3 <- qplot(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], xlab = ratio.names.x, ylab = ratio.names.y ) +
+      qualitative.ratio.ellipse.plot.3 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
       stat_ellipse(aes(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], colour=as.factor(ratio.frame$Qualitative3))) +
       geom_point(aes(colour=as.factor(ratio.frame$Qualitative3), shape=as.factor(ratio.frame$Qualitative3)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
@@ -2975,9 +2966,10 @@ observeEvent(input$timeseriesact1, {
       theme(axis.title.y = element_text(size=15, angle=90)) +
       theme(plot.title=element_text(size=20)) +
       theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15))
+      theme(legend.text=element_text(size=15)) +
+      geom_point(colour="grey30", size=input$spotsize2-2)
       
-      qualitative.ratio.plot.4 <- qplot(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], xlab = ratio.names.x, ylab = ratio.names.y ) +
+      qualitative.ratio.plot.4 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
       geom_point(aes(colour=as.factor(ratio.frame$Qualitative4), shape=as.factor(ratio.frame$Qualitative4)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       scale_shape_manual("Qualitative4", values=1:nlevels(ratio.frame$Qualitative4)) +
@@ -2989,9 +2981,10 @@ observeEvent(input$timeseriesact1, {
       theme(axis.title.y = element_text(size=15, angle=90)) +
       theme(plot.title=element_text(size=20)) +
       theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15))
+      theme(legend.text=element_text(size=15)) +
+      geom_point(colour="grey30", size=input$spotsize2-2)
       
-      qualitative.ratio.ellipse.plot.4 <- qplot(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], xlab = ratio.names.x, ylab = ratio.names.y ) +
+      qualitative.ratio.ellipse.plot.4 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
       stat_ellipse(aes(ratio.frame[,1]/ratio.frame[,2], ratio.frame[,3]/ratio.frame[,4], colour=as.factor(ratio.frame$Qualitative4))) +
       geom_point(aes(colour=as.factor(ratio.frame$Qualitative4), shape=as.factor(ratio.frame$Qualitative4)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
@@ -3004,7 +2997,8 @@ observeEvent(input$timeseriesact1, {
       theme(axis.title.y = element_text(size=15, angle=90)) +
       theme(plot.title=element_text(size=20)) +
       theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15))
+      theme(legend.text=element_text(size=15)) +
+      geom_point(colour="grey30", size=input$spotsize2-2)
       
       
 
@@ -3101,6 +3095,9 @@ observeEvent(input$timeseriesact1, {
        
        ratio.frame <- subset(ratio.frame, !((ratio.frame[,3]/ratio.frame[,4]) < input$ylimrangeratio[1] | (ratio.frame[,3]/ratio.frame[,4]) > input$ylimrangeratio[2]))
        
+       ratio.frame$X <- ratio.frame[,1]/ratio.frame[,2]
+       ratio.frame$Y <- ratio.frame[,3]/ratio.frame[,4]
+       
        ratio.frame
        
    })
@@ -3143,7 +3140,7 @@ observeEvent(input$timeseriesact1, {
        "<b> Qual 1: </b>", point$Qualitative1, "<br/>",
        "<b> Qual 2: </b>", point$Qualitative2, "<br/>",
        "<b> Qual 3: </b>", point$Qualitative4, "<br/>",
-       "<b> Qual 4: </b>", point$Qualitative5, "<br/>",
+       "<b> Qual 4: </b>", point$Qualitative5, "<br/>"
        
        
        )))
@@ -3726,7 +3723,7 @@ plotInput5 <- reactive({
 
 output$ternaryplot <- renderPlot({
     
-    plotInput5()
+    print(plotInput5())
     
 })
 
