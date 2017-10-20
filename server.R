@@ -1745,7 +1745,7 @@ print(plotInput())
              
              
              checkboxGroupInput('show_vars', 'Elemental lines to show:',
-             choices=lineOptions(), selected = defaultLines())
+             choices=lineOptions(), selected = NULL)
          })
          
 
@@ -1813,6 +1813,9 @@ print(plotInput())
       rhandsontable(DF, useTypes = FALSE, stretchH = "all")
   })
   
+  
+  
+
   qualitativeSelect1 <- reactive({
       
       qualitative.data <- values[["DF"]]
@@ -1866,28 +1869,28 @@ print(plotInput())
       
       
       checkboxGroupInput('qual_select1a', 'Select',
-      choices=qualitativeSelect1(), selected = NULL)
+      choices=qualitativeSelect1(), selected = qualitativeSelect1())
   })
   
   output$qualSelect2a <- renderUI({
       
       
       checkboxGroupInput('qual_select2a', 'Select',
-      choices=qualitativeSelect2(), selected = NULL)
+      choices=qualitativeSelect2(), selected = qualitativeSelect2())
   })
   
   output$qualSelect3a <- renderUI({
       
       
       checkboxGroupInput('qual_select3a', 'Select',
-      choices=qualitativeSelect3(), selected = NULL)
+      choices=qualitativeSelect3(), selected = qualitativeSelect3())
   })
   
   output$qualSelect4a <- renderUI({
       
       
       checkboxGroupInput('qual_select4a', 'Select',
-      choices=qualitativeSelect4(), selected = NULL)
+      choices=qualitativeSelect4(), selected = qualitativeSelect4())
   })
   
   
@@ -1910,28 +1913,28 @@ print(plotInput())
       
       
       checkboxGroupInput('qual_select1b', 'Select',
-      choices=qualitativeSelect1(), selected = NULL)
+      choices=qualitativeSelect1(), selected = qualitativeSelect1())
   })
   
   output$qualSelect2b <- renderUI({
       
       
       checkboxGroupInput('qual_select2b', 'Select',
-      choices=qualitativeSelect2(), selected = NULL)
+      choices=qualitativeSelect2(), selected = qualitativeSelect2())
   })
   
   output$qualSelect3b <- renderUI({
       
       
       checkboxGroupInput('qual_select3b', 'Select',
-      choices=qualitativeSelect3(), selected = NULL)
+      choices=qualitativeSelect3(), selected = qualitativeSelect3())
   })
   
   output$qualSelect4b <- renderUI({
       
       
       checkboxGroupInput('qual_select4b', 'Select',
-      choices=qualitativeSelect4(), selected = NULL)
+      choices=qualitativeSelect4(), selected = qualitativeSelect4())
   })
   
   
@@ -1955,7 +1958,7 @@ dataMerge1a <- reactive({
     
     spectra.line.table <- dataMerge()
     quality.table <- values[["DF"]]
-    
+
     spectra.line.table$Qualitative1 <- quality.table$Qualitative1
     spectra.line.table$Qualitative2 <- quality.table$Qualitative2
     spectra.line.table$Qualitative3 <- quality.table$Qualitative3
@@ -1985,7 +1988,7 @@ dataMerge1b <- reactive({
     
     spectra.line.table <- dataMerge()
     quality.table <- values[["DF"]]
-    
+
     spectra.line.table$Qualitative1 <- quality.table$Qualitative1
     spectra.line.table$Qualitative2 <- quality.table$Qualitative2
     spectra.line.table$Qualitative3 <- quality.table$Qualitative3
@@ -2106,10 +2109,45 @@ content = function(file
 )
 
 
+dataMerge3 <- reactive({
+    spectra.line.table <- dataMerge2()
+    quality.table <- values[["DF"]]
+
+    spectra.line.table <- spectra.line.table[,c("Spectrum", input$show_vars, ls(quality.table[,-1]))]
+    
+    #spectra.line.table <- spectra.line.table[complete.cases(spectra.line.table[,input$show_vars]),]
+    
+    
+    
+    spectra.line.table <- spectra.line.table[complete.cases(spectra.line.table),]
+    
+    if(input$logtrans==TRUE){spectra.line.table[,input$show_vars] <- log(spectra.line.table[,input$show_vars]+10)}
+
+    spectra.line.table
+    
+})
+
+
+
+qualityTable <- reactive({
+    spectra.line.table <- dataMerge2()
+    quality.table <- values[["DF"]]
+    
+    partial.table <- spectra.line.table[,c("Spectrum", input$show_vars)]
+
+    
+    full.table <- merge(x=partial.table, y=quality.table, by.x="Spectrum", by.y="Spectrum")
+    full.table <- full.table[complete.cases(full.table),]
+    
+    full.table[,ls(quality.table)]
+    
+})
+
+
 
 choiceLines <- reactive({
     
-    spectra.line.table <- dataMerge()
+    spectra.line.table <- dataMerge2()
     
     standard <- if(input$filetype=="Spectra"){
         colnames(spectra.line.table[ ,!(colnames(spectra.line.table) == "Spectrum")])
@@ -2132,13 +2170,17 @@ choiceLines <- reactive({
   )
   
   
+
   #####PCA Analysis
   
   xrfKReactive <- reactive({
       
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
      
       xrf.pca.frame <- spectra.line.table[,input$show_vars]
+      xrf.pca.frame <- xrf.pca.frame[complete.cases(xrf.pca.frame),]
+      
+
       
       xrf.k <- kmeans(xrf.pca.frame, input$knum, iter.max=1000, nstart=15, algorithm=c("Hartigan-Wong"))
       xrf.pca <- prcomp(xrf.pca.frame, scale.=FALSE)
@@ -2159,17 +2201,20 @@ choiceLines <- reactive({
   
   xrfPCAReactive <- reactive({
       
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
+      
      
 
       
       xrf.clusters <- xrfKReactive()
       
       element.counts <- spectra.line.table[,input$show_vars]
+
       
       
       
       xrf.pca.results <- data.frame(xrf.clusters, element.counts)
+      
       
       xrf.pca.results
   })
@@ -2178,7 +2223,9 @@ choiceLines <- reactive({
   
   xMinPCA <- reactive({
       
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
+      
+
       
       
       xrf.pca.results <- xrfKReactive()
@@ -2191,14 +2238,16 @@ choiceLines <- reactive({
       
       
       
-      min(spectra.line.table$PC1)
+      round(min(spectra.line.table$PC1), 2)
       
       
   })
   
   xMaxPCA <- reactive({
       
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
+      
+
       
       
       xrf.pca.results <- xrfKReactive()
@@ -2209,11 +2258,11 @@ choiceLines <- reactive({
       spectra.line.table$PC1 <- xrf.k$PC1
       spectra.line.table$PC2 <- xrf.k$PC2
       
-      quality.table <- values[["DF"]]
+      quality.table <-qualityTable()
       
      
       
-      max(spectra.line.table$PC1)
+      round(max(spectra.line.table$PC1), 2)
       
       
   })
@@ -2222,8 +2271,9 @@ choiceLines <- reactive({
   
   yMinPCA <- reactive({
       
-      spectra.line.table <- dataMerge2()
-      quality.table <- values[["DF"]]
+      spectra.line.table <- dataMerge3()
+      quality.table <-qualityTable()
+      
      
       xrf.pca.results <- xrfKReactive()
       
@@ -2234,14 +2284,15 @@ choiceLines <- reactive({
       spectra.line.table$PC2 <- xrf.k$PC2
       
     
-      min(spectra.line.table$PC2)
+      round(min(spectra.line.table$PC2), 2)
       
       
   })
   
   yMaxPCA <- reactive({
       
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
+      
       
       
       xrf.pca.results <- xrfKReactive()
@@ -2255,7 +2306,7 @@ choiceLines <- reactive({
 
  
       
-      max(spectra.line.table$PC2)
+      round(max(spectra.line.table$PC2), 2)
       
       
   })
@@ -2276,13 +2327,15 @@ choiceLines <- reactive({
   
   plotInput2 <- reactive({
       
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
+      
+
       
   xrf.pca.results <- xrfKReactive()
   
   xrf.k <- xrfKReactive()
   
-  quality.table <- values[["DF"]]
+  quality.table <-qualityTable()
   
   colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
   colnames(colour.table) <- c("Cluster", names(spectra.line.table))
@@ -2301,6 +2354,8 @@ choiceLines <- reactive({
   spectra.line.table <- subset(spectra.line.table, !(spectra.line.table$PC1 < input$xlimrangepca[1] | spectra.line.table$PC1 > input$xlimrangepca[2]))
   
   spectra.line.table <- subset(spectra.line.table, !(spectra.line.table$PC2 < input$ylimrangepca[1] | spectra.line.table$PC2 > input$ylimrangepca[2]))
+  
+  
 
 
   
@@ -2506,20 +2561,20 @@ choiceLines <- reactive({
   geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
   
   
-  quant.regular <- ggplot(data= spectra.line.table) +
-  geom_point(aes(PC1, PC2, colour=Quantitative), size = input$spotsize) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  scale_colour_gradientn("Quantitative", colours=rainbow(length(spectra.line.table$Quantitative))) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
+  #quant.regular <- ggplot(data= spectra.line.table) +
+  #geom_point(aes(PC1, PC2, colour=Quantitative), size = input$spotsize) +
+  #scale_x_continuous("Principle Component 1") +
+  #scale_y_continuous("Principle Component 2") +
+  #theme_light() +
+  #theme(axis.text.x = element_text(size=15)) +
+  #theme(axis.text.y = element_text(size=15)) +
+  #theme(axis.title.x = element_text(size=15)) +
+  #theme(axis.title.y = element_text(size=15, angle=90)) +
+  #theme(plot.title=element_text(size=20)) +
+  #theme(legend.title=element_text(size=15)) +
+  #theme(legend.text=element_text(size=15)) +
+  #scale_colour_gradientn("Quantitative", colours=rainbow(length(spectra.line.table$Quantitative))) +
+  #geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
 
 
   if (input$elipseplot1 == FALSE && input$pcacolour == "black") {
@@ -2544,10 +2599,6 @@ choiceLines <- reactive({
       qual.ellipse.4
   } else if (input$elipseplot1 == FALSE && input$pcacolour == "Qualitative4") {
       qual.regular.4
-  } else if (input$elipseplot1 == TRUE && input$pcacolour == "Quantitative") {
-      quant.regular
-  } else if (input$elipseplot1 == FALSE && input$pcacolour == "Quantitative") {
-      quant.regular
   }
 
 
@@ -2562,8 +2613,8 @@ choiceLines <- reactive({
   
   hoverHold <- reactive({
       
-      spectra.line.table <- dataMerge2()
-      
+      spectra.line.table <- dataMerge3()
+
       xrf.pca.results <- xrfKReactive()
       
       xrf.k <- xrfKReactive()
@@ -2602,7 +2653,7 @@ choiceLines <- reactive({
       
       hover <- input$plot_hoverpca
       point <- nearPoints(point.table,  coordinfo=hover,   threshold = 5, maxpoints = 1, addDist = TRUE)
-      #if (nrow(point) == 0) return(NULL)
+      if (nrow(point) == 0) return(NULL)
       
 
 
@@ -2697,7 +2748,7 @@ outApp <- reactive({
     
     xrf.k <- xrfKReactive()
     
-    quality.table <- values[["DF"]]
+    quality.table <-qualityTable()
     
     colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
     colnames(colour.table) <- c("Cluster", names(spectra.line.table))
@@ -2742,12 +2793,12 @@ output$inelementnorm <- renderUI({
 
 plotInput3a <- reactive({
     
-    spectra.line.table <- dataMerge2()
+    spectra.line.table <- dataMerge3()
 
    
    xrf.k <- xrfKReactive()
    
-   quality.table <- values[["DF"]]
+   quality.table <-qualityTable()
    
    colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
    colnames(colour.table) <- c("Cluster", names(spectra.line.table))
@@ -2939,7 +2990,7 @@ observeEvent(input$timeseriesact1, {
       
       xrf.k <- xrfKReactive()
       
-      quality.table <- values[["DF"]]
+      quality.table <-qualityTable()
       
       colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
       colnames(colour.table) <- c("Cluster", names(spectra.line.table))
@@ -3113,13 +3164,13 @@ observeEvent(input$timeseriesact1, {
 
   plotInput3c <- reactive({
       
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
 
       
       
       xrf.k <- xrfKReactive()
       
-      quality.table <- values[["DF"]]
+      quality.table <-qualityTable()
       
       colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
       colnames(colour.table) <- c("Cluster", names(spectra.line.table))
@@ -3279,12 +3330,12 @@ observeEvent(input$timeseriesact1, {
 
   plotInput3d <- reactive({
       
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
 
       
       xrf.k <- xrfKReactive()
       
-      quality.table <- values[["DF"]]
+      quality.table <-qualityTable()
       
       colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
       colnames(colour.table) <- c("Cluster", names(spectra.line.table))
@@ -3448,12 +3499,12 @@ observeEvent(input$timeseriesact1, {
 
   plotInput3e <- reactive({
       
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
 
       
       xrf.k <- xrfKReactive()
       
-      quality.table <- values[["DF"]]
+      quality.table <-qualityTable()
       
       colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
       colnames(colour.table) <- c("Cluster", names(spectra.line.table))
@@ -3616,10 +3667,25 @@ observeEvent(input$timeseriesact1, {
   }
   )
   
+  choiceLinesRatio <- reactive({
+      
+      spectra.line.table <- dataMerge3()
+      
+      spectra.line.table$None <- rep(1, length(spectra.line.table$Spectrum))
+      
+      standard <- if(input$filetype=="Spectra"){
+          colnames(spectra.line.table[ ,!(colnames(spectra.line.table) == "Spectrum")])
+      } else if(input$filetype=="Net"){
+          colnames(spectra.line.table[ ,!(colnames(spectra.line.table) == "Spectrum")])
+      } else if(input$filetype=="Spreadsheet"){
+          colnames(spectra.line.table[ ,!(colnames(spectra.line.table) == "Spectrum")])
+      }
+      
+  })
   
   
   ratioChooseA <- reactive({
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
       spectra.line.names <- colnames(spectra.line.table)
       
       
@@ -3631,11 +3697,11 @@ observeEvent(input$timeseriesact1, {
   
   
   ratioChooseB <- reactive({
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
       spectra.line.names <- colnames(spectra.line.table)
       
       
-      standard <- spectra.line.names[3]
+      standard <- "None"
       
       
       standard
@@ -3644,7 +3710,7 @@ observeEvent(input$timeseriesact1, {
   
   
   ratioChooseC <- reactive({
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
       spectra.line.names <- colnames(spectra.line.table)
       
       
@@ -3657,10 +3723,10 @@ observeEvent(input$timeseriesact1, {
   
   
   ratioChooseD <- reactive({
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
       spectra.line.names <- colnames(spectra.line.table)
       
-      standard <- spectra.line.names[5]
+      standard <- "None"
       
       
       standard
@@ -3669,26 +3735,27 @@ observeEvent(input$timeseriesact1, {
   
   
   output$inelementratioa <- renderUI({
-      selectInput("elementratioa", "Element A", choices=choiceLines(), selected=ratioChooseA())
+      selectInput("elementratioa", "Element A", choices=choiceLinesRatio(), selected=ratioChooseA())
   })
   
   output$inelementratiob <- renderUI({
-      selectInput("elementratiob", "Element B", choices=choiceLines(), selected=ratioChooseB())
+      selectInput("elementratiob", "Element B", choices=choiceLinesRatio(), selected=ratioChooseB())
   })
   
   output$inelementratioc <- renderUI({
-      selectInput("elementratioc", "Element C", choices=choiceLines(), selected=ratioChooseC())
+      selectInput("elementratioc", "Element C", choices=choiceLinesRatio(), selected=ratioChooseC())
   })
   
   output$inelementratiod <- renderUI({
-      selectInput("elementratiod", "Element D", choices=choiceLines(), selected=ratioChooseD())
+      selectInput("elementratiod", "Element D", choices=choiceLinesRatio(), selected=ratioChooseD())
   })
   
   
   xMinRatio <- reactive({
       
-      spectra.line.table <- dataMerge2()
-      
+      spectra.line.table <- dataMerge3()
+      spectra.line.table$None <- rep(1, length(spectra.line.table$Spectrum))
+
       
       first.ratio <-spectra.line.table[input$elementratioa]
       second.ratio <- spectra.line.table[input$elementratiob]
@@ -3704,15 +3771,16 @@ observeEvent(input$timeseriesact1, {
       ratio.frame <- data.frame(first.ratio, second.ratio, third.ratio, fourth.ratio,  spectra.line.table$Qualitative1, spectra.line.table$Qualitative2, spectra.line.table$Qualitative3, spectra.line.table$Qualitative4, spectra.line.table$Quantitative)
       colnames(ratio.frame) <- gsub("[.]", "", c(substr(input$elementratioa, 1, 2), substr(input$elementratiob, 1, 2), substr(input$elementratioc, 1, 2), substr(input$elementratiod, 1, 2), "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Quantitative"))
       
-      min((ratio.frame[,1]/ratio.frame[,2]))
+      round(min((ratio.frame[,1]/ratio.frame[,2])), 2)
       
       
   })
   
   xMaxRatio <- reactive({
       
-      spectra.line.table <- dataMerge2()
-      
+      spectra.line.table <- dataMerge3()
+      spectra.line.table$None <- rep(1, length(spectra.line.table$Spectrum))
+
      
       
       first.ratio <-spectra.line.table[input$elementratioa]
@@ -3730,7 +3798,7 @@ observeEvent(input$timeseriesact1, {
       colnames(ratio.frame) <- gsub("[.]", "", c(substr(input$elementratioa, 1, 2), substr(input$elementratiob, 1, 2), substr(input$elementratioc, 1, 2), substr(input$elementratiod, 1, 2), "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Quantitative"))
   
       
-      max((ratio.frame[,1]/ratio.frame[,2]))
+      round(max((ratio.frame[,1]/ratio.frame[,2])), 2)
       
       
   })
@@ -3739,7 +3807,8 @@ observeEvent(input$timeseriesact1, {
   
   yMinRatio <- reactive({
       
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
+      spectra.line.table$None <- rep(1, length(spectra.line.table$Spectrum))
 
       
       first.ratio <-spectra.line.table[input$elementratioa]
@@ -3756,14 +3825,15 @@ observeEvent(input$timeseriesact1, {
       ratio.frame <- data.frame(first.ratio, second.ratio, third.ratio, fourth.ratio, spectra.line.table$Qualitative1, spectra.line.table$Qualitative2, spectra.line.table$Qualitative3, spectra.line.table$Qualitative4, spectra.line.table$Quantitative)
       colnames(ratio.frame) <- gsub("[.]", "", c(substr(input$elementratioa, 1, 2), substr(input$elementratiob, 1, 2), substr(input$elementratioc, 1, 2), substr(input$elementratiod, 1, 2),  "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Quantitative"))
       
-      min((ratio.frame[,3]/ratio.frame[,4]))
+      round(min((ratio.frame[,3]/ratio.frame[,4])), 2)
       
       
   })
   
   yMaxRatio <- reactive({
       
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
+      spectra.line.table$None <- rep(1, length(spectra.line.table$Spectrum))
 
       
       first.ratio <-spectra.line.table[input$elementratioa]
@@ -3781,7 +3851,7 @@ observeEvent(input$timeseriesact1, {
       colnames(ratio.frame) <- gsub("[.]", "", c(substr(input$elementratioa, 1, 2), substr(input$elementratiob, 1, 2), substr(input$elementratioc, 1, 2), substr(input$elementratiod, 1, 2),  "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Quantitative"))
    
       
-      max((ratio.frame[,3]/ratio.frame[,4]))
+      round(max((ratio.frame[,3]/ratio.frame[,4])), 2)
       
       
   })
@@ -3807,7 +3877,8 @@ observeEvent(input$timeseriesact1, {
   
   plotInput4 <- reactive({
       
-      spectra.line.table <- dataMerge2()
+      spectra.line.table <- dataMerge3()
+      spectra.line.table$None <- rep(1, length(spectra.line.table$Spectrum))
 
       
      
@@ -3843,8 +3914,11 @@ observeEvent(input$timeseriesact1, {
       colnames(ratio.frame) <- gsub("[.]", "", c(substr(input$elementratioa, 1, 2), substr(input$elementratiob, 1, 2), substr(input$elementratioc, 1, 2), substr(input$elementratiod, 1, 2), "Cluster", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Quantitative"))
       
             
-      ratio.names.x <- c(names(ratio.frame[1]), "/", names(ratio.frame[2]))
-      ratio.names.y <- c(names(ratio.frame[3]), "/", names(ratio.frame[4]))
+            if(input$elementratiob!="None"){ratio.names.x <- c(names(ratio.frame[1]), "/", names(ratio.frame[2]))}
+            if(input$elementratiod!="None"){ratio.names.y <- c(names(ratio.frame[3]), "/", names(ratio.frame[4]))}
+            
+            if(input$elementratiob=="None"){ratio.names.x <- c(names(ratio.frame[1]))}
+            if(input$elementratiod=="None"){ratio.names.y <- c(names(ratio.frame[3]))}
       
       ratio.names.x <- paste(ratio.names.x, sep=",", collapse="")
       ratio.names.y <- paste(ratio.names.y, sep=",", collapse="")
@@ -3855,6 +3929,9 @@ observeEvent(input$timeseriesact1, {
       
       ratio.frame$X <- ratio.frame[,1]/ratio.frame[,2]
       ratio.frame$Y <- ratio.frame[,3]/ratio.frame[,4]
+      
+      ratio.frame$X <- ratio.frame[,1]
+      ratio.frame$Y <- ratio.frame[,3]
       
       
       black.ratio.plot <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
@@ -4074,8 +4151,9 @@ observeEvent(input$timeseriesact1, {
    
    hoverHoldRatio <- reactive({
        
-       spectra.line.table <- dataMerge2()
-       
+       spectra.line.table <- dataMerge3()
+       spectra.line.table$None <- rep(1, length(spectra.line.table$Spectrum))
+
        
        
        xrf.k <- xrfKReactive()
@@ -4136,7 +4214,7 @@ observeEvent(input$timeseriesact1, {
        
        hover <- input$plot_hoverratio
        point <- nearPoints(point.table,  coordinfo=hover,   threshold = 5, maxpoints = 1, addDist = TRUE)
-       #if (nrow(point) == 0) return(NULL)
+       if (nrow(point) == 0) return(NULL)
        
        
        # calculate point position INSIDE the image as percent of total dimensions
@@ -4192,7 +4270,7 @@ observeEvent(input$timeseriesact1, {
 
 
 ternaryChooseA <- reactive({
-    spectra.line.table <- dataMerge()
+    spectra.line.table <- dataMerge3()
     spectra.line.names <- colnames(spectra.line.table)
     
     
@@ -4209,7 +4287,7 @@ ternaryChooseA <- reactive({
 })
 
 ternaryChooseB <- reactive({
-    spectra.line.table <- dataMerge()
+    spectra.line.table <- dataMerge3()
     spectra.line.names <- colnames(spectra.line.table)
     
     
@@ -4226,7 +4304,7 @@ ternaryChooseB <- reactive({
 })
 
 ternaryChooseC <- reactive({
-    spectra.line.table <- dataMerge()
+    spectra.line.table <- dataMerge3()
     spectra.line.names <- colnames(spectra.line.table)
     
     
@@ -4257,12 +4335,13 @@ output$inaxisc <- renderUI({
 
 plotInput5 <- reactive({
     
-    spectra.line.table <- dataMerge2()
+    spectra.line.table <- dataMerge3()
 
     
     xrf.k <- xrfKReactive()
     
-    quality.table <- values[["DF"]]
+    quality.table <-qualityTable()
+    
     
     colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
     colnames(colour.table) <- c("Cluster", names(spectra.line.table))
@@ -4327,7 +4406,8 @@ plotInput5 <- reactive({
     theme(axis.title.y = element_text(size=15, angle=90)) +
     theme(plot.title=element_text(size=20)) +
     theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
+    theme(legend.text=element_text(size=15)) 
+    
     
     ternaryplotclusterellipse <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
     geom_density_tern() +
@@ -4755,12 +4835,12 @@ output$ternaryplot <- renderPlot({
 
 hoverHoldTern <- reactive({
     
-    spectra.line.table <- dataMerge2()
+    spectra.line.table <- dataMerge3()
     
     
     xrf.k <- xrfKReactive()
     
-    quality.table <- values[["DF"]]
+    quality.table <-qualityTable()
     
     colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
     colnames(colour.table) <- c("Cluster", names(spectra.line.table))
@@ -4794,12 +4874,12 @@ hoverHoldTern <- reactive({
 
 hoverHoldTernNorm <- reactive({
     
-    spectra.line.table <- dataMerge2()
+    spectra.line.table <- dataMerge3()
     
     
     xrf.k <- xrfKReactive()
     
-    quality.table <- values[["DF"]]
+    quality.table <-qualityTable()
     
     colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
     colnames(colour.table) <- c("Cluster", names(spectra.line.table))

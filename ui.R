@@ -298,6 +298,8 @@ selected="Cluster"),
 sliderInput("spotsize", label = "Point Size", value=5, min=2, max=15),
 
 checkboxInput('elipseplot1', "Elipse"),
+checkboxInput('logtrans', "Log Transform"),
+
 
 uiOutput('inxlimrangepca'),
 uiOutput('inylimrangepca'),
@@ -322,7 +324,7 @@ tabPanel('PCA Plot',
 # we don't change its position
 div(
 style = "position:relative",
-plotOutput("xrfpcaplot", height = 1200,
+plotOutput("xrfpcaplot", height = 650,
 hover = hoverOpts("plot_hoverpca", delay = 100, delayType = "debounce")),
 uiOutput("hover_infopca")
 )
@@ -478,6 +480,7 @@ tags$hr(),
 
 sliderInput("ternpointsize", label = "Point Size", value=5, min=2, max=15),
 
+
 tags$hr(),
 
 downloadButton('downloadPlot5', "Plot")
@@ -486,7 +489,7 @@ downloadButton('downloadPlot5', "Plot")
 
 mainPanel(
 tabPanel('Ternary Plot', plotOutput('ternaryplot',
-dblclick = "plot1_dblclick", height = 1200, 
+dblclick = "plot1_dblclick", height = 800,
 brush = brushOpts(
 id = "plot1_brush",
 resetOnNew = TRUE
@@ -536,6 +539,8 @@ uiOutput('inxlimrangeratio'),
 uiOutput('inylimrangeratio'),
 
 
+
+
 checkboxInput('elipseplot2', "Elipse"),
 
 
@@ -553,7 +558,7 @@ mainPanel(
 tabPanel('Element Ratios',
 div(
 style = "position:relative",
-plotOutput("elementratiotimeseries", height = 1200,
+plotOutput("elementratiotimeseries", height = 650,
 hover = hoverOpts("plot_hoverratio", delay = 100, delayType = "debounce")),
 uiOutput("hover_inforatio")
 )
