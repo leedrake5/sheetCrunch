@@ -4271,12 +4271,15 @@ observeEvent(input$timeseriesact1, {
        fourth.ratio.norm <- fourth.ratio/sum(fourth.ratio)
        
        
-       ratio.frame <- data.frame(first.ratio, second.ratio, third.ratio, fourth.ratio, spectra.line.table$Spectrum, spectra.line.table$Qualitative1, spectra.line.table$Qualitative2, spectra.line.table$Qualitative3, spectra.line.table$Qualitative4, spectra.line.table$Quantitative)
-       colnames(ratio.frame) <- gsub("[.]", "", c(substr(input$elementratioa, 1, 2), substr(input$elementratiob, 1, 2), substr(input$elementratioc, 1, 2), substr(input$elementratiod, 1, 2), "Spectrum", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Quantitative"))
+       ratio.frame <- data.frame(first.ratio, second.ratio, third.ratio, fourth.ratio, spectra.line.table$Cluster, spectra.line.table$Qualitative1, spectra.line.table$Qualitative2, spectra.line.table$Qualitative3, spectra.line.table$Qualitative4, spectra.line.table$Quantitative, spectra.line.table$Spectrum)
+       colnames(ratio.frame) <- gsub("[.]", "", c(substr(input$elementratioa, 1, 2), substr(input$elementratiob, 1, 2), substr(input$elementratioc, 1, 2), substr(input$elementratiod, 1, 2), "Cluster", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Quantitative", "Spectrum"))
        
        
-       ratio.names.x <- c(names(ratio.frame[1]), "/", names(ratio.frame[2]))
-       ratio.names.y <- c(names(ratio.frame[3]), "/", names(ratio.frame[4]))
+       if(input$elementratiob!="None"){ratio.names.x <- c(names(ratio.frame[1]), "/", names(ratio.frame[2]))}
+       if(input$elementratiod!="None"){ratio.names.y <- c(names(ratio.frame[3]), "/", names(ratio.frame[4]))}
+       
+       if(input$elementratiob=="None"){ratio.names.x <- c(names(ratio.frame[1]))}
+       if(input$elementratiod=="None"){ratio.names.y <- c(names(ratio.frame[3]))}
        
        ratio.names.x <- paste(ratio.names.x, sep=",", collapse="")
        ratio.names.y <- paste(ratio.names.y, sep=",", collapse="")
@@ -4287,6 +4290,9 @@ observeEvent(input$timeseriesact1, {
        
        ratio.frame$X <- ratio.frame[,1]/ratio.frame[,2]
        ratio.frame$Y <- ratio.frame[,3]/ratio.frame[,4]
+       
+       ratio.frame$X <- ratio.frame[,1]
+       ratio.frame$Y <- ratio.frame[,3]
        
        ratio.frame
        
