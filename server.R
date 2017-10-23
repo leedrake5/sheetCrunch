@@ -4335,8 +4335,8 @@ observeEvent(input$timeseriesact1, {
        p(HTML(paste0("<b> Spectrum: </b>", point$Spectrum, "<br/>",
        "<b> Qual 1: </b>", point$Qualitative1, "<br/>",
        "<b> Qual 2: </b>", point$Qualitative2, "<br/>",
-       "<b> Qual 3: </b>", point$Qualitative4, "<br/>",
-       "<b> Qual 4: </b>", point$Qualitative5, "<br/>"
+       "<b> Qual 3: </b>", point$Qualitative3, "<br/>",
+       "<b> Qual 4: </b>", point$Qualitative4, "<br/>"
        
        
        )))
