@@ -292,8 +292,14 @@ selectInput("pcacolour", "Colour", choices=c(
 "Qualitative2"="Qualitative2",
 "Qualitative3"="Qualitative3",
 "Qualitative4"="Qualitative4",
-"Quantitative"="Quantitative"),
+"Quantitative"="Quantitative",
+"Focus"="Focus"),
 selected="Cluster"),
+
+uiOutput('pcaFocusVariable'),
+uiOutput('pcaFocusUI'),
+uiOutput('pcaFocusLabel'),
+
 
 sliderInput("spotsize", label = "Point Size", value=5, min=2, max=15),
 
@@ -518,8 +524,13 @@ c(
 "Qualitative2"="Qualitative2",
 "Qualitative3"="Qualitative3",
 "Qualitative4"="Qualitative4",
-"Quantitative" = "Quantitative"
+"Quantitative" = "Quantitative",
+"Focus" = "Focus"
 ), selected="Cluster"),
+
+uiOutput('ratioFocusVariable'),
+uiOutput('ratioFocusUI'),
+uiOutput('ratioFocusLabel'),
 
 tags$hr(),
 

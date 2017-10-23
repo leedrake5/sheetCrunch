@@ -10,7 +10,7 @@ library(random)
 library(rhandsontable)
 library(random)
 library(Cairo)
-
+library(gghighlight)
 
 
 
@@ -2324,7 +2324,31 @@ choiceLines <- reactive({
   })
   
   
+  output$pcaFocusVariable <- renderUI({
+      
+      if(input$pcacolour=="Focus"){selectInput('pcafocusvariable', "Choose Variable", choices=names(values[["DF"]]), selected="Qualitative1")} else {
+          p()
+      }
+      
+  })
   
+  output$pcaFocusUI <- renderUI({
+      
+      if(input$pcacolour=="Focus"){selectInput('pcafocuschoice', "Choose Focus", choices=unique(values[["DF"]][input$pcafocusvariable]), selected="Qualitative1", multiple=TRUE)} else {
+          p()
+      }
+      
+  })
+  
+  output$pcaFocusLabel <- renderUI({
+      if(input$pcacolour=="Focus"){selectInput('pcafocuslabel', "Choose Label", choices=c("None", names(values[["DF"]])), selected="None")} else {
+          p()
+      }
+      
+  })
+  
+  
+
   plotInput2 <- reactive({
       
       spectra.line.table <- dataMerge3()
@@ -2560,6 +2584,22 @@ choiceLines <- reactive({
   scale_colour_discrete("Qualitative4") +
   geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
   
+  if (input$pcacolour == "Focus" && input$pcafocuslabel=="None") {new.spectra.line.table <- spectra.line.table[,c("Spectrum", "PC1", "PC2", input$pcafocusvariable)]}
+  
+  if (input$pcacolour == "Focus" && input$pcafocuslabel=="None") {colnames(new.spectra.line.table) <- c("Spectrum", "PC1", "PC2", "Selected")}
+  
+  if (input$elipseplot1 == FALSE && input$pcacolour == "Focus" && input$pcafocuslabel=="None") {select.plot <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice),  use_group_by=FALSE, use_direct_label=FALSE) + theme_light()}
+  
+  if (input$elipseplot1 == TRUE && input$pcacolour == "Focus"  && input$pcafocuslabel=="None") {select.plot.ellipse <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), use_group_by=FALSE, use_direct_label=FALSE) + stat_ellipse() + theme_light()}
+  
+  if (input$pcacolour == "Focus" && input$pcafocuslabel!="None") {newer.spectra.line.table <- spectra.line.table[,c("Spectrum", "PC1", "PC2", input$pcafocusvariable, input$pcafocuslabel)]}
+  
+  if (input$pcacolour == "Focus" && input$pcafocuslabel!="None") {colnames(newer.spectra.line.table) <- c("Spectrum", "PC1", "PC2", "Selected", "Label")}
+  
+  if (input$elipseplot1 == FALSE && input$pcacolour == "Focus" && input$pcafocuslabel!="None") {select.plot <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + theme_light()}
+  
+  if (input$elipseplot1 == TRUE && input$pcacolour == "Focus"  && input$pcafocuslabel!="None") {select.plot.ellipse <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + stat_ellipse() + theme_light()}
+  
   
   #quant.regular <- ggplot(data= spectra.line.table) +
   #geom_point(aes(PC1, PC2, colour=Quantitative), size = input$spotsize) +
@@ -2599,6 +2639,10 @@ choiceLines <- reactive({
       qual.ellipse.4
   } else if (input$elipseplot1 == FALSE && input$pcacolour == "Qualitative4") {
       qual.regular.4
+  } else if (input$elipseplot1 == FALSE && input$pcacolour == "Focus") {
+      select.plot
+  }  else if (input$elipseplot1 == TRUE && input$pcacolour == "Focus") {
+      select.plot.ellipse
   }
 
 
@@ -3872,6 +3916,28 @@ observeEvent(input$timeseriesact1, {
 
   
   
+  output$ratioFocusVariable <- renderUI({
+      
+      if(input$ratiocolour=="Focus"){selectInput('ratiofocusvariable', "Choose Variable", choices=names(values[["DF"]]), selected="Qualitative1")} else {
+          p()
+      }
+      
+  })
+  
+  output$ratioFocusUI <- renderUI({
+      
+      if(input$ratiocolour=="Focus"){selectInput('ratiofocuschoice', "Choose Focus", choices=unique(values[["DF"]][input$ratiofocusvariable]), selected="Qualitative1", multiple=TRUE)} else {
+          p()
+      }
+      
+  })
+  
+  output$ratioFocusLabel <- renderUI({
+      if(input$ratiocolour=="Focus"){selectInput('ratiofocuslabel', "Choose Label", choices=c("None", names(values[["DF"]])), selected="None")} else {
+          p()
+      }
+      
+  })
   
   
   
@@ -3910,8 +3976,8 @@ observeEvent(input$timeseriesact1, {
       fourth.ratio.norm <- fourth.ratio/sum(fourth.ratio)
       
       
-      ratio.frame <- data.frame(first.ratio, second.ratio, third.ratio, fourth.ratio, spectra.line.table$Cluster, spectra.line.table$Qualitative1, spectra.line.table$Qualitative2, spectra.line.table$Qualitative3, spectra.line.table$Qualitative4, spectra.line.table$Quantitative)
-      colnames(ratio.frame) <- gsub("[.]", "", c(substr(input$elementratioa, 1, 2), substr(input$elementratiob, 1, 2), substr(input$elementratioc, 1, 2), substr(input$elementratiod, 1, 2), "Cluster", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Quantitative"))
+      ratio.frame <- data.frame(first.ratio, second.ratio, third.ratio, fourth.ratio, spectra.line.table$Cluster, spectra.line.table$Qualitative1, spectra.line.table$Qualitative2, spectra.line.table$Qualitative3, spectra.line.table$Qualitative4, spectra.line.table$Quantitative, spectra.line.table$Spectrum)
+      colnames(ratio.frame) <- gsub("[.]", "", c(substr(input$elementratioa, 1, 2), substr(input$elementratiob, 1, 2), substr(input$elementratioc, 1, 2), substr(input$elementratiod, 1, 2), "Cluster", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Quantitative", "Spectrum"))
       
             
             if(input$elementratiob!="None"){ratio.names.x <- c(names(ratio.frame[1]), "/", names(ratio.frame[2]))}
@@ -4103,6 +4169,23 @@ observeEvent(input$timeseriesact1, {
       geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
       
       
+      if (input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {new.ratio.table <- ratio.frame[,c("Spectrum", "X", "Y", input$ratiofocusvariable)]}
+      
+      if (input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {colnames(new.ratio.table) <- c("Spectrum", "X", "Y", "Selected")}
+      
+      if (input$elipseplot2 == FALSE && input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {select.plot <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice),  use_group_by=FALSE, use_direct_label=FALSE) + theme_light()}
+      
+      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel=="None") {select.plot.ellipse <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), use_group_by=FALSE, use_direct_label=FALSE) + stat_ellipse() + theme_light()}
+      
+      if (input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {newer.ratio.table <- ratio.frame[,c("Spectrum", "X", "Y", input$ratiofocusvariable, input$ratiofocuslabel)]}
+      
+      if (input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {colnames(newer.ratio.table) <- c("Spectrum", "X", "Y", "Selected", "Label")}
+      
+      if (input$elipseplot2 == FALSE && input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {select.plot <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + theme_light()}
+      
+      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel!="None") {select.plot.ellipse <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + stat_ellipse() + theme_light()}
+      
+      
 
       
       
@@ -4136,6 +4219,10 @@ observeEvent(input$timeseriesact1, {
           quanitative.ratio.plot
       } else if (input$ratiocolour == "Quantitative" && input$elipseplot2==TRUE) {
           quantitative.ratio.plot
+      } else if (input$ratiocolour == "Focus" && input$elipseplot2==FALSE) {
+          select.plot
+      } else if (input$ratiocolour == "Focus" && input$elipseplot2==TRUE) {
+          select.plot.ellipse
       }
 
   })
