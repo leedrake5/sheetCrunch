@@ -288,12 +288,12 @@ numericInput("knum", label = "K-Means", value=3),
 selectInput("pcacolour", "Colour", choices=c(
 "Black"="black",
 "Cluster"="Cluster",
+"Focus" = "Focus",
 "Qualitative1"="Qualitative1",
 "Qualitative2"="Qualitative2",
 "Qualitative3"="Qualitative3",
 "Qualitative4"="Qualitative4",
-"Quantitative"="Quantitative",
-"Focus"="Focus"),
+"Quantitative"="Quantitative"),
 selected="Cluster"),
 
 uiOutput('pcaFocusVariable'),
@@ -520,12 +520,12 @@ selectInput(
 c(
 "Black" = "Black",
 "Cluster" = "Cluster",
+"Focus" = "Focus",
 "Qualitative1"="Qualitative1",
 "Qualitative2"="Qualitative2",
 "Qualitative3"="Qualitative3",
 "Qualitative4"="Qualitative4",
-"Quantitative" = "Quantitative",
-"Focus" = "Focus"
+"Quantitative" = "Quantitative"
 ), selected="Cluster"),
 
 uiOutput('ratioFocusVariable'),
