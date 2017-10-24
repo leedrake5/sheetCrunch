@@ -9,7 +9,6 @@ library(rhandsontable)
 shinyUI(navbarPage("XRF", id="nav", theme = shinytheme("paper"),
 tabPanel("Spectrum",
 div(class="outer",
-headerPanel("X-Ray Fluorescence Spectrum Viewer"),
 sidebarLayout(
 sidebarPanel(
 
@@ -137,24 +136,16 @@ checkboxInput('usecalfile', "Use Cal File"),
 
 
 tags$hr(),
-tags$hr(),
 
-fileInput('file2', 'Choose Spectra', multiple=TRUE,
-accept=c('text/csv',
-'text/comma-separated-values,text/plain',
-'.csv')),
+checkboxInput('otherdata', "Import Other Data", value=FALSE),
 
-fileInput('calfileinput2', 'Load Cal File', accept='.quant', multiple=FALSE),
+uiOutput('file2gen'),
+uiOutput('calfile2gen'),
+uiOutput('space23gen'),
+uiOutput('file3gen'),
+uiOutput('calfile3gen')
 
-tags$hr(),
-tags$hr(),
 
-fileInput('file3', 'Choose Spectra', multiple=TRUE,
-accept=c('text/csv',
-'text/comma-separated-values,text/plain',
-'.csv')),
-
-fileInput('calfileinput3', 'Load Cal File', accept='.quant', multiple=FALSE)
 
 ),
 
@@ -346,110 +337,6 @@ tabPanel("Table", DT::dataTableOutput('xrfpcatable'))
 
 )),
 
-tabPanel("Timeseries",
-div(class="outer",
-
-
-fluidRow(
-sidebarLayout(
-
-sidebarPanel(
-
-p("Create Plot"),
-actionButton('timeseriesact1', "1"),
-actionButton('timeseriesact2', "2"),
-actionButton('timeseriesact3', "3"),
-actionButton('timeseriesact4', "4"),
-actionButton('timeseriesact5', "5"),
-
-tags$hr(),
-
-downloadButton('downloadPlot3a', "1"),
-downloadButton('downloadPlot3b', "2"),
-downloadButton('downloadPlot3c', "3"),
-downloadButton('downloadPlot3d', "4"),
-downloadButton('downloadPlot3e', "5"),
-
-
-tags$hr(),
-
-uiOutput('inelementtrend'),
-uiOutput('inelementnorm'),
-
-selectInput(
-"timecolour", "Time Series Type",
-c(
-"Black" = "Black",
-"Smooth" = "Smooth",
-"Ramp" = "Selected",
-"Cluster" = "Cluster",
-"Qualitative1"="Qualitative1",
-"Qualitative2"="Qualitative2",
-"Qualitative3"="Qualitative3",
-"Qualitative4"="Qualitative4",
-"Quantitative" = "Quantitative",
-"Area" = "Area")
-),
-
-numericInput("startmm", label = "Start Point (mm)", value=0),
-numericInput("intervalmm", label = "Interval Between Spectra (mm)", value=3),
-
-tags$hr(),
-
-
-sliderInput("smoothing", label = "Smoothed Mean Average", value=1, min=1, max=50),
-
-sliderInput("linesize", label = "Line Size", value=1, min=1, max=15),
-sliderInput("pointsize", label = "Point Size", value=5, min=1, max=15)
-
-
-),
-
-mainPanel(
-tabsetPanel(
-id = 'dataset',
-tabPanel('Time Series 1', plotOutput('timeseriesplot1',
-dblclick = "plot1_dblclick", height = 700, width= 1200,
-brush = brushOpts(
-id = "plot1_brush",
-resetOnNew = TRUE
-))),
-
-tabPanel('Time Series 2', plotOutput('timeseriesplot2',
-dblclick = "plot1_dblclick", height = 700, width= 1200,
-brush = brushOpts(
-id = "plot1_brush",
-resetOnNew = TRUE
-))),
-
-tabPanel('Time Series 3', plotOutput('timeseriesplot3',
-dblclick = "plot1_dblclick", height = 700, width= 1200,
-brush = brushOpts(
-id = "plot1_brush",
-resetOnNew = TRUE
-))),
-
-tabPanel('Time Series 4', plotOutput('timeseriesplot4',
-dblclick = "plot1_dblclick", height = 700, width= 1200,
-brush = brushOpts(
-id = "plot1_brush",
-resetOnNew = TRUE
-))),
-
-tabPanel('Time Series 5', plotOutput('timeseriesplot5',
-dblclick = "plot1_dblclick", height = 700, width= 1200,
-brush = brushOpts(
-id = "plot1_brush",
-resetOnNew = TRUE
-)))
-
-
-
-))
-
-))
-
-)),
 
 tabPanel("Ternary Diagram",
 div(class="outer",
