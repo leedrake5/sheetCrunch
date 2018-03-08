@@ -328,6 +328,13 @@ uiOutput("hover_infopca")
 
 
 ),
+tabPanel("Optimal Clusters",
+div(
+style = "position:relative",
+plotOutput('optimalkplot',
+hover = hoverOpts("plot_hoveroptimalk", delay = 100, delayType = "debounce")),
+uiOutput("hover_infooptimalk"))
+),
 tabPanel("Table", DT::dataTableOutput('xrfpcatable'))
 
 
@@ -460,10 +467,6 @@ plotOutput("elementratiotimeseries", height = 650,
 hover = hoverOpts("plot_hoverratio", delay = 100, delayType = "debounce")),
 uiOutput("hover_inforatio")
 )
-
-
-
-
 
 )
 
