@@ -274,7 +274,7 @@ fluidRow(
 sidebarLayout(
 
 sidebarPanel(
-uiOutput('knumui'),
+numericInput("knum", label = "K-Means", value=3),
 
 selectInput("pcacolour", "Colour", choices=c(
 "Black"="black",

@@ -377,7 +377,7 @@ shinyServer(function(input, output, session) {
         
     })
     
-    observeEvent(is.null(input$file1)==FALSE, {
+    observeEvent(input$actionprocess, {
         
         
         myData1 <- reactive({
@@ -1702,65 +1702,6 @@ print(plotInput())
         
         
          })
-        
-      
-   
-    
-    
-         
-         dataMerge <- reactive({
-             
-             if(input$filetype!="Spreadsheet"){
-                 
-                 first.instrument <- if(input$filetype=="Spectra" && input$usecalfile==FALSE){
-                     spectra.line.fn(myData1())
-                 } else if(input$filetype=="Net" && input$usecalfile==FALSE){
-                     myData1()
-                 } else if(input$filetype=="Spectra" && input$usecalfile==TRUE) {
-                     tableInputValQuant1()
-                 } else if(input$filetype=="Net" && input$usecalfile==TRUE){
-                     tableInputValQuant1()
-                 }
-                 
-                 if(is.null(input$file2)==FALSE){
-                     second.instrument <- if(input$filetype=="Spectra" && input$usecalfile==FALSE){
-                         spectra.line.fn(myData2())
-                     } else if(input$filetype=="Net" && input$usecalfile==FALSE){
-                         myData2()
-                     } else if(input$filetype=="Spectra" && input$usecalfile==TRUE) {
-                         tableInputValQuant2()
-                     } else if(input$filetype=="Net" && input$usecalfile==TRUE){
-                         tableInputValQuant2()
-                     }
-                 }
-                 
-                 if(is.null(input$file3)==FALSE){
-                     third.instrument <- if(input$filetype=="Spectra" && input$usecalfile==FALSE){
-                         spectra.line.fn(myData3())
-                     } else if(input$filetype=="Net" && input$usecalfile==FALSE){
-                         myData3()
-                     } else if(input$filetype=="Spectra" && input$usecalfile==TRUE) {
-                         tableInputValQuant3()
-                     } else if(input$filetype=="Net" && input$usecalfile==TRUE){
-                         tableInputValQuant3()
-                     }
-                 }
-                 
-                 
-                 if(is.null(input$file2)==TRUE && is.null(input$file3)==TRUE){
-                     first.instrument
-                 }else if(is.null(input$file2)==FALSE && is.null(input$file3)==TRUE){
-                     merge(first.instrument, second.instrument, all=TRUE)
-                 }else if(is.null(input$file2)==FALSE && is.null(input$file3)==FALSE){
-                     merge(merge(first.instrument, second.instrument, all=TRUE), third.instrument, all=TRUE)
-                 }
-             }  else if(input$filetype=="Spreadsheet"){
-                 importSpreadsheet()
-             }
-             
-         })
-         
-         
          
          
          
@@ -1788,12 +1729,12 @@ print(plotInput())
          
          defaultLines <- reactive({
              
-             spectra.line.table <- dataMerge()
+             #spectra.line.table <- dataMerge()
              if(input$usecalfile==TRUE){quantified <- colnames(dataMerge()[ ,!(colnames(dataMerge()) =="Spectrum")])
              }
              
              standard <- if(input$usecalfile==FALSE && input$filetype=="Spectra"){
-                 c("Ca.K.alpha", "Ti.K.alpha", "Fe.K.alpha", "Cu.K.alpha", "Zn.K.alpha")
+                 c("Ca.K.alpha", "Ti.K.alpha", "Fe.K.alpha")
              } else if(input$usecalfile==FALSE && input$filetype=="Net"){
                  colnames(spectra.line.table)
              } else if(input$usecalfile==TRUE && input$filetype=="Spectra"){
@@ -1810,8 +1751,252 @@ print(plotInput())
              
              
              checkboxGroupInput('show_vars', 'Elemental lines to show:',
-             choices=lineOptions(), selected = NULL)
+             choices=lineOptions(), selected = defaultLines())
          })
+         
+         
+         elementallinestouse <- reactive({
+             
+             #c(input$show_vars_k_alpha, input$show_vars_k_beta, input$show_vars_l_alpha, input$show_vars_l_beta, input$show_vars_m)
+             
+             input$show_vars
+             
+             
+         })
+         
+         
+         
+         spectraData1 <- reactive({
+             
+             data <- fullSpectra1()
+             
+             elements <- elementallinestouse()
+             
+             
+             
+             
+             
+             spectra.line.list <- lapply(elements, function(x) elementGrab(element.line=x, data=data))
+             element.count.list <- lapply(spectra.line.list, '[', 2)
+             
+             spectra.line.vector <- as.numeric(unlist(element.count.list))
+             
+             dim(spectra.line.vector) <- c(length(spectra.line.list[[1]]$Spectrum), length(elements))
+             
+             spectra.line.frame <- data.frame(spectra.line.list[[1]]$Spectrum, spectra.line.vector)
+             
+             colnames(spectra.line.frame) <- c("Spectrum", elements)
+             
+             spectra.line.frame <- as.data.frame(spectra.line.frame)
+             
+             spectra.line.frame <- spectra.line.frame[order(as.character(spectra.line.frame$Spectrum)),]
+             
+             spectra.line.frame$Spectrum <- gsub(".pdz", "", spectra.line.frame$Spectrum)
+             spectra.line.frame$Spectrum <- gsub(".csv", "", spectra.line.frame$Spectrum)
+             spectra.line.frame$Spectrum <- gsub(".CSV", "", spectra.line.frame$Spectrum)
+             spectra.line.frame$Spectrum <- gsub(".spt", "", spectra.line.frame$Spectrum)
+             spectra.line.frame$Spectrum <- gsub(".mca", "", spectra.line.frame$Spectrum)
+             spectra.line.frame$Spectrum <- gsub(".spx", "", spectra.line.frame$Spectrum)
+             
+             
+             spectra.line.frame
+             
+         })
+         
+         netData1 <- reactive({
+             
+             net.data <- netCounts1()
+             
+             elements <- elementallinestouse()
+             
+             
+             net.data.partial <- net.data[,elements]
+             net.data <- data.frame(net.data$Spectrum ,net.data.partial)
+             colnames(net.data) <- c("Spectrum", elements)
+             net.data <- net.data[order(as.character(net.data$Spectrum)),]
+             
+             net.data$Spectrum <- gsub(".csv", "", net.data$Spectrum)
+             net.data$Spectrum <- gsub(".CSV", "", net.data$Spectrum)
+             
+             net.data
+             
+         })
+         
+         spectraData2 <- reactive({
+             
+             data <- fullSpectra2()
+             
+             elements <- elementallinestouse()
+             
+             
+             
+             
+             
+             spectra.line.list <- lapply(elements, function(x) elementGrab(element.line=x, data=data))
+             element.count.list <- lapply(spectra.line.list, '[', 2)
+             
+             spectra.line.vector <- as.numeric(unlist(element.count.list))
+             
+             dim(spectra.line.vector) <- c(length(spectra.line.list[[1]]$Spectrum), length(elements))
+             
+             spectra.line.frame <- data.frame(spectra.line.list[[1]]$Spectrum, spectra.line.vector)
+             
+             colnames(spectra.line.frame) <- c("Spectrum", elements)
+             
+             spectra.line.frame <- as.data.frame(spectra.line.frame)
+             
+             spectra.line.frame <- spectra.line.frame[order(as.character(spectra.line.frame$Spectrum)),]
+             
+             spectra.line.frame$Spectrum <- gsub(".pdz", "", spectra.line.frame$Spectrum)
+             spectra.line.frame$Spectrum <- gsub(".csv", "", spectra.line.frame$Spectrum)
+             spectra.line.frame$Spectrum <- gsub(".CSV", "", spectra.line.frame$Spectrum)
+             spectra.line.frame$Spectrum <- gsub(".spt", "", spectra.line.frame$Spectrum)
+             spectra.line.frame$Spectrum <- gsub(".mca", "", spectra.line.frame$Spectrum)
+             spectra.line.frame$Spectrum <- gsub(".spx", "", spectra.line.frame$Spectrum)
+             
+             
+             spectra.line.frame
+             
+         })
+         
+         netData2 <- reactive({
+             
+             net.data <- netCounts2()
+             
+             elements <- elementallinestouse()
+             
+             
+             net.data.partial <- net.data[,elements]
+             net.data <- data.frame(net.data$Spectrum ,net.data.partial)
+             colnames(net.data) <- c("Spectrum", elements)
+             net.data <- net.data[order(as.character(net.data$Spectrum)),]
+             
+             net.data$Spectrum <- gsub(".csv", "", net.data$Spectrum)
+             net.data$Spectrum <- gsub(".CSV", "", net.data$Spectrum)
+             
+             net.data
+             
+         })
+         
+         
+         spectraData3 <- reactive({
+             
+             data <- fullSpectra3()
+             
+             elements <- elementallinestouse()
+             
+             
+             
+             
+             
+             spectra.line.list <- lapply(elements, function(x) elementGrab(element.line=x, data=data))
+             element.count.list <- lapply(spectra.line.list, '[', 2)
+             
+             spectra.line.vector <- as.numeric(unlist(element.count.list))
+             
+             dim(spectra.line.vector) <- c(length(spectra.line.list[[1]]$Spectrum), length(elements))
+             
+             spectra.line.frame <- data.frame(spectra.line.list[[1]]$Spectrum, spectra.line.vector)
+             
+             colnames(spectra.line.frame) <- c("Spectrum", elements)
+             
+             spectra.line.frame <- as.data.frame(spectra.line.frame)
+             
+             spectra.line.frame <- spectra.line.frame[order(as.character(spectra.line.frame$Spectrum)),]
+             
+             spectra.line.frame$Spectrum <- gsub(".pdz", "", spectra.line.frame$Spectrum)
+             spectra.line.frame$Spectrum <- gsub(".csv", "", spectra.line.frame$Spectrum)
+             spectra.line.frame$Spectrum <- gsub(".CSV", "", spectra.line.frame$Spectrum)
+             spectra.line.frame$Spectrum <- gsub(".spt", "", spectra.line.frame$Spectrum)
+             spectra.line.frame$Spectrum <- gsub(".mca", "", spectra.line.frame$Spectrum)
+             spectra.line.frame$Spectrum <- gsub(".spx", "", spectra.line.frame$Spectrum)
+             
+             
+             spectra.line.frame
+             
+         })
+         
+         netData3 <- reactive({
+             
+             net.data <- netCounts3()
+             
+             elements <- elementallinestouse()
+             
+             
+             net.data.partial <- net.data[,elements]
+             net.data <- data.frame(net.data$Spectrum ,net.data.partial)
+             colnames(net.data) <- c("Spectrum", elements)
+             net.data <- net.data[order(as.character(net.data$Spectrum)),]
+             
+             net.data$Spectrum <- gsub(".csv", "", net.data$Spectrum)
+             net.data$Spectrum <- gsub(".CSV", "", net.data$Spectrum)
+             
+             net.data
+             
+         })
+        
+      
+   
+    
+    
+         
+         dataMerge <- reactive({
+             
+             if(input$filetype!="Spreadsheet"){
+                 
+                 first.instrument <- if(input$filetype=="Spectra" && input$usecalfile==FALSE){
+                     spectraData1()
+                 } else if(input$filetype=="Net" && input$usecalfile==FALSE){
+                     netData1()
+                 } else if(input$filetype=="Spectra" && input$usecalfile==TRUE) {
+                     tableInputValQuant1()
+                 } else if(input$filetype=="Net" && input$usecalfile==TRUE){
+                     tableInputValQuant1()
+                 }
+                 
+                 if(is.null(input$file2)==FALSE){
+                     second.instrument <- if(input$filetype=="Spectra" && input$usecalfile==FALSE){
+                         spectraData2()
+                     } else if(input$filetype=="Net" && input$usecalfile==FALSE){
+                         netData2()
+                     } else if(input$filetype=="Spectra" && input$usecalfile==TRUE) {
+                         tableInputValQuant2()
+                     } else if(input$filetype=="Net" && input$usecalfile==TRUE){
+                         tableInputValQuant2()
+                     }
+                 }
+                 
+                 if(is.null(input$file3)==FALSE){
+                     third.instrument <- if(input$filetype=="Spectra" && input$usecalfile==FALSE){
+                         spectraData3()
+                     } else if(input$filetype=="Net" && input$usecalfile==FALSE){
+                         netData3()
+                     } else if(input$filetype=="Spectra" && input$usecalfile==TRUE) {
+                         tableInputValQuant3()
+                     } else if(input$filetype=="Net" && input$usecalfile==TRUE){
+                         tableInputValQuant3()
+                     }
+                 }
+                 
+                 
+                 if(is.null(input$file2)==TRUE && is.null(input$file3)==TRUE){
+                     first.instrument
+                 }else if(is.null(input$file2)==FALSE && is.null(input$file3)==TRUE){
+                     merge(first.instrument, second.instrument, all=TRUE)
+                 }else if(is.null(input$file2)==FALSE && is.null(input$file3)==FALSE){
+                     merge(merge(first.instrument, second.instrument, all=TRUE), third.instrument, all=TRUE)
+                 }
+             }  else if(input$filetype=="Spreadsheet"){
+                 importSpreadsheet()
+             }
+             
+         })
+         
+         
+         
+         
+         
+
          
 
 
@@ -2267,68 +2452,38 @@ choiceLines <- reactive({
   
   optimalK <- reactive({
       
+      iter <- input$knum*2
       
       spectra.line.table <- dataMerge3()
-      
       xrf.pca.frame <- spectra.line.table[,input$show_vars]
       xrf.pca.frame <- xrf.pca.frame[complete.cases(xrf.pca.frame),]
       
       wss <- (nrow(xrf.pca.frame)-1)*sum(apply(xrf.pca.frame,2,var))
-      for (i in 2:30) wss[i] <- sum(kmeans(xrf.pca.frame,
+      for (i in 2:length(xrf.pca.frame)) wss[i] <- sum(kmeans(xrf.pca.frame,
       centers=i)$withinss)
       
       data.frame(
-      clustercount=seq(1, 30, 1),
+      clustercount=seq(1, length(xrf.pca.frame), 1),
       wss=wss)
       
-  })
-  
-  
-  output$wsstable <- downloadHandler(
-  filename = function() { paste(paste(c(input$projectname, "_", "WSSTable"), collapse=''), '.csv', sep=',') },
-  content = function(file
-  ) {
-      write.csv(optimalK(), file)
-  }
-  )
-  
-  
-  
-  
-  screeCrunch <- reactive({
-      
-      wss.frame <- optimalK()
-      
-      best.choice <- scree_crunch(dataframe=wss.frame, dependent="wss", independent="clustercount")
-      
-      best.choice
-      
-  })
-  
-  output$knumui <- renderUI({
-      
-      numericInput("knum", label = "K-Means", value=screeCrunch())
-      
-  })
+       })
   
   
   optimalKplot <- reactive({
       
       wss.frame <- optimalK()
-      
+    
       
       ggplot(wss.frame, aes(clustercount, wss)) +
       geom_line() +
       geom_point() +
-      geom_point(data=wss.frame[screeCrunch(), ], aes(clustercount, wss), size=3) +
-      geom_point(data=wss.frame[screeCrunch(), ], aes(clustercount, wss), pch=1, size=6) +
       scale_x_continuous("Number of Clusters") +
       scale_y_continuous("Within Groups Sum of Squares", labels=comma) +
       theme_light()
       
   })
-  
-  
+      
+ 
   
   
   output$optimalkplot <- renderPlot({
