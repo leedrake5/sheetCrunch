@@ -12,6 +12,8 @@ library(random)
 library(Cairo)
 library(gghighlight)
 library(scales)
+library(openxlsx)
+library(gRbase)
 
 
 
@@ -174,6 +176,48 @@ shinyServer(function(input, output, session) {
         
         united.frame <- as.data.frame(united.frame)
         united.frame
+        
+    })
+    
+    
+    artaxExcelData <- reactive({
+        
+        inFile <- input$file1
+        
+        #if (is.null(inFile)) {return(NULL)}
+        
+        
+        
+        proto.fish <- loadWorkbook(file=inFile$datapath)
+        just.fish <- readWorkbook(proto.fish, sheet=2)
+        colnames(just.fish)[1] <- "Spectrum"
+
+        
+        just.fish
+        
+        
+        
+    })
+    
+    ExcelData <- reactive({
+        inFile <- input$file1
+        proto.fish <- loadWorkbook(file=inFile$datapath)
+        just.fish <- readWorkbook(proto.fish, sheet=1)
+        quant.fish <- just.fish[, sapply(just.fish, is.numeric)]
+        qual.fish <- just.fish[, !sapply(just.fish, is.numeric)]
+        
+        data.frame(Spectrum=qual.fish[,1], quant.fish)
+
+    })
+    
+    qualExcelData <- reactive({
+        inFile <- input$file1
+        proto.fish <- loadWorkbook(file=inFile$datapath)
+        just.fish <- readWorkbook(proto.fish, sheet=1)
+        quant.fish <- just.fish[, sapply(just.fish, is.numeric)]
+        qual.fish <- just.fish[, !sapply(just.fish, is.numeric)]
+        
+        data.frame(Spectrum=qual.fish[,1], qual.fish)
         
     })
     
@@ -386,8 +430,12 @@ shinyServer(function(input, output, session) {
                 fullSpectra1()
             } else if(input$filetype=="Net"){
                 netCounts1()
+            } else if(input$filetype=="Spreadsheet"){
+                ExcelData()
+            } else if(input$filetype=="Artax Excel"){
+                artaxExcelData()
             }
-            
+                
             data
             
             
@@ -1716,7 +1764,7 @@ print(plotInput())
                      spectra.line.fn(myData1())
                  } else if(input$filetype=="Net" && input$usecalfile==FALSE){
                      myData1()
-                 } else if(input$filetype=="Spectra" && input$usecalfile==TRUE) {
+                 }  else if(input$filetype=="Spectra" && input$usecalfile==TRUE) {
                      tableInputValQuant1()
                  } else if(input$filetype=="Net" && input$usecalfile==TRUE){
                      tableInputValQuant1()
@@ -1754,8 +1802,10 @@ print(plotInput())
                  }else if(is.null(input$file2)==FALSE && is.null(input$file3)==FALSE){
                      merge(merge(first.instrument, second.instrument, all=TRUE), third.instrument, all=TRUE)
                  }
-             }  else if(input$filetype=="Spreadsheet"){
-                 importSpreadsheet()
+             }  else if(input$filetype=="Spreadsheet" && input$usecalfile==FALSE){
+                 myData1()
+             } else if(input$filetype=="Artax Excel" && input$usecalfile==FALSE){
+                 myData1()
              }
              
          })
@@ -1781,7 +1831,9 @@ print(plotInput())
              }else if(input$usecalfile==TRUE && input$filetype=="Net"){
                  quantified
              } else if(input$filetype=="Spreadsheet"){
-                 colnames(spectra.line.table[ ,!(colnames(spectra.line.table) == "Spectrum")])
+                 colnames(spectra.line.table)
+             } else if(input$filetype=="Artax Excel"){
+                 colnames(spectra.line.table)
              }
              
          })
@@ -1806,11 +1858,23 @@ print(plotInput())
              
          })
          
+         
+         optionLines <- reactive({
+             
+             if(input$clusterlearn==FALSE){
+                 defaultLines()
+             } else if(input$clusterlearn==TRUE){
+                 thanksForAllTheFish()
+             }
+             
+         })
+         
+         
          output$defaultlines <- renderUI({
              
              
              checkboxGroupInput('show_vars', 'Elemental lines to show:',
-             choices=lineOptions(), selected = NULL)
+             choices=lineOptions(), selected = optionLines())
          })
          
 
@@ -1847,6 +1911,9 @@ print(plotInput())
       
       empty.line.table <- data.frame(spectra.line.vector, na.vector, na.vector, na.vector, na.vector, na.vector, na.vector)
       colnames(empty.line.table) <- c("Spectrum", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Qualitative5", "Qualitative6")
+      
+      
+      if(input$filetype=="Spreadsheet"){empty.line.table$Qualitative1 <- qualExcelData()[,3]}
       
       empty.line.table$Quantitative <- lin.vector
       
@@ -2263,12 +2330,98 @@ choiceLines <- reactive({
   })
   
   
+  ####Choose Clusters
+  ####Identify best variables
+  defaultVariables <- reactive({
+      
+      elements <-  if(input$filetype=="Spectra"){
+              hold <- read.csv(inFile$datapath[[1]])
+              voltage <- as.numeric(as.vector(hold[11,1]))
+              if(voltage<25){
+                  accepted.spec.light
+              }else{
+                  accepted.spec.trace
+              }
+          } else if(input$filetype=="Net"){
+              hold <- read.csv(inFile$datapath[[1]])
+              hold.k <- subset(hold, Line=="K12")
+              hold.med <- median(hold.k$Energy.keV)
+              if(hold.med<=5){
+                  accepted.net.light
+              } else if(!(hold.med < 5 | hold.med > 7)){
+                  accepted.net.combined
+              } else if(hold.med >= 7){
+                  accepted.net.trace
+              }
+          } else if(input$filetype=="Artax Excel"){
+              proto.fish <- loadWorkbook(file=inFile$datapath)
+              just.fish <- readWorkbook(proto.fish, sheet=1)
+              voltage <- as.numeric(just.fish[4,2])
+              if(voltage<25){
+                  accepted.net.light
+              }else{
+                  accepted.net.trace
+              }
+          } else if(input$filetype=="Spreadsheet"){
+              lineOptions()
+          }
+
+      
+      elements
+      
+      
+  })
+  
+  output$nvariablesui <- renderUI({
+      
+      if(input$clusterlearn==TRUE){
+          numericInput("nvariables", label = "# Elements", min=2, max=length(defaultVariables()), value=3)
+      } else if(input$clusterlearn==FALSE){
+          p()
+      }
+      
+  })
+  
+  thanksForAllTheFish <- reactive({
+      
+      spectra.line.table <- dataMerge()
+      
+      if(input$filetype!="Spreadsheet"){
+          elements <- as.vector(intersect(defaultVariables(), colnames(spectra.line.table[,-1])))
+      } else if(input$filetype=="Spreadsheet"){
+          elements <- colnames(spectra.line.table[,-1])
+      }
+      
+      combos_mod <- function(a.vector){
+          
+          so <- seq(from=2, to=input$nvariables, by=1)
+          
+          long <- pblapply(so, function(x) combnPrim(x=a.vector, m=x))
+          and <- pblapply(long, function(x) plyr::alply(x, 2))
+          thanks.for.all.the.fish <- do.call(list, unlist(and, recursive=FALSE))
+          
+          thanks.for.all.the.fish
+          
+      }
+      
+      thanks.for.all.the.fish <- combos_mod(elements)
+      
+      list.of.elbows <- pbapply::pblapply(thanks.for.all.the.fish, function(x) optimal_k_chain(spectra.line.table[,x]))
+      names(list.of.elbows) <- seq(1, length(list.of.elbows), 1)
+      frame.of.elbows <- do.call("rbind", list.of.elbows)
+      result <- frame.of.elbows[which.max(frame.of.elbows$percent),]
+      best.choice <- thanks.for.all.the.fish[[as.numeric(rownames(result))]]
+      
+      
+  })
+  
+  
   ###Optimal Clusters
   
   optimalK <- reactive({
       
       
-      spectra.line.table <- tableInput()
+      spectra.line.table <- dataMerge()
       
       n <- if(nrow(spectra.line.table)<30){
           nrow(spectra.line.table)-5

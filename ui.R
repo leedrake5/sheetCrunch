@@ -6,8 +6,8 @@ library(rhandsontable)
 
 
 
-shinyUI(navbarPage("XRF", id="nav", theme = shinytheme("paper"),
-tabPanel("Spectrum",
+shinyUI(navbarPage("SheetCrunch", id="nav", theme = shinytheme("paper"),
+tabPanel("Data",
 div(class="outer",
 sidebarLayout(
 sidebarPanel(
@@ -22,11 +22,10 @@ downloadButton('downloadPlot', "Plot"),
 tags$hr(),
 
 fileInput('file1', 'Choose Spectra', multiple=TRUE,
-accept=c('text/csv',
-'text/comma-separated-values,text/plain',
-'.csv')),
+accept=c(
+'.csv', '.xlsx')),
 
-radioButtons("filetype", label=NULL, c("Spectra", "Net", "Spreadsheet"), selected="Spectra"),
+selectInput("filetype", label=NULL, c("Spectra", "Net", "Spreadsheet", "Artax Excel"), selected="Spectra"),
 
 tags$hr(),
 
@@ -180,6 +179,8 @@ tags$hr(),
 
 conditionalPanel(
 condition='input.dataset === spectra.line.table',
+checkboxInput('clusterlearn', "Machine Learn Cluster", value=FALSE),
+uiOutput('nvariablesui'),
 uiOutput('defaultlines')
 
 )),

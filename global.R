@@ -10,6 +10,7 @@ library(dplyr)
 library(ggtern)
 library(ggplot2)
 library(shiny)
+library(gRbase)
 
 
 
@@ -2653,3 +2654,85 @@ lukas.comp.prep.net <- function(data, spectra.line.table, element.line, slope.el
     
     predict.intensity.luk.comp
 }
+
+
+
+scree_crunch <- function(dataframe, dependent, independent){
+    
+    simple.frame <- data.frame(
+    newY = dataframe[,dependent]/max(dataframe[,dependent]),
+    newX = dataframe[,independent]/max(dataframe[,independent]))
+    
+    sims <-data.frame(
+    sims1 = seq(from=1, to=nrow(dataframe)-1, by=1),
+    sims2 = seq(from=2, to=nrow(dataframe), by=1)
+    )
+    
+    n <- seq(from=1, to=nrow(sims), by=1)
+    
+    lm.sims <- lapply(n, function(x) summary(lm(newY~newX, data=simple.frame[sims[,1][x]:sims[,2][x],])))
+    
+    
+    slopes <- unlist(lapply(n, function(x) as.vector(lm.sims[[x]]["coefficients"][[1]][2])))
+    
+    #rsquared <- unlist(pbapply::pblapply(n, function(x) as.vector(lm.sims[[x]]["r.squared"])))
+    
+    greater.1 <- which(abs(slopes) > 1)
+    
+    greater.1[length(greater.1)]+1
+    
+    
+}
+
+combos <- function(a.vector){
+    
+    so <- seq(from=2, to=length(a.vector), by=1)
+    
+    long <- pblapply(so, function(x) combnPrim(x=a.vector, m=x), cl=12L)
+    and <- pblapply(long, function(x) plyr::alply(x, 2), cl=12L)
+    thanks.for.all.the.fish <- do.call(list, unlist(and, recursive=FALSE))
+    
+    thanks.for.all.the.fish
+    
+}
+
+optimal_k_chain <- function(a.data.frame){
+    
+    #n <- if(nrow(a.data.frame)<30){
+    #nrow(a.data.frame)-5
+    #} else {
+    #30
+    #}
+    
+    n <- 20
+    
+    xrf.pca.frame <- a.data.frame[complete.cases(a.data.frame),]
+    
+    wss <- (nrow(xrf.pca.frame)-1)*sum(apply(xrf.pca.frame,2,var))
+    for (i in 2:n) wss[i] <- sum(kmeans(xrf.pca.frame,
+    centers=i)$withinss)
+    
+    result <- data.frame(
+    clustercount=seq(1, n, 1),
+    wss=wss,
+    percent=1-wss/max(wss))
+    
+    best.choice <- scree_crunch(dataframe=result, dependent="percent", independent="clustercount")
+    
+    result[best.choice,]
+    
+}
+
+
+accepted.spec.light <- c("Na.K.alpha", "Mg.K.alpha", "Al.K.alpha", "Si.K.alpha", "P.K.alpha", "S.K.alpha", "Cl.K.alpha", "K.K.alpha", "Ca.K.alpha", "Ti.K.alpha", "Ba.L.alpha", "Cr.K.alpha", "Mn.K.alpha", "Fe.K.alpha")
+accepted.spec.trace <- c("K.K.alpha", "Ca.K.alpha", "Ti.K.alpha", "V.K.alpha", "Ba.L.alpha", "Cr.K.alpha", "Mn.K.alpha", "Fe.K.alpha", "Co.K.alpha", "Ni.K.alpha", "Cu.K.alpha", "Zn.K.alpha", "Ga.K.alpha", "Br.K.alpha", "Se.K.alpha", "Rb.K.alpha", "Sr.K.alpha", "Y.K.alpha", "Zr.K.alpha", "Nb.K.alpha", "Mo.K.alpha", "Ag.K.alpha", "Cd.K.alpha", "Sn.K.alpha", "Sb.K.alpha", "Ba.K.alpha", "Au.L.alpha", "Hg.L.alpha", "Pb.L.beta", "Th.L.alpha", "U.L.alpha")
+accepted.spec.combined <- c("Na.K.alpha", "Mg.K.alpha", "Al.K.alpha", "Si.K.alpha", "P.K.alpha", "S.K.alpha", "Cl.K.alpha", "K.K.alpha", "Ca.K.alpha", "Ti.K.alpha", "V.K.alpha", "Ba.L.alpha", "Cr.K.alpha", "Mn.K.alpha", "Fe.K.alpha", "Co.K.alpha", "Ni.K.alpha", "Cu.K.alpha", "Zn.K.alpha", "Ga.K.alpha", "Br.K.alpha", "Se.K.alpha", "Rb.K.alpha", "Sr.K.alpha", "Y.K.alpha", "Zr.K.alpha", "Nb.K.alpha", "Mo.K.alpha", "Ag.K.alpha", "Cd.K.alpha", "Sn.K.alpha", "Sb.K.alpha", "Ba.K.alpha", "Au.L.alpha", "Hg.L.alpha", "Pb.L.beta", "Th.L.alpha", "U.L.alpha")
+
+accepted.net.light <- c("Na.K12", "Mg.K12", "Al.K12", "Si.K12", "P.K12", "S.K12", "Cl.K12", "K.K12", "Ca.K12", "Ti.K12", "Ba.L1", "Cr.K12", "Mn.K12", "Fe.K12")
+accepted.net.trace <- c("K.K12", "Ca.K12", "Ti.K12", "V.K12", "Ba.L1", "Cr.K12", "Mn.K12", "Fe.K12", "Co.K12", "Ni.K12", "Cu.K12", "Zn.K12", "Ga.K12", "Br.K12", "Se.K12", "Rb.K12", "Sr.K12", "Y.K12", "Zr.K12", "Nb.K12", "Mo.K12", "Ag.K12", "Cd.K12", "Sn.K12", "Sb.K12", "Ba.K12", "Au.L1", "Hg.L1", "Pb.L1", "Th.L1", "U.L1")
+accepted.net.combined <- c("Na.K12", "Mg.K12", "Al.K12", "Si.K12", "P.K12", "S.K12", "Cl.K12", "K.K12", "Ca.K12", "Ti.K12", "V.K12", "Ba.L1", "Cr.K12", "Mn.K12", "Fe.K12", "Co.K12", "Ni.K12", "Cu.K12", "Zn.K12", "Ga.K12", "Br.K12", "Se.K12", "Rb.K12", "Sr.K12", "Y.K12", "Zr.K12", "Nb.K12", "Mo.K12", "Ag.K12", "Cd.K12", "Sn.K12", "Sb.K12", "Ba.K12", "Au.L1", "Hg.L1", "Pb.L1", "Th.L1", "U.L1")
+
+
+preference.light <- c("Na.K12", "Mg.K12", "Al.K12", "Si.K12", "P.K12", "S.K12", "Cl.K12", "K.K12", "Ca.K12", "Na.K.alpha", "Mg.K.alpha", "Al.K.alpha", "Si.K.alpha", "P.K.alpha", "S.K.alpha", "Cl.K.alpha", "K.K.alpha", "Ca.K.alpha")
+preference.trace <- c("Ti.K12", "V.K12", "Ba.L1", "Cr.K12", "Mn.K12", "Fe.K12", "Co.K12", "Ni.K12", "Cu.K12", "Zn.K12", "Ga.K12", "Br.K12", "Se.K12", "Rb.K12", "Sr.K12", "Y.K12", "Zr.K12", "Nb.K12", "Mo.K12", "Ag.K12", "Cd.K12", "Sn.K12", "Sb.K12", "Ba.K12", "Au.L1", "Hg.L1", "Pb.L1", "Th.L1", "U.L1", "Ti.K.alpha", "V.K.alpha", "Ba.L.alpha", "Cr.K.alpha", "Mn.K.alpha", "Fe.K.alpha", "Co.K.alpha", "Ni.K.alpha", "Cu.K.alpha", "Zn.K.alpha", "Ga.K.alpha", "Br.K.alpha", "Se.K.alpha", "Rb.K.alpha", "Sr.K.alpha", "Y.K.alpha", "Zr.K.alpha", "Nb.K.alpha", "Mo.K.alpha", "Ag.K.alpha", "Cd.K.alpha", "Sn.K.alpha", "Sb.K.alpha", "Ba.K.alpha", "Au.L.alpha", "Hg.L.alpha", "Pb.L.beta", "Th.L.alpha", "U.L.alpha")
+
