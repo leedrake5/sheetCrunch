@@ -25,7 +25,7 @@ fileInput('file1', 'Choose Spectra', multiple=TRUE,
 accept=c(
 '.csv', '.xlsx')),
 
-selectInput("filetype", label=NULL, c("Spectra", "Net", "Spreadsheet", "Artax Excel"), selected="Spectra"),
+selectInput("filetype", label=NULL, c("Spectra", "Net", "Spreadsheet", "Artax Excel"), selected="Spreadsheet"),
 
 tags$hr(),
 

@@ -184,7 +184,7 @@ shinyServer(function(input, output, session) {
         
         inFile <- input$file1
         
-        #if (is.null(inFile)) {return(NULL)}
+        if (is.null(inFile)) {return(NULL)}
         
         
         
@@ -201,8 +201,11 @@ shinyServer(function(input, output, session) {
     
     ExcelData <- reactive({
         inFile <- input$file1
+        if (is.null(inFile)) return(NULL)
+
         proto.fish <- loadWorkbook(file=inFile$datapath)
         just.fish <- readWorkbook(proto.fish, sheet=1)
+        just.fish[,1] <- as.character(just.fish[,1])
         quant.fish <- just.fish[, sapply(just.fish, is.numeric)]
         qual.fish <- just.fish[, !sapply(just.fish, is.numeric)]
         
@@ -212,12 +215,15 @@ shinyServer(function(input, output, session) {
     
     qualExcelData <- reactive({
         inFile <- input$file1
+        if (is.null(inFile)) return(NULL)
+
         proto.fish <- loadWorkbook(file=inFile$datapath)
         just.fish <- readWorkbook(proto.fish, sheet=1)
+        just.fish[,1] <- as.character(just.fish[,1])
         quant.fish <- just.fish[, sapply(just.fish, is.numeric)]
         qual.fish <- just.fish[, !sapply(just.fish, is.numeric)]
         
-        data.frame(Spectrum=qual.fish[,1], qual.fish)
+        data.frame(Spectrum=qual.fish[,1], qual.fish[,2:length(qual.fish)])
         
     })
     
@@ -1900,7 +1906,13 @@ print(plotInput())
       spectra.line.table <- dataMerge()
       spectra.line.vector <- spectra.line.table$Spectrum
       
-      n <- length(spectra.line.vector)
+      spectra.line.vector <- if(is.null(spectra.line.vector)==FALSE){
+          spectra.line.table$Spectrum
+      } else if(is.null(spectra.line.vector)==TRUE){
+          seq(1, 5, 1)
+      }
+      
+       n <- length(spectra.line.vector)
       
       lin.vector <- seq(from = 1, to = n, by = 1)
 
@@ -1913,9 +1925,14 @@ print(plotInput())
       colnames(empty.line.table) <- c("Spectrum", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Qualitative5", "Qualitative6")
       
       
-      if(input$filetype=="Spreadsheet"){empty.line.table$Qualitative1 <- qualExcelData()[,3]}
-      
-      empty.line.table$Quantitative <- lin.vector
+      if(input$filetype=="Spreadsheet" && length(qualExcelData())>=2){empty.line.table$Qualitative1 <- qualExcelData()[,2]}
+           if(input$filetype=="Spreadsheet" && length(qualExcelData())>=3){empty.line.table$Qualitative2 <- qualExcelData()[,3]}
+                     if(input$filetype=="Spreadsheet" && length(qualExcelData())>=4){empty.line.table$Qualitative3 <- qualExcelData()[,4]}
+                        if(input$filetype=="Spreadsheet" && length(qualExcelData())>=5){empty.line.table$Qualitative4 <- qualExcelData()[,5]}
+                            if(input$filetype=="Spreadsheet" && length(qualExcelData())>=6){empty.line.table$Qualitative5 <- qualExcelData()[,6]}
+                                if(input$filetype=="Spreadsheet" && length(qualExcelData())>=7){empty.line.table$Qualitative6 <- qualExcelData()[,7]}
+     
+     empty.line.table$Quantitative <- lin.vector
       
       
       empty.line.table
@@ -3431,7 +3448,7 @@ secondDefaultSelect <- reactive({
       
       
       ratio.frame <- data.frame(first.ratio, second.ratio, third.ratio, fourth.ratio, spectra.line.table$Cluster, spectra.line.table$Qualitative1, spectra.line.table$Qualitative2, spectra.line.table$Qualitative3, spectra.line.table$Qualitative4, spectra.line.table$Quantitative, spectra.line.table$Spectrum)
-      colnames(ratio.frame) <- gsub("[.]", "", c(substr(input$elementratioa, 1, 2), substr(input$elementratiob, 1, 2), substr(input$elementratioc, 1, 2), substr(input$elementratiod, 1, 2), "Cluster", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Quantitative", "Spectrum"))
+      colnames(ratio.frame) <- c(input$elementratioa, input$elementratiob, input$elementratioc, input$elementratiod, "Cluster", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Quantitative", "Spectrum")
       
             
             if(input$elementratiob!="None"){ratio.names.x <- c(names(ratio.frame[1]), "/", names(ratio.frame[2]))}
@@ -3912,11 +3929,11 @@ plotInput5 <- reactive({
     third.axis.norm <- third.axis/sum(third.axis)
     
     axis.frame <- data.frame(first.axis, second.axis, third.axis, spectra.line.table$Cluster, spectra.line.table$Qualitative1, spectra.line.table$Qualitative2, spectra.line.table$Qualitative3, spectra.line.table$Qualitative4, spectra.line.table$Quantitative)
-    colnames(axis.frame) <- gsub("[.]", "", c(substr(input$axisa, 1, 2), substr(input$axisb, 1, 2), substr(input$axisc, 1, 2), "Cluster", "Qualitative1",  "Qualitative2", "Qualitative3", "Qualitative4","Quantitative"))
+    colnames(axis.frame) <- c(input$axisa, input$axisb, input$axisc, "Cluster", "Qualitative1",  "Qualitative2", "Qualitative3", "Qualitative4","Quantitative")
     
     axis.frame.norm <- data.frame(first.axis.norm, second.axis.norm, third.axis.norm, spectra.line.table$Cluster, spectra.line.table$Qualitative1, spectra.line.table$Qualitative2, spectra.line.table$Qualitative3, spectra.line.table$Qualitative4, spectra.line.table$Quantitative)
-    colnames(axis.frame.norm) <- gsub("[.]", "", c(substr(input$axisa, 1, 2), substr(input$axisb, 1, 2), substr(input$axisc, 1, 2), "Cluster", "Qualitative1",  "Qualitative2", "Qualitative3", "Qualitative4", "Quantitative"))
-    
+    colnames(axis.frame) <- c(input$axisa, input$axisb, input$axisc, "Cluster", "Qualitative1",  "Qualitative2", "Qualitative3", "Qualitative4","Quantitative")
+
     ternaryplot1 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
     geom_point(size=input$ternpointsize) +
     theme_light() +
