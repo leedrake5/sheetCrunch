@@ -3932,7 +3932,7 @@ plotInput5 <- reactive({
     colnames(axis.frame) <- c(input$axisa, input$axisb, input$axisc, "Cluster", "Qualitative1",  "Qualitative2", "Qualitative3", "Qualitative4","Quantitative")
     
     axis.frame.norm <- data.frame(first.axis.norm, second.axis.norm, third.axis.norm, spectra.line.table$Cluster, spectra.line.table$Qualitative1, spectra.line.table$Qualitative2, spectra.line.table$Qualitative3, spectra.line.table$Qualitative4, spectra.line.table$Quantitative)
-    colnames(axis.frame) <- c(input$axisa, input$axisb, input$axisc, "Cluster", "Qualitative1",  "Qualitative2", "Qualitative3", "Qualitative4","Quantitative")
+    colnames(axis.frame.norm) <- c(input$axisa, input$axisb, input$axisc, "Cluster", "Qualitative1",  "Qualitative2", "Qualitative3", "Qualitative4","Quantitative")
 
     ternaryplot1 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
     geom_point(size=input$ternpointsize) +
@@ -4391,7 +4391,7 @@ plotInput5 <- reactive({
 
 output$ternaryplot <- renderPlot({
     
-    print(plotInput5())
+    plotInput5()
     
 })
 
