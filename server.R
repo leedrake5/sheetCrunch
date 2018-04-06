@@ -206,8 +206,8 @@ shinyServer(function(input, output, session) {
         proto.fish <- loadWorkbook(file=inFile$datapath)
         just.fish <- readWorkbook(proto.fish, sheet=1)
         just.fish[,1] <- as.character(just.fish[,1])
-        quant.fish <- just.fish[, sapply(just.fish, is.numeric)]
-        qual.fish <- just.fish[, !sapply(just.fish, is.numeric)]
+        quant.fish <- as.data.frame(just.fish[, sapply(just.fish, is.numeric)])
+        qual.fish <- as.data.frame(just.fish[, !sapply(just.fish, is.numeric)])
         
         data.frame(Spectrum=qual.fish[,1], quant.fish)
 
@@ -220,10 +220,13 @@ shinyServer(function(input, output, session) {
         proto.fish <- loadWorkbook(file=inFile$datapath)
         just.fish <- readWorkbook(proto.fish, sheet=1)
         just.fish[,1] <- as.character(just.fish[,1])
-        quant.fish <- just.fish[, sapply(just.fish, is.numeric)]
-        qual.fish <- just.fish[, !sapply(just.fish, is.numeric)]
-        
-        data.frame(Spectrum=qual.fish[,1], qual.fish[,2:length(qual.fish)])
+        quant.fish <- as.data.frame(just.fish[, sapply(just.fish, is.numeric)])
+        qual.fish <- as.data.frame(just.fish[, !sapply(just.fish, is.numeric)])
+        if(length(qual.fish)>1){
+            data.frame(Spectrum=qual.fish[,1], qual.fish[,2:length(qual.fish)])
+        } else if(length(qual.fish)==1){
+            data.frame(Spectrum=qual.fish[,1], Qualitative1=qual.fish[,1])
+        }
         
     })
     
