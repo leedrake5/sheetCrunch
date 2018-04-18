@@ -28,7 +28,7 @@ Hodder.v <- function(y)
     for(i in 1:(n-1)) {
         y[i] <- y[i+1] - y[i]
         y[1:(n-1)]
-        y <- abs(y)
+        y <- y
     }
     y <- c(0, y[1:(n-1)])
     

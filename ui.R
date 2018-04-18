@@ -345,6 +345,139 @@ tabPanel("Table", DT::dataTableOutput('xrfpcatable'))
 
 )),
 
+tabPanel("Match",
+div(class="outer",
+
+fluidRow(
+sidebarLayout(
+
+sidebarPanel(
+downloadButton('test'),
+uiOutput('choosespectraui'),
+selectInput('matchtype', "Match Type", choices=c("Untransformed", "Velocity", "Log", "Log-Velocity"), selected="Log"),
+selectInput('matchcriteria', "Match Criteria", choices=c("R2", "AIC", "BIC"), selected="BIC"),
+tags$hr(),
+uiOutput('thebestmatchui'),
+tags$hr(),
+
+selectInput('elementfingerprint', "Element:",
+c("(Ne) Neon" = "Ne.table",
+"(Na) Sodium" = "Na.table",
+"(Mg) Magnesium" = "Mg.table",
+"(Al) Aluminum" = "Al.table",
+"(Si) Silicon" = "Si.table",
+"(P)  Phosphorous" = "P.table",
+"(S)  Sulfur" = "S.table",
+"(Cl) Chlorine" = "Cl.table",
+"(Ar) Argon" = "Ar.table",
+"(K)  Potassium" = "K.table",
+"(Ca) Calcium" = "Ca.table",
+"(Sc) Scandium" = "Sc.table",
+"(Ti) Titanium" = "Ti.table",
+"(V)  Vanadium" = "V.table",
+"(Cr) Chromium" = "Cr.table",
+"(Mn) Manganese" = "Mn.table",
+"(Fe) Iron" = "Fe.table",
+"(Co) Cobalt" = "Co.table",
+"(Ni) Nickel" = "Ni.table",
+"(Cu) Copper" = "Cu.table",
+"(Zn) Zinc"= "Zn.table",
+"(Ga) Gallium" = "Ga.table",
+"(Ge) Germanium" = "Ge.table",
+"(As) Arsenic" = "As.table",
+"(Se) Selenium" = "Se.table",
+"(Br) Bromium" = "Br.table",
+"(Kr) Krypton" = "Kr.table",
+"(Rb) Rubidium" = "Rb.table",
+"(Sr) Strontium" = "Sr.table",
+"(Y)  Yttrium" = "Y.table",
+"(Zr) Zirconium" = "Zr.table",
+"(Nb) Niobium" = "Nb.table",
+"(Mo) Molybdenum" = "Mo.table",
+"(Tc) Technicium" = "Tc.table",
+"(Ru) Ruthenium" = "Ru.table",
+"(Rh) Rhodium" = "Rh.table",
+"(Pd) Paladium" = "Pd.table",
+"(Ag) Silver" = "Ag.table",
+"(Cd) Cadmium" = "Cd.table",
+"(In) Indium" = "In.table",
+"(Sn) Tin" = "Sn.table",
+"(Sb) Antimony" = "Sb.table",
+"(Te) Tellerium" = "Te.table",
+"(I) Iodine" = "I.table",
+"(Xe) Xenon" = "Xe.table",
+"(Cs) Cesium" = "Cs.table",
+"(Bs) Barium" = "Ba.table",
+"(Ce) Cerium" = "Ce.table",
+"(Pr) Praeseodymeum" = "Pr.table",
+"(Nd) Neodymeum" = "Nd.table",
+"(Pr) Promethium" = "Pr.table",
+"(Sm) Samarium" = "Sm.table",
+"(Eu) Europium" = "Eu.table",
+"(Gd) Gadolinium" = "Gd.table",
+"(Tb) Terbium" = "Tb.table",
+"(Dy) Dysprosium" = "Dy.table",
+"(Ho) Holmium" = "Ho.table",
+"(Er) Erbium" = "Er.table",
+"(Tm) Thullium" = "Tm.table",
+"(Yb) Ytterbium" = "Yb.table",
+"(Lu) Lutetium" = "Lu.table",
+"(Hf) Halfnium" = "Hf.table",
+"(Ta) Tantalum" = "Ta.table",
+"(W)  Tungsten" = "W.table",
+"(Re) Rhenium" = "Re.table",
+"(Os) Osmium" = "Os.table",
+"(Ir) Irridium" = "Ir.table",
+"(Pt) Platinum" = "Pt.table",
+"(Au) Gold" = "Au.table",
+"(Hg) Mercury" = "Hg.table",
+"(Tl) Thallium" = "Tl.table",
+"(Pb) Lead" = "Pb.table",
+"(Bi) Bismuth" = "Bi.table",
+"(Po) Polonium" = "Po.table",
+"(At) Astatine" = "At.table",
+"(Rn) Radon" = "Rn.table",
+"(Fr) Francium" = "Fr.table",
+"(Ra) Radium" = "Ra.table",
+"(Ac) Actinum" = "Ac.table",
+"(Th) Thorium" = "Th.table",
+"(Pa) Proactinum" = "Pa.table",
+"(U)  Uranium" = "U.table"),
+selected="Fe.table")
+
+),
+
+mainPanel(
+tabsetPanel(
+tabPanel('Match',
+div(
+style = "position:relative",
+plotOutput('matchplotmetric', height = 650,
+dblclick = "plot_dblclickmatchmetric",
+brush = brushOpts(id = "plot_brushmatchmetric", resetOnNew = TRUE),
+hover = hoverOpts("plot_hovermatchmetric", delay = 100, delayType = "debounce")),
+uiOutput("hover_infomatchmetric")
+)),
+tabPanel('Spectra',
+div(
+style = "position:relative",
+plotOutput('matchplot', height = 650,
+dblclick = "plot_dblclickmatch",
+brush = brushOpts(id = "plot_brushmatch", resetOnNew = TRUE),
+hover = hoverOpts("plot_hovermatch", delay = 100, delayType = "debounce")),
+uiOutput("hover_infomatch")
+)),
+tabPanel("All Matches", DT::dataTableOutput('matchtable'))
+))
+
+
+
+)
+)
+
+)
+),
+
 
 tabPanel("Ternary Diagram",
 div(class="outer",

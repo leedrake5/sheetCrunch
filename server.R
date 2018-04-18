@@ -131,9 +131,12 @@ shinyServer(function(input, output, session) {
             incProgress(1/n)
             Sys.sleep(0.1)
         })
-        
+        data[data == 0] <- 0.0001
         data
     })
+    
+    
+    
     
     
     netCounts1 <- reactive({
@@ -3159,6 +3162,476 @@ outApp <- reactive({
     
     
 })
+
+
+
+###Fingerprinting Module
+
+
+# Return the requested dataset
+datasetInputMatch <- reactive({
+    switch(input$elementfingerprint,
+    "H.table" = H.table,
+    "He.table" = He.table,
+    "Li.table" = Li.table,
+    "Be.table" = Be.table,
+    "B.table" = B.table,
+    "C.table" = C.table,
+    "N.table" = N.table,
+    "O.table" = O.table,
+    "F.table" = F.table,
+    "Ne.table" = Ne.table,
+    "Na.table" = Na.table,
+    "Mg.table" = Mg.table,
+    "Al.table" = Al.table,
+    "Si.table" = Si.table,
+    "P.table" = P.table,
+    "S.table" = S.table,
+    "Cl.table" = Cl.table,
+    "Ar.table" = Ar.table,
+    "K.table" = K.table,
+    "Ca.table" = Ca.table,
+    "Sc.table" = Sc.table,
+    "Ti.table" = Ti.table,
+    "V.table" = V.table,
+    "Cr.table" = Cr.table,
+    "Mn.table" = Mn.table,
+    "Fe.table" = Fe.table,
+    "Co.table" = Co.table,
+    "Ni.table" = Ni.table,
+    "Cu.table" = Cu.table,
+    "Zn.table" = Zn.table,
+    "Ga.table" = Ga.table,
+    "Ge.table" = Ge.table,
+    "As.table" = As.table,
+    "Se.table" = Se.table,
+    "Br.table" = Br.table,
+    "Kr.table" = Kr.table,
+    "Rb.table" = Rb.table,
+    "Sr.table" = Sr.table,
+    "Y.table" = Y.table,
+    "Zr.table" = Zr.table,
+    "Nb.table" = Nb.table,
+    "Mo.table" = Mo.table,
+    "Tc.table" = Tc.table,
+    "Ru.table" = Ru.table,
+    "Rh.table" = Rh.table,
+    "Pd.table" = Pd.table,
+    "Ag.table" = Ag.table,
+    "Cd.table" = Cd.table,
+    "In.table" = In.table,
+    "Sn.table" = Sn.table,
+    "Sb.table" = Sb.table,
+    "Te.table" = Te.table,
+    "I.table" = I.table,
+    "Xe.table" = Xe.table,
+    "Cs.table" = Cs.table,
+    "Ba.table" = Ba.table,
+    "La.table" = La.table,
+    "Ce.table" = Ce.table,
+    "Pr.table" = Pr.table,
+    "Nd.table" = Nd.table,
+    "Pm.table" = Pm.table,
+    "Sm.table" = Sm.table,
+    "Eu.table" = Eu.table,
+    "Gd.table" = Gd.table,
+    "Tb.table" = Tb.table,
+    "Dy.table" = Dy.table,
+    "Ho.table" = Ho.table,
+    "Er.table" = Er.table,
+    "Tm.table" = Tm.table,
+    "Yb.table" = Yb.table,
+    "Lu.table" = Lu.table,
+    "Hf.table" = Hf.table,
+    "Ta.table" = Ta.table,
+    "W.table" = W.table,
+    "Re.table" = Re.table,
+    "Os.table" = Os.table,
+    "Ir.table" = Ir.table,
+    "Pt.table" = Pt.table,
+    "Au.table" = Au.table,
+    "Hg.table" = Hg.table,
+    "Tl.table" = Tl.table,
+    "Pb.table" = Pb.table,
+    "Bi.table" = Bi.table,
+    "Po.table" = Po.table,
+    "At.table" = At.table,
+    "Rn.table" = Rn.table,
+    "Fr.table" = Fr.table,
+    "Ra.table" = Ra.table,
+    "Ac.table" = Ac.table,
+    "Th.table" = Th.table,
+    "Pa.table" = Pa.table,
+    "U.table" = U.table)
+})
+
+
+output$test <- downloadHandler(
+filename = function() { paste(paste(c(input$projectname, "_", "test"), collapse=''), '.csv', sep=',') },
+content = function(file
+) {
+    write.csv(fullSpectra1(), file)
+}
+)
+
+spectraSplit <- reactive({
+    
+    data <- fullSpectra1()
+    data <- plyr::arrange(data, Spectrum, Energy)
+    namez <- make.names(sort(as.vector(unique(data$Spectrum))))
+    
+    
+    out <- split(data, f=data$Spectrum)
+    names(out) <- namez
+    out
+    
+})
+
+
+
+
+optionsDatum <- reactive({
+    
+    names(spectraSplit())
+    
+})
+
+output$choosespectraui <- renderUI({
+    
+    selectInput('selectedfingerprint', "Spectrum to Match", choices=optionsDatum(), selected=optionsDatum()[1])
+    
+})
+
+choosenSpectrum <- reactive({
+    
+    spectraSplit()[[input$selectedfingerprint]]
+    
+})
+
+spectraRest <- reactive({
+    
+    data <- spectraSplit()
+    
+    data[[input$selectedfingerprint]] <- NULL
+    
+    data
+    
+})
+
+restNames <- reactive({
+    
+    names(spectraRest())
+    
+})
+
+lmList <- reactive({
+
+    lm.list <- if(input$matchtype=="Untransformed"){
+        pblapply(restNames(), function(x) lm(choosenSpectrum()$CPS~spectraRest()[[x]]$CPS))
+    } else if(input$matchtype=="Velocity"){
+        pblapply(restNames(), function(x) lm(Hodder.v(choosenSpectrum()$CPS)~Hodder.v(spectraRest()[[x]]$CPS)))
+    } else if(input$matchtype=="Log"){
+        pblapply(restNames(), function(x) lm(log(choosenSpectrum()$CPS)~log(spectraRest()[[x]]$CPS)))
+    } else if(input$matchtype=="Log-Velocity"){
+        pblapply(restNames(), function(x) lm(log(Hodder.v(choosenSpectrum()$CPS))~log(Hodder.v(spectraRest()[[x]]$CPS))))
+    }
+
+    names(lm.list) <- restNames()
+
+    
+    lm.list
+    
+})
+
+
+r2Frame <- reactive({
+    
+    
+    
+    r2.list <- pblapply(restNames(), function(x) summary(lmList())$r.squared)
+    names(r2.list) <- restNames()
+    
+    r2.frame <- data.frame(Spectrum=restNames(), R2=unlist(r2.list))
+    r2.frame <- r2.frame[order(-r2.frame$R2),]
+    r2.frame
+    
+})
+
+aicFrame <- reactive({
+    
+    aic.list <- pblapply(lmList(), function(x) extractAIC(x, k=2)[2])
+    names(aic.list) <- restNames()
+    
+    aic.frame <- data.frame(Spectrum=restNames(), AIC=unlist(aic.list))
+    aic.frame <- aic.frame[order(aic.frame$AIC),]
+    aic.frame
+    
+})
+
+
+bicFrame <- reactive({
+    
+    bic.list <- pblapply(lmList(), function(x) extractAIC(x, k=log(2))[2])
+    names(bic.list) <- restNames()
+    
+    bic.frame <- data.frame(Spectrum=restNames(), BIC=unlist(bic.list))
+    bic.frame <- bic.frame[order(bic.frame$BIC),]
+    bic.frame
+
+})
+
+matchTable <- reactive({
+    
+    if(input$matchcriteria=="R2"){
+        r2Frame()
+    } else if(input$matchcriteria=="AIC"){
+        aicFrame()
+    } else if(input$matchcriteria=="BIC"){
+        bicFrame()
+    }
+    
+})
+
+bestMatch <- reactive({
+    
+    make.names(matchTable()$Spectrum[1])
+    
+})
+
+output$thebestmatchui <- renderUI({
+    
+    h4(paste0("The best match is ", bestMatch()))
+    
+})
+
+
+matchResults <- reactive({
+    
+    rbind(choosenSpectrum(), spectraSplit()[[bestMatch()]])
+    
+})
+
+ranges_match <- reactiveValues(x = NULL, y = NULL)
+
+
+matchPlot <- reactive({
+    
+    data <- matchResults()
+    
+    element <- datasetInputMatch()
+    intensity.norm <- (element$Intensity/max(element$Intensity))*max(data$CPS)
+    intensity.base <- (element$Intensity/max(element$Intensity))
+    
+    
+    
+    qplot(data$Energy, data$CPS, xlab = "Energy (keV)", ylab = "Counts per Second", geom="line", colour=data$Spectrum) +
+    theme_light()+
+    theme(legend.position="bottom") +
+    geom_segment(aes(x=element$Line, xend=element$Line, y = 0, yend=intensity.norm), colour="grey50", linetype=2)  +
+    scale_colour_discrete("Spectrum") +
+    coord_cartesian(xlim = ranges_match$x, ylim = ranges_match$y)
+
+
+
+    })
+
+
+observeEvent(input$plot_dblclickmatch, {
+    data <- matchResults()
+    brush <- input$plot_brushmatch
+    if (!is.null(brush)) {
+        ranges_match$x <- c(brush$xmin, brush$xmax)
+        ranges_match$y <- c(brush$ymin, brush$ymax)
+        
+    } else {
+        ranges_match$x <- NULL
+        ranges_match$y <- NULL
+    }
+        })
+    
+    output$matchplot <- renderPlot({
+        
+        matchPlot()
+        
+        
+    })
+    
+    output$hover_infomatch <- renderUI({
+        
+        point.table <- matchResults()
+        
+        
+        hover <- input$plot_hovermatch
+        point <- nearPoints(point.table,  coordinfo=hover,   threshold = 5, maxpoints = 1, addDist = TRUE)
+        if (nrow(point) == 0) return(NULL)
+        
+        
+        
+        
+        # calculate point position INSIDE the image as percent of total dimensions
+        # from left (horizontal) and from top (vertical)
+        left_pct <- (hover$x - hover$domain$left) / (hover$domain$right - hover$domain$left)
+        top_pct <- (hover$domain$top - hover$y) / (hover$domain$top - hover$domain$bottom)
+        
+        # calculate distance from left and bottom side of the picture in pixels
+        left_px <- hover$range$left + left_pct * (hover$range$right - hover$range$left)
+        top_px <- hover$range$top + top_pct * (hover$range$bottom - hover$range$top)
+        
+        
+        # create style property fot tooltip
+        # background color is set so tooltip is a bit transparent
+        # z-index is set so we are sure are tooltip will be on top
+        style <- paste0("position:absolute; z-index:100; background-color: rgba(245, 245, 245, 0.85); ",
+        "left:", left_px + 2, "px; top:", top_px + 2, "px;")
+        
+        # actual tooltip created as wellPanel
+        wellPanel(
+        style = style,
+        p(HTML(paste0("<b> Spectrum: </b>", point$Spectrum, "<br/>",
+        "<b> Energy: </b>", point$Energy, "<br/>",
+        "<b> Counts: </b>", point$CPS, "<br/>"
+        
+        )))
+        
+        )
+    })
+    
+    
+    ranges_matchmetric <- reactiveValues(x = NULL, y = NULL)
+    
+    
+    matchPlotMetric <- reactive({
+        
+        data <- matchResults()
+        
+        max.metric <- if(input$matchtype == "Untransformed"){
+            max(data$CPS)
+        } else if(input$matchtype == "Velocity"){
+            max(Hodder.v(data$CPS))
+        } else if(input$matchtype == "Log"){
+            max(log(data$CPS))
+        } else if(input$matchtype == "Log-Velocity"){
+            max(log(Hodder.v(data$CPS)))
+        }
+        
+        element <- datasetInputMatch()
+        intensity.norm <- (element$Intensity/max(element$Intensity))*max.metric
+        intensity.base <- (element$Intensity/max(element$Intensity))
+        
+        
+        
+        plot <- if(input$matchtype == "Untransformed"){
+            qplot(data$Energy, data$CPS, xlab = "Energy (keV)", ylab = "Counts per Second", geom="line", colour=data$Spectrum) +
+            theme_light()+
+            theme(legend.position="bottom") +
+            geom_segment(aes(x=element$Line, xend=element$Line, y = 0, yend=intensity.norm), colour="grey50", linetype=2)  +
+            scale_colour_discrete("Spectrum") +
+            coord_cartesian(xlim = ranges_matchmetric$x, ylim = ranges_matchmetric$y)
+        } else if(input$matchtype == "Velocity"){
+            qplot(data$Energy, Hodder.v(data$CPS), xlab = "Energy (keV)", ylab = "Counts per Second", geom="line", colour=data$Spectrum) +
+            theme_light()+
+            theme(legend.position="bottom") +
+            geom_segment(aes(x=element$Line, xend=element$Line, y = 0, yend=intensity.norm), colour="grey50", linetype=2)  +
+            scale_colour_discrete("Spectrum") +
+            coord_cartesian(xlim = ranges_match$x, ylim = ranges_match$y)
+        } else if(input$matchtype == "Log"){
+            qplot(data$Energy, log(data$CPS), xlab = "Energy (keV)", ylab = "Counts per Second", geom="line", colour=data$Spectrum) +
+            theme_light()+
+            theme(legend.position="bottom") +
+            geom_segment(aes(x=element$Line, xend=element$Line, y = 0, yend=intensity.norm), colour="grey50", linetype=2)  +
+            scale_colour_discrete("Spectrum") +
+            coord_cartesian(xlim = ranges_matchmetric$x, ylim = ranges_matchmetric$y)
+        } else if(input$matchtype == "Log-Velocity"){
+            qplot(data$Energy, log(Hodder.v(data$CPS)), xlab = "Energy (keV)", ylab = "Counts per Second", geom="line", colour=data$Spectrum) +
+            theme_light()+
+            theme(legend.position="bottom") +
+            geom_segment(aes(x=element$Line, xend=element$Line, y = 0, yend=intensity.norm), colour="grey50", linetype=2)  +
+            scale_colour_discrete("Spectrum") +
+            coord_cartesian(xlim = ranges_matchmetric$x, ylim = ranges_matchmetric$y)
+        }
+        
+        plot
+        
+    })
+    
+    
+    observeEvent(input$plot_dblclickmatchmetric, {
+        data <- matchResults()
+        brush <- input$plot_brushmatchmetric
+        if (!is.null(brush)) {
+            ranges_matchmetric$x <- c(brush$xmin, brush$xmax)
+            ranges_matchmetric$y <- c(brush$ymin, brush$ymax)
+            
+        } else {
+            ranges_matchmetric$x <- NULL
+            ranges_matchmetric$y <- NULL
+        }
+    })
+        
+        
+        output$matchplotmetric <- renderPlot({
+            
+            matchPlotMetric()
+            
+        })
+        
+        output$hover_infomatchmetric <- renderUI({
+            
+            point.table <- matchResults()
+            
+            point.table$CPS <- if(input$matchtype == "Untransformed"){
+                point.table$CPS
+            } else if(input$matchtype == "Velocity"){
+                Hodder.v(point.table$CPS)
+            } else if(input$matchtype == "Log"){
+                log(point.table$CPS)
+            } else if(input$matchtype == "Log-Velocity"){
+                log(Hodder.v(point.table$CPS))
+            }
+            
+            
+            hover <- input$plot_hovermatchmetric
+            point <- nearPoints(point.table,  coordinfo=hover,   threshold = 5, maxpoints = 1, addDist = TRUE)
+            if (nrow(point) == 0) return(NULL)
+            
+            
+            
+            
+            # calculate point position INSIDE the image as percent of total dimensions
+            # from left (horizontal) and from top (vertical)
+            left_pct <- (hover$x - hover$domain$left) / (hover$domain$right - hover$domain$left)
+            top_pct <- (hover$domain$top - hover$y) / (hover$domain$top - hover$domain$bottom)
+            
+            # calculate distance from left and bottom side of the picture in pixels
+            left_px <- hover$range$left + left_pct * (hover$range$right - hover$range$left)
+            top_px <- hover$range$top + top_pct * (hover$range$bottom - hover$range$top)
+            
+            
+            # create style property fot tooltip
+            # background color is set so tooltip is a bit transparent
+            # z-index is set so we are sure are tooltip will be on top
+            style <- paste0("position:absolute; z-index:100; background-color: rgba(245, 245, 245, 0.85); ",
+            "left:", left_px + 2, "px; top:", top_px + 2, "px;")
+            
+            # actual tooltip created as wellPanel
+            wellPanel(
+            style = style,
+            p(HTML(paste0("<b> Spectrum: </b>", point$Spectrum, "<br/>",
+            "<b> Energy: </b>", point$Energy, "<br/>",
+            "<b> Counts: </b>", point$CPS, "<br/>"
+            
+            )))
+            
+            )
+        })
+    
+    output$matchtable <- renderDataTable({
+        
+        data.table(matchTable())
+        
+    })
+
+
 
 
 
