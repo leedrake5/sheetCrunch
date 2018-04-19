@@ -2400,7 +2400,18 @@ choiceLines <- reactive({
   output$nvariablesui <- renderUI({
       
       if(input$clusterlearn==TRUE){
-          numericInput("nvariables", label = "# Elements", min=2, max=length(defaultVariables()), value=3)
+          numericInput("nvariables", label = "# Elements", min=2, max=length(defaultVariables()), value=2)
+      } else if(input$clusterlearn==FALSE){
+          p()
+      }
+      
+  })
+  
+  
+  output$usesubsetui <- renderUI({
+      
+      if(input$clusterlearn==TRUE){
+          checkboxInput("usesubset", label="Use Subset", value=FALSE)
       } else if(input$clusterlearn==FALSE){
           p()
       }
@@ -2443,12 +2454,17 @@ choiceLines <- reactive({
   
   fishVector <- reactive({
       
-      spectra.line.table <- dataMerge()
+      spectra.line.table <- if(input$usesubset==FALSE){
+          dataMerge()
+      } else if(input$usesubset==TRUE){
+          as.data.frame(dataMerge2()[, sapply(dataMerge2(), is.numeric)])
+      }
       
+
       if(input$filetype!="Spreadsheet"){
-          elements <- as.vector(intersect(defaultVariables(), colnames(spectra.line.table[,-1])))
+          elements <- as.vector(intersect(defaultVariables(), colnames(spectra.line.table)))
       } else if(input$filetype=="Spreadsheet"){
-          elements <- colnames(spectra.line.table[,-1])
+          elements <- colnames(spectra.line.table)
       }
       
       combos_mod <- function(a.vector){
@@ -2469,13 +2485,18 @@ choiceLines <- reactive({
   
   thanksForAllTheFish <- reactive({
       
-      spectra.line.table <- dataMerge()
+      spectra.line.table <- if(input$usesubset==FALSE){
+          dataMerge()
+      } else if(input$usesubset==TRUE){
+          as.data.frame(dataMerge2()[, sapply(dataMerge2(), is.numeric)])
+      }
+      
 
       
       if(input$filetype!="Spreadsheet"){
-          elements <- as.vector(intersect(defaultVariables(), colnames(spectra.line.table[,-1])))
+          elements <- as.vector(intersect(defaultVariables(), colnames(spectra.line.table)))
       } else if(input$filetype=="Spreadsheet"){
-          elements <- colnames(spectra.line.table[,-1])
+          elements <- colnames(spectra.line.table)
       }
       
       thanks.for.all.the.fish <- fishVector()
@@ -2715,6 +2736,19 @@ choiceLines <- reactive({
   spectra.line.table$Cluster <- xrf.k$Cluster
   spectra.line.table$PC1 <- xrf.k$PC1
   spectra.line.table$PC2 <- xrf.k$PC2
+  
+  
+  if(input$pcacolour=="Cluster"){
+      spectra.line.table <- spectra.line.table[order(spectra.line.table[input$ratiocolour]),]
+  } else if(input$pcacolour=="Qualitative1"){
+      spectra.line.table <- spectra.line.table[order(spectra.line.table[input$ratiocolour]),]
+  } else if(input$pcacolour=="Qualitative2"){
+      spectra.line.table <- spectra.line.table[order(spectra.line.table[input$ratiocolour]),]
+  } else if(input$pcacolour=="Qualitative3"){
+      spectra.line.table <- spectra.line.table[order(spectra.line.table[input$ratiocolour]),]
+  } else if(input$pcacolour=="Qualitative4"){
+      spectra.line.table <- spectra.line.table[order(spectra.line.table[input$ratiocolour]),]
+  }
   
 
   
@@ -3771,6 +3805,7 @@ secondDefaultSelect <- reactive({
   
   plotInput4 <- reactive({
       
+      
       spectra.line.table <- dataMerge3()
       spectra.line.table$None <- rep(1, length(spectra.line.table$Spectrum))
 
@@ -3820,6 +3855,18 @@ secondDefaultSelect <- reactive({
       ratio.frame$X <- ratio.frame[,1]/ratio.frame[,2]
       ratio.frame$Y <- ratio.frame[,3]/ratio.frame[,4]
       
+      if(input$ratiocolour=="Cluster"){
+          spectra.line.table <- spectra.line.table[order(spectra.line.table$Cluster),]
+      } else if(input$ratiocolour=="Qualitative1"){
+          spectra.line.table <- spectra.line.table[order(spectra.line.table$Qualitative1),]
+      } else if(input$ratiocolour=="Qualitative2"){
+          spectra.line.table <- spectra.line.table[order(spectra.line.table$Qualitative2),]
+      } else if(input$ratiocolour=="Qualitative3"){
+          spectra.line.table <- spectra.line.table[order(spectra.line.table$Qualitative3),]
+      } else if(input$ratiocolour=="Qualitative4"){
+          spectra.line.table <- spectra.line.table[order(spectra.line.table$Qualitative4),]
+      }
+      
 
       
       black.ratio.plot <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
@@ -3833,7 +3880,8 @@ secondDefaultSelect <- reactive({
       theme(plot.title=element_text(size=20)) +
       theme(legend.title=element_text(size=15)) +
       theme(legend.text=element_text(size=15)) +
-      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
+      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01) +
+      scale_color_hue(direction = input$colourdirectionratio)
       
       cluster.ratio.plot <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
       geom_point(aes(colour=as.factor(ratio.frame$Cluster), shape=as.factor(ratio.frame$Cluster)), size=input$spotsize2+1) +
@@ -3869,7 +3917,7 @@ secondDefaultSelect <- reactive({
       geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
       
       qualitative.ratio.plot.1 <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
-      geom_point(aes(colour=as.factor(ratio.frame$Qualitative1), shape=as.factor(ratio.frame$Qualitative1)), size=input$spotsize2+1) +
+      geom_point(aes(colour=as.character(ratio.frame$Qualitative1), shape=as.character(ratio.frame$Qualitative1)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
       scale_shape_manual("Qualitative1", values=1:nlevels(ratio.frame$Qualitative1)) +
@@ -3885,8 +3933,8 @@ secondDefaultSelect <- reactive({
       geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
       
       qualitative.ratio.ellipse.plot.1 <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.factor(ratio.frame$Qualitative))) +
-      geom_point(aes(colour=as.factor(ratio.frame$Qualitative1), shape=as.factor(ratio.frame$Qualitative1)), size=input$spotsize2+1) +
+      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.character(ratio.frame$Qualitative))) +
+      geom_point(aes(colour=as.character(ratio.frame$Qualitative1), shape=as.character(ratio.frame$Qualitative1)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       scale_shape_manual("Qualitative1", values=1:nlevels(ratio.frame$Qualitative1)) +
       coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
@@ -3903,7 +3951,7 @@ secondDefaultSelect <- reactive({
       
       
       qualitative.ratio.plot.2 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      geom_point(aes(colour=as.factor(ratio.frame$Qualitative2), shape=as.factor(ratio.frame$Qualitative2)), size=input$spotsize2+1) +
+      geom_point(aes(colour=as.character(ratio.frame$Qualitative2), shape=as.character(ratio.frame$Qualitative2)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
       scale_shape_manual("Qualitative2", values=1:nlevels(ratio.frame$Qualitative2)) +
@@ -3920,7 +3968,7 @@ secondDefaultSelect <- reactive({
       
       qualitative.ratio.ellipse.plot.2 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
       stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.factor(ratio.frame$Qualitative2))) +
-      geom_point(aes(colour=as.factor(ratio.frame$Qualitative2), shape=as.factor(ratio.frame$Qualitative2)), size=input$spotsize2+1) +
+      geom_point(aes(colour=as.character(ratio.frame$Qualitative2), shape=as.character(ratio.frame$Qualitative2)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
       scale_shape_manual("Qualitative2", values=1:nlevels(ratio.frame$Qualitative2)) +
@@ -3936,7 +3984,7 @@ secondDefaultSelect <- reactive({
       geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
       
       qualitative.ratio.plot.3 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      geom_point(aes(colour=as.factor(ratio.frame$Qualitative3), shape=as.factor(ratio.frame$Qualitative3)), size=input$spotsize2+1) +
+      geom_point(aes(colour=as.character(ratio.frame$Qualitative3), shape=as.character(ratio.frame$Qualitative3)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
       scale_shape_manual("Qualitative3", values=1:nlevels(ratio.frame$Qualitative3)) +
@@ -3952,8 +4000,8 @@ secondDefaultSelect <- reactive({
       geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
       
       qualitative.ratio.ellipse.plot.3 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.factor(ratio.frame$Qualitative3))) +
-      geom_point(aes(colour=as.factor(ratio.frame$Qualitative3), shape=as.factor(ratio.frame$Qualitative3)), size=input$spotsize2+1) +
+      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.character(ratio.frame$Qualitative3))) +
+      geom_point(aes(colour=as.character(ratio.frame$Qualitative3), shape=as.character(ratio.frame$Qualitative3)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
       scale_shape_manual("Qualitative3", values=1:nlevels(ratio.frame$Qualitative3)) +
@@ -3969,7 +4017,7 @@ secondDefaultSelect <- reactive({
       geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
       
       qualitative.ratio.plot.4 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      geom_point(aes(colour=as.factor(ratio.frame$Qualitative4), shape=as.factor(ratio.frame$Qualitative4)), size=input$spotsize2+1) +
+      geom_point(aes(colour=as.character(ratio.frame$Qualitative4), shape=as.character(ratio.frame$Qualitative4)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
       scale_shape_manual("Qualitative4", values=1:nlevels(ratio.frame$Qualitative4)) +
@@ -3985,8 +4033,8 @@ secondDefaultSelect <- reactive({
       geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
       
       qualitative.ratio.ellipse.plot.4 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.factor(ratio.frame$Qualitative4))) +
-      geom_point(aes(colour=as.factor(ratio.frame$Qualitative4), shape=as.factor(ratio.frame$Qualitative4)), size=input$spotsize2+1) +
+      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.character(ratio.frame$Qualitative4))) +
+      geom_point(aes(colour=as.character(ratio.frame$Qualitative4), shape=as.character(ratio.frame$Qualitative4)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
       scale_shape_manual("Qualitative4", values=1:nlevels(ratio.frame$Qualitative4)) +

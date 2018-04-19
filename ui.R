@@ -182,6 +182,7 @@ conditionalPanel(
 condition='input.dataset === spectra.line.table',
 checkboxInput('clusterlearn', "Machine Learn Cluster", value=FALSE),
 uiOutput('nvariablesui'),
+uiOutput('usesubsetui'),
 uiOutput('defaultlines')
 
 )),
