@@ -174,6 +174,7 @@ sidebarPanel(
 
 actionButton('hotableprocess', "Enter Values"),
 downloadButton('downloadData', "Table"),
+downloadButton('thanksforallthefishtable', "MCL"),
 
 tags$hr(),
 
@@ -192,7 +193,8 @@ mainPanel(
 tabsetPanel(
 id = 'dataset',
 tabPanel('All Data', dataTableOutput('mytable1')),
-tabPanel('Add Categories', rHandsontableOutput('hot'))
+tabPanel('Add Categories', rHandsontableOutput('hot')),
+tabPanel('Machine Determined Clusers', DT::dataTableOutput('thanksforallthefish'))
 
 ))
 )
@@ -323,7 +325,9 @@ tabPanel('PCA Plot',
 div(
 style = "position:relative",
 plotOutput("xrfpcaplot", height = 650,
-hover = hoverOpts("plot_hoverpca", delay = 100, delayType = "debounce")),
+hover = hoverOpts("plot_hoverpca", delay = 100, delayType = "debounce"),
+dblclick = "plot_pca_dblclick",
+brush = brushOpts(id = "plot_pca_brush", resetOnNew = TRUE)),
 uiOutput("hover_infopca")
 )
 
@@ -598,7 +602,9 @@ tabPanel('Element Ratios',
 div(
 style = "position:relative",
 plotOutput("elementratiotimeseries", height = 650,
-hover = hoverOpts("plot_hoverratio", delay = 100, delayType = "debounce")),
+hover = hoverOpts("plot_hoverratio", delay = 100, delayType = "debounce"),
+dblclick = "plot_ratio_dblclick",
+brush = brushOpts(id = "plot_ratio_brush", resetOnNew = TRUE)),
 uiOutput("hover_inforatio")
 )
 
