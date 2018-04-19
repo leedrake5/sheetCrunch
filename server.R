@@ -2357,6 +2357,8 @@ choiceLines <- reactive({
   ####Identify best variables
   defaultVariables <- reactive({
       
+      inFile <- input$file1
+      
       elements <-  if(input$filetype=="Spectra"){
               hold <- read.csv(inFile$datapath[[1]])
               voltage <- as.numeric(as.vector(hold[11,1]))
