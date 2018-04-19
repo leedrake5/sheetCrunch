@@ -3820,9 +3820,7 @@ secondDefaultSelect <- reactive({
       ratio.frame$X <- ratio.frame[,1]/ratio.frame[,2]
       ratio.frame$Y <- ratio.frame[,3]/ratio.frame[,4]
       
-      ratio.frame$X <- ratio.frame[,1]
-      ratio.frame$Y <- ratio.frame[,3]
-      
+
       
       black.ratio.plot <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
       geom_point(lwd=input$spotsize2) +
@@ -4121,10 +4119,7 @@ secondDefaultSelect <- reactive({
        
        ratio.frame$X <- ratio.frame[,1]/ratio.frame[,2]
        ratio.frame$Y <- ratio.frame[,3]/ratio.frame[,4]
-       
-       ratio.frame$X <- ratio.frame[,1]
-       ratio.frame$Y <- ratio.frame[,3]
-       
+
        ratio.frame
        
    })
