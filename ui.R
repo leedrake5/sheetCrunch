@@ -357,12 +357,13 @@ fluidRow(
 sidebarLayout(
 
 sidebarPanel(
-downloadButton('test'),
+checkboxInput('usesubsetmatch', label="Use Subset", value=FALSE),
 uiOutput('choosespectraui'),
 selectInput('matchtype', "Match Type", choices=c("Untransformed", "Velocity", "Log", "Log-Velocity"), selected="Log"),
 selectInput('matchcriteria', "Match Criteria", choices=c("R2", "AIC", "BIC"), selected="BIC"),
 tags$hr(),
 uiOutput('thebestmatchui'),
+
 tags$hr(),
 
 selectInput('elementfingerprint', "Element:",

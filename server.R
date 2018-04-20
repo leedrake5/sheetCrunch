@@ -3295,20 +3295,40 @@ datasetInputMatch <- reactive({
 })
 
 
-output$test <- downloadHandler(
-filename = function() { paste(paste(c(input$projectname, "_", "test"), collapse=''), '.csv', sep=',') },
-content = function(file
-) {
-    write.csv(fullSpectra1(), file)
-}
-)
+
+
+
+spectraMatchData <- reactive({
+    data <- fullSpectra1()
+    data$CPS <- as.numeric(data$CPS)
+    data$Energy <- as.numeric(data$Energy)
+    data$Spectrum <- as.vector(data$Spectrum)
+    
+    if(input$usesubsetmatch==TRUE){
+        data <- filter(data,
+        Spectrum %in% input$show_rows
+        )
+        
+    }
+    
+    data <- data[complete.cases(data),]
+    data <- na.omit(data)
+    
+    data <- plyr::arrange(data, Spectrum, Energy)
+
+    data
+})
+
+
+
 
 spectraSplit <- reactive({
     
-    data <- fullSpectra1()
-    data <- plyr::arrange(data, Spectrum, Energy)
+    data <- spectraMatchData()
+    
     namez <- make.names(sort(as.vector(unique(data$Spectrum))))
     
+
     
     out <- split(data, f=data$Spectrum)
     names(out) <- namez
@@ -3321,7 +3341,7 @@ spectraSplit <- reactive({
 
 optionsDatum <- reactive({
     
-    names(spectraSplit())
+    na.omit(names(spectraSplit()))
     
 })
 
