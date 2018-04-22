@@ -1857,9 +1857,9 @@ print(plotInput())
              }
              
              standard <- if(input$usecalfile==FALSE && input$filetype=="Spectra"){
-                 c("Ca.K.alpha", "Ti.K.alpha", "Fe.K.alpha", "Cu.K.alpha", "Zn.K.alpha")
+                 defaultVariables()
              } else if(input$usecalfile==FALSE && input$filetype=="Net"){
-                 colnames(spectra.line.table)
+                 defaultVariables()
              } else if(input$usecalfile==TRUE && input$filetype=="Spectra"){
                  quantified
              }else if(input$usecalfile==TRUE && input$filetype=="Net"){
@@ -2317,10 +2317,10 @@ choiceLines <- reactive({
 
   
   output$downloadData <- downloadHandler(
-  filename = function() { paste(paste(c(input$projectname, "_", "CountTable"), collapse=''), '.csv', sep=',') },
+  filename = function() { paste(c(input$projectname, "_", "CountTable", ".xlsx"), collapse='') },
   content = function(file
   ) {
-      write.csv(tableInput(), file)
+      openxlsx::write.xlsx(dataMerge3(), file)
   }
   )
   
@@ -3953,7 +3953,7 @@ secondDefaultSelect <- reactive({
       geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
       
       qualitative.ratio.ellipse.plot.1 <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.character(ratio.frame$Qualitative))) +
+      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.character(ratio.frame$Qualitative1))) +
       geom_point(aes(colour=as.character(ratio.frame$Qualitative1), shape=as.character(ratio.frame$Qualitative1)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       scale_shape_manual("Qualitative1", values=1:nlevels(ratio.frame$Qualitative1)) +
