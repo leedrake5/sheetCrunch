@@ -1,11 +1,11 @@
 library(pbapply)
 library(reshape2)
-library(TTR)
+#library(TTR)
 library(dplyr)
 library(data.table)
 library(shiny)
 library(ggplot2)
-library(ggtern)
+#library(ggtern)
 library(random)
 library(rhandsontable)
 library(random)
@@ -100,39 +100,20 @@ shinyServer(function(input, output, session) {
             
             n <- length(temp)*id.seq
             
-            myfiles.x = pblapply(inFile$datapath, read_csv_filename_x)
+            n.seq <- seq(1, length(inFile$name), 1)
             
             
-            
-            myfiles.y = pblapply(inFile$datapath, read_csv_filename_y)
-            
-            
-            
-            
-            xrf.x <- data.frame(id.seq, myfiles.x)
-            colnames(xrf.x) <- c("ID", temp)
-            xrf.y <- data.frame(id.seq, myfiles.y)
-            colnames(xrf.y) <- c("ID", temp)
-            
-            
-            xrf.x <- data.table(xrf.x)
-            xrf.y <- data.table(xrf.y)
-            
-            
-            energy.m <- xrf.x[, list(variable = names(.SD), value = unlist(.SD, use.names = F)), by = ID]
-            cps.m <- xrf.y[, list(variable = names(.SD), value = unlist(.SD, use.names = F)), by = ID]
-            
-            
-            spectra.frame <- data.frame(energy.m$value, cps.m$value, cps.m$variable)
-            colnames(spectra.frame) <- c("Energy", "CPS", "Spectrum")
-            data <- spectra.frame
+            data <- pblapply(n.seq, function(x) csvFrame(filepath=inFile$datapath[x], filename=inFile$name[x]))
+            data <- as.data.frame(do.call("rbind", data))
             
             
             incProgress(1/n)
             Sys.sleep(0.1)
         })
-        data[data == 0] <- 0.0001
+        
+        
         data
+        
     })
     
     
@@ -247,37 +228,17 @@ shinyServer(function(input, output, session) {
             
             n <- length(temp)*id.seq
             
-            myfiles.x = pblapply(inFile$datapath, read_csv_filename_x)
+            n.seq <- seq(1, length(inFile$name), 1)
             
             
-            
-            myfiles.y = pblapply(inFile$datapath, read_csv_filename_y)
-            
-            
-            
-            
-            xrf.x <- data.frame(id.seq, myfiles.x)
-            colnames(xrf.x) <- c("ID", temp)
-            xrf.y <- data.frame(id.seq, myfiles.y)
-            colnames(xrf.y) <- c("ID", temp)
-            
-            
-            xrf.x <- data.table(xrf.x)
-            xrf.y <- data.table(xrf.y)
-            
-            
-            energy.m <- xrf.x[, list(variable = names(.SD), value = unlist(.SD, use.names = F)), by = ID]
-            cps.m <- xrf.y[, list(variable = names(.SD), value = unlist(.SD, use.names = F)), by = ID]
-            
-            
-            spectra.frame <- data.frame(energy.m$value, cps.m$value, cps.m$variable)
-            colnames(spectra.frame) <- c("Energy", "CPS", "Spectrum")
-            data <- spectra.frame
+            data <- pblapply(n.seq, function(x) csvFrame(filepath=inFile$datapath[x], filename=inFile$name[x]))
+            data <- do.call("rbind", data)
             
             
             incProgress(1/n)
             Sys.sleep(0.1)
         })
+        
         
         data
     })
@@ -342,37 +303,17 @@ shinyServer(function(input, output, session) {
             
             n <- length(temp)*id.seq
             
-            myfiles.x = pblapply(inFile$datapath, read_csv_filename_x)
+            n.seq <- seq(1, length(inFile$name), 1)
             
             
-            
-            myfiles.y = pblapply(inFile$datapath, read_csv_filename_y)
-            
-            
-            
-            
-            xrf.x <- data.frame(id.seq, myfiles.x)
-            colnames(xrf.x) <- c("ID", temp)
-            xrf.y <- data.frame(id.seq, myfiles.y)
-            colnames(xrf.y) <- c("ID", temp)
-            
-            
-            xrf.x <- data.table(xrf.x)
-            xrf.y <- data.table(xrf.y)
-            
-            
-            energy.m <- xrf.x[, list(variable = names(.SD), value = unlist(.SD, use.names = F)), by = ID]
-            cps.m <- xrf.y[, list(variable = names(.SD), value = unlist(.SD, use.names = F)), by = ID]
-            
-            
-            spectra.frame <- data.frame(energy.m$value, cps.m$value, cps.m$variable)
-            colnames(spectra.frame) <- c("Energy", "CPS", "Spectrum")
-            data <- spectra.frame
+            data <- pblapply(n.seq, function(x) csvFrame(filepath=inFile$datapath[x], filename=inFile$name[x]))
+            data <- do.call("rbind", data)
             
             
             incProgress(1/n)
             Sys.sleep(0.1)
         })
+        
         
         data
     })
@@ -2068,28 +2009,28 @@ print(plotInput())
       
       
       checkboxGroupInput('qual_select1b', 'Select',
-      choices=qualitativeSelect1(), selected = qualitativeSelect1())
+      choices=qualitativeSelect1(), selected = NULL)
   })
   
   output$qualSelect2b <- renderUI({
       
       
       checkboxGroupInput('qual_select2b', 'Select',
-      choices=qualitativeSelect2(), selected = qualitativeSelect2())
+      choices=qualitativeSelect2(), selected = NULL)
   })
   
   output$qualSelect3b <- renderUI({
       
       
       checkboxGroupInput('qual_select3b', 'Select',
-      choices=qualitativeSelect3(), selected = qualitativeSelect3())
+      choices=qualitativeSelect3(), selected = NULL)
   })
   
   output$qualSelect4b <- renderUI({
       
       
       checkboxGroupInput('qual_select4b', 'Select',
-      choices=qualitativeSelect4(), selected = qualitativeSelect4())
+      choices=qualitativeSelect4(), selected = NULL)
   })
   
   
@@ -2097,14 +2038,14 @@ print(plotInput())
       
       
       checkboxGroupInput('qual_select5b', 'Select',
-      choices=qualitativeSelect5(), selected = qualitativeSelect5())
+      choices=qualitativeSelect5(), selected = NULL)
   })
   
   output$qualSelect6b <- renderUI({
       
       
       checkboxGroupInput('qual_select6b', 'Select',
-      choices=qualitativeSelect6(), selected = qualitativeSelect6())
+      choices=qualitativeSelect6(), selected = NULL)
   })
 
 
@@ -2471,8 +2412,8 @@ choiceLines <- reactive({
           
           so <- seq(from=2, to=input$nvariables, by=1)
           
-          long <- pblapply(so, function(x) combnPrim(x=a.vector, m=x))
-          and <- pblapply(long, function(x) plyr::alply(x, 2))
+          long <- pblapply(so, function(x) combnPrim(x=a.vector, m=x), cl=14L)
+          and <- pblapply(long, function(x) plyr::alply(x, 2), cl=14L)
           thanks.for.all.the.fish <- do.call(list, unlist(and, recursive=FALSE))
           
           thanks.for.all.the.fish
@@ -2507,7 +2448,7 @@ choiceLines <- reactive({
       
       frame.of.thanks <- as.data.frame(do.call("rbind", thanks.for.all.the.length))
       
-      list.of.elbows <- pbapply::pblapply(thanks.for.all.the.fish, function(x) optimal_k_chain(spectra.line.table[,x]))
+      list.of.elbows <- pbapply::pblapply(thanks.for.all.the.fish, function(x) optimal_k_chain(spectra.line.table[,x]), cl=14L)
       names(list.of.elbows) <- seq(1, length(list.of.elbows), 1)
       frame.of.elbows <- as.data.frame(do.call("rbind", list.of.elbows))
       cbind(frame.of.elbows, frame.of.thanks)

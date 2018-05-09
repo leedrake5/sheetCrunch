@@ -3,16 +3,16 @@ new.bioconductor <- list.of.bioconductor[!(list.of.bioconductor %in% installed.p
 if(length(new.bioconductor)) source("https://bioconductor.org/biocLite.R")
 if(length(new.bioconductor)) biocLite(new.bioconductor)
 
-list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "gghighlight", "scales", "gRbase")
+list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "gghighlight", "scales", "gRbase", "openxlsx")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
 
 library(pbapply)
 library(reshape2)
-library(TTR)
+#library(TTR)
 library(dplyr)
-library(ggtern)
+#library(ggtern)
 library(ggplot2)
 library(shiny)
 library(gRbase)
@@ -71,7 +71,11 @@ read_csv_filename_y <- function(filename){
     return(return.cps)
 }
 
-
+csvFrame <- function(filepath, filename){
+    
+    data.frame(Energy=read_csv_filename_x(filepath), CPS=read_csv_filename_y(filepath), Spectrum=rep(filename, length(read_csv_filename_x(filepath))))
+    
+}
 
 read_csv_net <- function(filepath) {
     

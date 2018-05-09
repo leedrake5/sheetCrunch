@@ -359,7 +359,7 @@ sidebarLayout(
 sidebarPanel(
 checkboxInput('usesubsetmatch', label="Use Subset", value=FALSE),
 uiOutput('choosespectraui'),
-selectInput('matchtype', "Match Type", choices=c("Untransformed", "Velocity", "Log", "Log-Velocity"), selected="Log"),
+selectInput('matchtype', "Match Type", choices=c("Untransformed", "Velocity", "Log", "Log-Velocity"), selected="Velocity"),
 selectInput('matchcriteria', "Match Criteria", choices=c("R2", "AIC", "BIC"), selected="BIC"),
 tags$hr(),
 uiOutput('thebestmatchui'),
