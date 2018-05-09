@@ -2696,7 +2696,7 @@ choiceLines <- reactive({
   
   basic <- ggplot(data= spectra.line.table) +
   geom_point(aes(PC1, PC2), size = input$spotsize) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = FALSE) +
+  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
   scale_x_continuous("Principle Component 1") +
   scale_y_continuous("Principle Component 2") +
   theme_light() +
@@ -2713,7 +2713,7 @@ choiceLines <- reactive({
   regular <- ggplot(data= spectra.line.table) +
   geom_point(aes(PC1, PC2, colour=as.factor(Cluster), shape=as.factor(Cluster)), size = input$spotsize+1) +
   geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = FALSE) +
+  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
   scale_x_continuous("Principle Component 1") +
   scale_y_continuous("Principle Component 2") +
   theme_light() +
@@ -2732,7 +2732,7 @@ choiceLines <- reactive({
   ellipse <- ggplot(data= spectra.line.table)+
   geom_point(aes(PC1, PC2, colour=as.factor(Cluster), shape=as.factor(Cluster)), size = input$spotsize+1) +
   geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = FALSE) +
+  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
   scale_x_continuous("Principle Component 1") +
   scale_y_continuous("Principle Component 2") +
   theme_light() +
@@ -2753,7 +2753,7 @@ choiceLines <- reactive({
   qual.regular.1 <- ggplot(data= spectra.line.table) +
   geom_point(aes(PC1, PC2, colour=as.factor(Qualitative1), shape=as.factor(Qualitative1)), size = input$spotsize+1) +
   geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = FALSE) +
+  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
   scale_x_continuous("Principle Component 1") +
   scale_y_continuous("Principle Component 2") +
   theme_light() +
@@ -2772,7 +2772,7 @@ choiceLines <- reactive({
   qual.ellipse.1 <- ggplot(data= spectra.line.table)+
   geom_point(aes(PC1, PC2, colour=as.factor(Qualitative1), shape=as.factor(Qualitative1)), size = input$spotsize+1) +
   geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = FALSE) +
+  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
   scale_x_continuous("Principle Component 1") +
   scale_y_continuous("Principle Component 2") +
   theme_light() +
@@ -2792,7 +2792,7 @@ choiceLines <- reactive({
   qual.regular.2 <- ggplot(data= spectra.line.table) +
   geom_point(aes(PC1, PC2, colour=as.factor(Qualitative2), shape=as.factor(Qualitative2)), size = input$spotsize+1) +
   geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = FALSE) +
+  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
   scale_x_continuous("Principle Component 1") +
   scale_y_continuous("Principle Component 2") +
   theme_light() +
@@ -2810,7 +2810,7 @@ choiceLines <- reactive({
   qual.ellipse.2 <- ggplot(data= spectra.line.table)+
   geom_point(aes(PC1, PC2, colour=as.factor(Qualitative2), shape=as.factor(Qualitative2)), size = input$spotsize+1) +
   geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = FALSE) +
+  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
   scale_x_continuous("Principle Component 1") +
   scale_y_continuous("Principle Component 2") +
   theme_light() +
@@ -2831,7 +2831,7 @@ choiceLines <- reactive({
   qual.ellipse.3 <- ggplot(data= spectra.line.table)+
   geom_point(aes(PC1, PC2, colour=as.factor(Qualitative3), shape=as.factor(Qualitative3)), size = input$spotsize+1) +
   geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = FALSE) +
+  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
   scale_x_continuous("Principle Component 1") +
   scale_y_continuous("Principle Component 2") +
   theme_light() +
@@ -2851,7 +2851,7 @@ choiceLines <- reactive({
   qual.regular.3 <- ggplot(data= spectra.line.table) +
   geom_point(aes(PC1, PC2, colour=as.factor(Qualitative3), shape=as.factor(Qualitative3)), size = input$spotsize+1) +
   geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = FALSE) +
+  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
   scale_x_continuous("Principle Component 1") +
   scale_y_continuous("Principle Component 2") +
   theme_light() +
@@ -2870,7 +2870,7 @@ choiceLines <- reactive({
   qual.ellipse.4 <- ggplot(data= spectra.line.table)+
   geom_point(aes(PC1, PC2, colour=as.factor(Qualitative4), shape=as.factor(Qualitative4)), size = input$spotsize+1) +
   geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = FALSE) +
+  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
   scale_x_continuous("Principle Component 1") +
   scale_y_continuous("Principle Component 2") +
   theme_light() +
@@ -2890,7 +2890,7 @@ choiceLines <- reactive({
   qual.regular.4 <- ggplot(data= spectra.line.table) +
   geom_point(aes(PC1, PC2, colour=as.factor(Qualitative4), shape=as.factor(Qualitative4)), size = input$spotsize+1) +
   geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = FALSE) +
+  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
   scale_x_continuous("Principle Component 1") +
   scale_y_continuous("Principle Component 2") +
   theme_light() +
@@ -2909,17 +2909,17 @@ choiceLines <- reactive({
   
   if (input$pcacolour == "Focus" && input$pcafocuslabel=="None") {colnames(new.spectra.line.table) <- c("Spectrum", "PC1", "PC2", "Selected")}
   
-  if (input$elipseplot1 == FALSE && input$pcacolour == "Focus" && input$pcafocuslabel=="None") {select.plot <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize,  use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = FALSE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme(legend.text=element_text(size=15)) + theme_light()}
+  if (input$elipseplot1 == FALSE && input$pcacolour == "Focus" && input$pcafocuslabel=="None") {select.plot <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize,  use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme(legend.text=element_text(size=15)) + theme_light()}
   
-  if (input$elipseplot1 == TRUE && input$pcacolour == "Focus"  && input$pcafocuslabel=="None") {select.plot.ellipse <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, use_group_by=FALSE, use_direct_label=FALSE) +  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = FALSE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+  if (input$elipseplot1 == TRUE && input$pcacolour == "Focus"  && input$pcafocuslabel=="None") {select.plot.ellipse <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, use_group_by=FALSE, use_direct_label=FALSE) +  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
   
   if (input$pcacolour == "Focus" && input$pcafocuslabel!="None") {newer.spectra.line.table <- spectra.line.table[,c("Spectrum", "PC1", "PC2", input$pcafocusvariable, input$pcafocuslabel)]}
   
   if (input$pcacolour == "Focus" && input$pcafocuslabel!="None") {colnames(newer.spectra.line.table) <- c("Spectrum", "PC1", "PC2", "Selected", "Label")}
   
-  if (input$elipseplot1 == FALSE && input$pcacolour == "Focus" && input$pcafocuslabel!="None") {select.plot <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = FALSE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
+  if (input$elipseplot1 == FALSE && input$pcacolour == "Focus" && input$pcafocuslabel!="None") {select.plot <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
   
-  if (input$elipseplot1 == TRUE && input$pcacolour == "Focus"  && input$pcafocuslabel!="None") {select.plot.ellipse <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = FALSE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+  if (input$elipseplot1 == TRUE && input$pcacolour == "Focus"  && input$pcafocuslabel!="None") {select.plot.ellipse <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
   
   
   #quant.regular <- ggplot(data= spectra.line.table) +
@@ -3832,7 +3832,7 @@ secondDefaultSelect <- reactive({
       
       black.ratio.plot <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
       geom_point(lwd=input$spotsize2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
+      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
       theme_light() +
       theme(axis.text.x = element_text(size=15)) +
       theme(axis.text.y = element_text(size=15)) +
@@ -3847,7 +3847,7 @@ secondDefaultSelect <- reactive({
       cluster.ratio.plot <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
       geom_point(aes(colour=as.factor(ratio.frame$Cluster), shape=as.factor(ratio.frame$Cluster)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
+      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
       scale_shape_manual("Cluster", values=1:nlevels(as.factor(as.factor(ratio.frame$Cluster)))) +
       scale_colour_discrete("Cluster") +
       theme_light() +
@@ -3864,7 +3864,7 @@ secondDefaultSelect <- reactive({
       stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.factor(ratio.frame$Cluster))) +
       geom_point(aes(colour=as.factor(ratio.frame$Cluster), shape=as.factor(ratio.frame$Cluster)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
+      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
       scale_shape_manual("Cluster", values=1:nlevels(as.factor(as.factor(ratio.frame$Cluster)))) +
       scale_colour_discrete("Cluster") +
       theme_light() +
@@ -3880,7 +3880,7 @@ secondDefaultSelect <- reactive({
       qualitative.ratio.plot.1 <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
       geom_point(aes(colour=as.character(ratio.frame$Qualitative1), shape=as.character(ratio.frame$Qualitative1)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
+      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
       scale_shape_manual("Qualitative1", values=1:nlevels(ratio.frame$Qualitative1)) +
       scale_colour_discrete("Qualitative1") +
       theme_light() +
@@ -3898,7 +3898,7 @@ secondDefaultSelect <- reactive({
       geom_point(aes(colour=as.character(ratio.frame$Qualitative1), shape=as.character(ratio.frame$Qualitative1)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
       scale_shape_manual("Qualitative1", values=1:nlevels(ratio.frame$Qualitative1)) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
+      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
       scale_colour_discrete("Qualitative1") +
       theme_light() +
       theme(axis.text.x = element_text(size=15)) +
@@ -3914,7 +3914,7 @@ secondDefaultSelect <- reactive({
       qualitative.ratio.plot.2 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
       geom_point(aes(colour=as.character(ratio.frame$Qualitative2), shape=as.character(ratio.frame$Qualitative2)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
+      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
       scale_shape_manual("Qualitative2", values=1:nlevels(ratio.frame$Qualitative2)) +
       scale_colour_discrete("Qualitative2") +
       theme_light() +
@@ -3931,7 +3931,7 @@ secondDefaultSelect <- reactive({
       stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.factor(ratio.frame$Qualitative2))) +
       geom_point(aes(colour=as.character(ratio.frame$Qualitative2), shape=as.character(ratio.frame$Qualitative2)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
+      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
       scale_shape_manual("Qualitative2", values=1:nlevels(ratio.frame$Qualitative2)) +
       scale_colour_discrete("Qualitative2") +
       theme_light() +
@@ -3947,7 +3947,7 @@ secondDefaultSelect <- reactive({
       qualitative.ratio.plot.3 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
       geom_point(aes(colour=as.character(ratio.frame$Qualitative3), shape=as.character(ratio.frame$Qualitative3)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
+      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
       scale_shape_manual("Qualitative3", values=1:nlevels(ratio.frame$Qualitative3)) +
       scale_colour_discrete("Qualitative3") +
       theme_light() +
@@ -3964,7 +3964,7 @@ secondDefaultSelect <- reactive({
       stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.character(ratio.frame$Qualitative3))) +
       geom_point(aes(colour=as.character(ratio.frame$Qualitative3), shape=as.character(ratio.frame$Qualitative3)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
+      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
       scale_shape_manual("Qualitative3", values=1:nlevels(ratio.frame$Qualitative3)) +
       scale_colour_discrete("Qualitative3") +
       theme_light() +
@@ -3980,7 +3980,7 @@ secondDefaultSelect <- reactive({
       qualitative.ratio.plot.4 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
       geom_point(aes(colour=as.character(ratio.frame$Qualitative4), shape=as.character(ratio.frame$Qualitative4)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
+      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
       scale_shape_manual("Qualitative4", values=1:nlevels(ratio.frame$Qualitative4)) +
       scale_colour_discrete("Qualitative4") +
       theme_light() +
@@ -3997,7 +3997,7 @@ secondDefaultSelect <- reactive({
       stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.character(ratio.frame$Qualitative4))) +
       geom_point(aes(colour=as.character(ratio.frame$Qualitative4), shape=as.character(ratio.frame$Qualitative4)), size=input$spotsize2+1) +
       geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +
+      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
       scale_shape_manual("Qualitative4", values=1:nlevels(ratio.frame$Qualitative4)) +
       scale_colour_discrete("Qualitative4") +
       theme_light() +
@@ -4015,17 +4015,17 @@ secondDefaultSelect <- reactive({
       
       if (input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {colnames(new.ratio.table) <- c("Spectrum", "X", "Y", "Selected")}
       
-      if (input$elipseplot2 == FALSE && input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {select.plot <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
+      if (input$elipseplot2 == FALSE && input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {select.plot <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
       
-      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel=="None") {select.plot.ellipse <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + scale_x_continuous(ratio.names.x) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel=="None") {select.plot.ellipse <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + scale_x_continuous(ratio.names.x) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
       
       if (input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {newer.ratio.table <- ratio.frame[,c("Spectrum", "X", "Y", input$ratiofocusvariable, input$ratiofocuslabel)]}
       
       if (input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {colnames(newer.ratio.table) <- c("Spectrum", "X", "Y", "Selected", "Label")}
       
-      if (input$elipseplot2 == FALSE && input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {select.plot <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
+      if (input$elipseplot2 == FALSE && input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {select.plot <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
       
-      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel!="None") {select.plot.ellipse <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = FALSE) + scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel!="None") {select.plot.ellipse <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
       
       
 
