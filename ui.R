@@ -21,11 +21,10 @@ downloadButton('downloadPlot', "Plot"),
 
 tags$hr(),
 
-fileInput('file1', 'Choose Spectra', multiple=TRUE,
-accept=c(
-'.csv', '.xlsx')),
+uiOutput('filegrab'),
 
-selectInput("filetype", label=NULL, c("Spectra", "Net", "Spreadsheet", "Artax Excel"), selected="Spreadsheet"),
+
+selectInput("filetype", label=NULL, c("PDZ","CSV", "Net", "Spreadsheet", "Artax Excel"), selected="Spreadsheet"),
 
 tags$hr(),
 

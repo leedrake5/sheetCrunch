@@ -1,3 +1,19 @@
+get_os <- function(){
+    sysinf <- Sys.info()
+    if (!is.null(sysinf)){
+        os <- sysinf['sysname']
+        if (os == 'Darwin')
+        os <- "osx"
+    } else { ## mystery machine
+        os <- .Platform$OS.type
+        if (grepl("^darwin", R.version$os))
+        os <- "osx"
+        if (grepl("linux-gnu", R.version$os))
+        os <- "linux"
+    }
+    tolower(os)
+}
+
 list.of.bioconductor <- c("graph", "RBGL", "Rgraphviz")
 new.bioconductor <- list.of.bioconductor[!(list.of.bioconductor %in% installed.packages()[,"Package"])]
 if(length(new.bioconductor)) source("https://bioconductor.org/biocLite.R")
@@ -6,6 +22,17 @@ if(length(new.bioconductor)) biocLite(new.bioconductor)
 list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "gghighlight", "scales", "gRbase", "openxlsx")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
+
+
+if("rPDZ" %in% installed.packages()[,"Package"]==FALSE && get_os()=="windows"){
+    install.packages("http://www.xrf.guru/packages/rPDZ_1.0.zip", repos=NULL, type="win.binary")
+} else if ("rPDZ" %in% installed.packages()[,"Package"]==FALSE && get_os()=="osx"){
+    install.packages("http://www.xrf.guru/packages/rPDZ_1.0.tgz", repos=NULL)
+} else if ("rPDZ" %in% installed.packages()[,"Package"]==FALSE && get_os()=="linux"){
+    install.packages("http://www.xrf.guru/packages/rPDZ_1.0.tar.gz", repos=NULL)
+}
+
+library(rPDZ)
 
 
 library(pbapply)
@@ -92,6 +119,68 @@ read_csv_net <- function(filepath) {
     colnames(simple.transpose) <- eline
     
     simple.transpose
+    
+}
+
+
+
+
+#Rcpp::sourceCpp("pdz.cpp")
+
+readPDZ25Data <- function(filepath, filename){
+    
+    filename <- gsub(".pdz", "", filename)
+    filename.vector <- rep(filename, 2020)
+    
+    nbrOfRecords <- 2020
+    integers <- readPDZ25(filepath, start=481, size=nbrOfRecords)
+    
+    sequence <- seq(1, length(integers), 1)
+    
+    time.est <- integers[21]
+    
+    channels <- sequence
+    energy <- sequence*.02
+    counts <- integers/(integers[21]/10)
+    
+    data.frame(Energy=energy, CPS=counts, Spectrum=filename.vector)
+    
+}
+
+
+readPDZ24Data<- function(filepath, filename){
+    
+    filename <- gsub(".pdz", "", filename)
+    filename.vector <- rep(filename, 2020)
+    
+    nbrOfRecords <- 2020
+    integers <- readPDZ24(filepath, start=357, size=nbrOfRecords)
+    sequence <- seq(1, length(integers), 1)
+    
+    time.est <- integers[21]
+    
+    channels <- sequence
+    energy <- sequence*.02
+    counts <- integers/(integers[21]/10)
+    
+    data.frame(Energy=energy, CPS=counts, Spectrum=filename.vector)
+    
+}
+
+
+
+readPDZData <- function(filepath, filename) {
+    nbrOfRecords <- 10000
+    
+    
+    floats <- readBin(con=filepath, what="float", size=4, n=nbrOfRecords, endian="little")
+    
+    if(floats[[9]]=="5"){
+        readPDZ25Data(filepath, filename)
+    }else {
+        readPDZ24Data(filepath, filename)
+    }
+    
     
 }
 
