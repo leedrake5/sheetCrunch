@@ -29,7 +29,7 @@ shinyServer(function(input, output, session) {
         } else if(input$filetype=="Net") {
             fileInput('file1', 'Choose Net Counts', multiple=TRUE,
             accept=c(".csv"))
-        }  else if(input$filetype=="Spreadsheet") {
+        }  else if(dataType()=="Spreadsheet") {
             fileInput('file1', 'Choose Spreadsheet', multiple=TRUE,
             accept=c(".xlsx"))
         }  else if(input$filetype=="Artax Excel") {
@@ -52,7 +52,7 @@ shinyServer(function(input, output, session) {
         } else if(input$filetype=="Net") {
             fileInput('file2', 'Choose Net Counts', multiple=TRUE,
             accept=c(".csv"))
-        }  else if(input$filetype=="Spreadsheet") {
+        }  else if(dataType()=="Spreadsheet") {
             fileInput('file2', 'Choose Spreadsheet', multiple=TRUE,
             accept=c(".xlsx"))
         }  else if(input$filetype=="Artax Excel") {
@@ -74,7 +74,7 @@ shinyServer(function(input, output, session) {
         } else if(input$filetype=="Net") {
             fileInput('file3', 'Choose Net Counts', multiple=TRUE,
             accept=c(".csv"))
-        }  else if(input$filetype=="Spreadsheet") {
+        }  else if(dataType()=="Spreadsheet") {
             fileInput('file3', 'Choose Spreadsheet', multiple=TRUE,
             accept=c(".xlsx"))
         }  else if(input$filetype=="Artax Excel") {
@@ -157,6 +157,8 @@ dataType <- reactive({
         "Spectra"
     } else if(input$filetype=="Net"){
         "Net"
+    } else if (input$filetype=="Spreadsheet"){
+        "Spreadsheet"
     }
     
 })
@@ -573,7 +575,7 @@ dataType <- reactive({
                 fullSpectra1()
             } else if(input$filetype=="Net"){
                 netCounts1()
-            } else if(input$filetype=="Spreadsheet"){
+            } else if(dataType()=="Spreadsheet"){
                 ExcelData()
             } else if(input$filetype=="Artax Excel"){
                 artaxExcelData()
@@ -1646,7 +1648,7 @@ dataType <- reactive({
                 fullSpectra()
             } else if(input$filetype=="Net"){
                 netCounts()
-            }else if(input$filetype=="Spreadsheet"){
+            }else if(dataType()=="Spreadsheet"){
                 importSpreadsheet()
             }
             
@@ -1945,7 +1947,7 @@ print(plotInput())
                  }else if(is.null(input$file2)==FALSE && is.null(input$file3)==FALSE){
                      merge(merge(first.instrument, second.instrument, all=TRUE), third.instrument, all=TRUE)
                  }
-             }  else if(input$filetype=="Spreadsheet" && input$usecalfile==FALSE){
+             }  else if(dataType()=="Spreadsheet" && input$usecalfile==FALSE){
                  myData1()
              } else if(input$filetype=="Artax Excel" && input$usecalfile==FALSE){
                  myData1()
@@ -1973,7 +1975,7 @@ print(plotInput())
                  quantified
              }else if(input$usecalfile==TRUE && input$filetype=="Net"){
                  quantified
-             } else if(input$filetype=="Spreadsheet"){
+             } else if(dataType()=="Spreadsheet"){
                  colnames(spectra.line.table)
              } else if(input$filetype=="Artax Excel"){
                  colnames(spectra.line.table)
@@ -1995,7 +1997,7 @@ print(plotInput())
                  quantified
              }else if(input$usecalfile==TRUE && input$filetype=="Net"){
                  quantified
-             } else if(input$filetype=="Spreadsheet"){
+             } else if(dataType()=="Spreadsheet"){
                  colnames(spectra.line.table[ ,!(colnames(spectra.line.table) == "Spectrum")])
              }
              
@@ -2062,12 +2064,12 @@ print(plotInput())
       colnames(empty.line.table) <- c("Spectrum", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Qualitative5", "Qualitative6")
       
       
-      if(input$filetype=="Spreadsheet" && length(qualExcelData())>=2){empty.line.table$Qualitative1 <- qualExcelData()[,2]}
-           if(input$filetype=="Spreadsheet" && length(qualExcelData())>=3){empty.line.table$Qualitative2 <- qualExcelData()[,3]}
-                     if(input$filetype=="Spreadsheet" && length(qualExcelData())>=4){empty.line.table$Qualitative3 <- qualExcelData()[,4]}
-                        if(input$filetype=="Spreadsheet" && length(qualExcelData())>=5){empty.line.table$Qualitative4 <- qualExcelData()[,5]}
-                            if(input$filetype=="Spreadsheet" && length(qualExcelData())>=6){empty.line.table$Qualitative5 <- qualExcelData()[,6]}
-                                if(input$filetype=="Spreadsheet" && length(qualExcelData())>=7){empty.line.table$Qualitative6 <- qualExcelData()[,7]}
+      if(dataType()=="Spreadsheet" && length(qualExcelData())>=2){empty.line.table$Qualitative1 <- qualExcelData()[,2]}
+           if(dataType()=="Spreadsheet" && length(qualExcelData())>=3){empty.line.table$Qualitative2 <- qualExcelData()[,3]}
+                     if(dataType()=="Spreadsheet" && length(qualExcelData())>=4){empty.line.table$Qualitative3 <- qualExcelData()[,4]}
+                        if(dataType()=="Spreadsheet" && length(qualExcelData())>=5){empty.line.table$Qualitative4 <- qualExcelData()[,5]}
+                            if(dataType()=="Spreadsheet" && length(qualExcelData())>=6){empty.line.table$Qualitative5 <- qualExcelData()[,6]}
+                                if(dataType()=="Spreadsheet" && length(qualExcelData())>=7){empty.line.table$Qualitative6 <- qualExcelData()[,7]}
      
      empty.line.table$Quantitative <- lin.vector
       
@@ -2439,7 +2441,7 @@ choiceLines <- reactive({
         colnames(spectra.line.table[ ,!(colnames(spectra.line.table) == "Spectrum")])
     } else if(input$filetype=="Net"){
         colnames(spectra.line.table[ ,!(colnames(spectra.line.table) == "Spectrum")])
-    } else if(input$filetype=="Spreadsheet"){
+    } else if(dataType()=="Spreadsheet"){
         colnames(spectra.line.table[ ,!(colnames(spectra.line.table) == "Spectrum")])
     }
     
@@ -2528,7 +2530,7 @@ choiceLines <- reactive({
               }else{
                   accepted.net.trace
               }
-          } else if(input$filetype=="Spreadsheet"){
+          } else if(dataType()=="Spreadsheet"){
               lineOptions()
           }
 
@@ -2565,7 +2567,7 @@ choiceLines <- reactive({
   #
   #    if(input$filetype!="Spreadsheet"){
   #        elements <- as.vector(intersect(defaultVariables(), colnames(spectra.line.table[,-1])))
-  #    } else if(input$filetype=="Spreadsheet"){
+  #    } else if(dataType()=="Spreadsheet"){
   #        elements <- colnames(spectra.line.table[,-1])
   #    }
   #
@@ -2604,7 +2606,7 @@ choiceLines <- reactive({
 
       if(input$filetype!="Spreadsheet"){
           elements <- as.vector(intersect(defaultVariables(), colnames(spectra.line.table)))
-      } else if(input$filetype=="Spreadsheet"){
+      } else if(dataType()=="Spreadsheet"){
           elements <- colnames(spectra.line.table)
       }
       
@@ -2636,7 +2638,7 @@ choiceLines <- reactive({
       
       if(input$filetype!="Spreadsheet"){
           elements <- as.vector(intersect(defaultVariables(), colnames(spectra.line.table)))
-      } else if(input$filetype=="Spreadsheet"){
+      } else if(dataType()=="Spreadsheet"){
           elements <- colnames(spectra.line.table)
       }
       
@@ -3858,7 +3860,7 @@ secondDefaultSelect <- reactive({
           colnames(spectra.line.table[ ,!(colnames(spectra.line.table) == "Spectrum")])
       } else if(input$filetype=="Net"){
           colnames(spectra.line.table[ ,!(colnames(spectra.line.table) == "Spectrum")])
-      } else if(input$filetype=="Spreadsheet"){
+      } else if(dataType()=="Spreadsheet"){
           colnames(spectra.line.table[ ,!(colnames(spectra.line.table) == "Spectrum")])
       }
       
@@ -4419,7 +4421,7 @@ ternaryChooseA <- reactive({
         "Al.K.alpha"
     } else if(input$filetype=="Net"){
         spectra.line.names[2]
-    } else if (input$filetype=="Spreadsheet"){
+    } else if (dataType()=="Spreadsheet"){
         spectra.line.names[2]
     }
     
@@ -4436,7 +4438,7 @@ ternaryChooseB <- reactive({
         "Si.K.alpha"
     } else if(input$filetype=="Net"){
         spectra.line.names[3]
-    } else if (input$filetype=="Spreadsheet"){
+    } else if (dataType()=="Spreadsheet"){
         spectra.line.names[3]
     }
     
@@ -4453,7 +4455,7 @@ ternaryChooseC <- reactive({
         "Ca.K.alpha"
     } else if(input$filetype=="Net"){
         spectra.line.names[4]
-    } else if (input$filetype=="Spreadsheet"){
+    } else if (dataType()=="Spreadsheet"){
         spectra.line.names[4]
     }
     

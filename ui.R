@@ -6,7 +6,7 @@ library(rhandsontable)
 
 
 
-shinyUI(navbarPage("SheetCrunch", id="nav", theme = shinytheme("paper"),
+shinyUI(navbarPage("Analyzer", id="nav", theme = shinytheme("paper"),
 tabPanel("Data",
 div(class="outer",
 sidebarLayout(

@@ -24,6 +24,7 @@ new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"
 if(length(new.packages)) install.packages(new.packages)
 
 
+
 if("rPDZ" %in% installed.packages()[,"Package"]==FALSE && get_os()=="windows"){
     install.packages("http://www.xrf.guru/packages/rPDZ_1.0.zip", repos=NULL, type="win.binary")
 } else if ("rPDZ" %in% installed.packages()[,"Package"]==FALSE && get_os()=="osx"){
