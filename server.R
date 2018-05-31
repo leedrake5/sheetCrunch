@@ -5,7 +5,7 @@ library(dplyr)
 library(data.table)
 library(shiny)
 library(ggplot2)
-#library(ggtern)
+library(ggtern)
 library(random)
 library(rhandsontable)
 library(random)
@@ -4971,7 +4971,7 @@ plotInput5 <- reactive({
 
 output$ternaryplot <- renderPlot({
     
-    plotInput5()
+    print(plotInput5())
     
 })
 
