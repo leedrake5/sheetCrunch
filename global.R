@@ -19,9 +19,13 @@ new.bioconductor <- list.of.bioconductor[!(list.of.bioconductor %in% installed.p
 if(length(new.bioconductor)) source("https://bioconductor.org/biocLite.R")
 if(length(new.bioconductor)) biocLite(new.bioconductor)
 
-list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "gghighlight", "scales", "gRbase", "openxlsx")
+list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "gghighlight", "scales", "gRbase", "openxlsx", "devtools", "digest")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
+
+if(packageVersion("ggplot2")!="2.2.1") devtools::install_version("ggplot2", version = "2.2.1", repos = "http://cran.us.r-project.org", checkBuilt=TRUE)
+if(packageVersion("gghighlight")!="0.0.1") devtools::install_version("gghighlight", version = "0.0.1", repos = "http://cran.us.r-project.org", checkBuilt=TRUE)
+if(packageVersion("ggtern")!="2.2.0") devtools::install_version("ggtern", version = "2.2.0", repos = "http://cran.us.r-project.org", checkBuilt=TRUE)
 
 
 
@@ -46,7 +50,20 @@ library(shiny)
 library(gRbase)
 
 
-
+layOut = function(...) {
+    
+    require(grid)
+    
+    x <- list(...)
+    n <- max(sapply(x, function(x) max(x[[2]])))
+    p <- max(sapply(x, function(x) max(x[[3]])))
+    pushViewport(viewport(layout = grid.layout(n, p)))
+    
+    for (i in seq_len(length(x))) {
+        print(x[[i]][[1]], vp = viewport(layout.pos.row = x[[i]][[2]],
+        layout.pos.col = x[[i]][[3]]))
+    }
+} 
 
 Hodder.v <- function(y)
 {
@@ -126,6 +143,142 @@ read_csv_net <- function(filepath) {
 
 
 
+readSPTData <- function(filepath, filename){
+    filename <- gsub(".spt", "", filename)
+    filename.vector <- rep(filename, 4096)
+    
+    meta <- paste0(readLines(filepath, n=16),collapse=" ")
+    meta.split <- strsplit(meta, " ")
+    chan.1 <- as.numeric(meta.split[[1]][32])
+    energy.1 <- as.numeric(sub(",", ".", meta.split[[1]][33], fixed = TRUE))
+    chan.2 <- as.numeric(meta.split[[1]][34])
+    energy.2 <- as.numeric(sub(",", ".", meta.split[[1]][35], fixed = TRUE))
+    
+    channels <- c(chan.1, chan.2)
+    energies <- c(energy.1, energy.2)
+    
+    energy.cal <- lm(energies~ channels)
+    
+    time <- as.numeric(meta.split[[1]][17])/1000
+    
+    raw <- read.table(filepath, skip=16)
+    cps <- raw[,1]/time
+    newdata <- as.data.frame(seq(1, 4096, 1))
+    colnames(newdata) <- "channels"
+    energy <- as.vector(predict.lm(energy.cal, newdata=newdata))
+    energy2 <- newdata[,1]*summary(energy.cal)$coef[2]
+    spectra.frame <- data.frame(energy, cps, filename.vector)
+    colnames(spectra.frame) <- c("Energy", "CPS", "Spectrum")
+    return(spectra.frame)
+}
+
+
+readMCAData <- function(filepath, filename){
+    filename <- gsub(".mca", "", filename)
+    filename.vector <- rep(filename, 4096)
+    
+    full <- read.csv(filepath, row.names=NULL)
+    
+    chan.1.a.pre <- as.numeric(unlist(strsplit(gsub("# Calibration1: ", "", full[13,1]), " ")))
+    chan.1.b.pre <- as.numeric(full[13,2])
+    chan.2.a.pre <- as.numeric(unlist(strsplit(gsub("# Calibration2: ", "", full[14,1]), " ")))
+    chan.2.b.pre <- as.numeric(full[14,2])
+    
+    
+    chan.1 <- chan.1.a.pre[1]
+    energy.1 <- chan.1.a.pre[2] + chan.1.b.pre/(10^nchar(chan.1.b.pre))
+    chan.2 <- chan.2.a.pre[1]
+    energy.2 <- chan.2.a.pre[2] + chan.2.b.pre/(10^nchar(chan.2.b.pre))
+    
+    channels <- c(chan.1, chan.2)
+    energies <- c(energy.1, energy.2)
+    
+    energy.cal <- lm(energies~channels)
+    
+    time.1 <- as.numeric(gsub("# Live time: ", "", full[10,1], " "))
+    time.2 <- as.numeric(full[10,2])
+    time <- time.1 + time.2/(10^nchar(time.2))
+    
+    cps <- as.numeric(full[17:4112, 1])/time
+    newdata <- as.data.frame(seq(1, 4096, 1))
+    colnames(newdata) <- "channels"
+    energy <- as.vector(predict.lm(energy.cal, newdata=newdata))
+    energy2 <- newdata[,1]*summary(energy.cal)$coef[2]
+    spectra.frame <- data.frame(energy, cps, filename.vector)
+    colnames(spectra.frame) <- c("Energy", "CPS", "Spectrum")
+    return(spectra.frame)
+}
+
+
+readSPXData <- function(filepath, filename){
+    
+    filename <- gsub(".spx", "", filename)
+    filename.vector <- rep(filename, 4096)
+    
+    xmlfile <- xmlTreeParse(filepath)
+    xmllist <- xmlToList(xmlfile)
+    channels.pre <- xmllist[["ClassInstance"]][["Channels"]][[1]]
+    counts <- as.numeric(strsplit(channels.pre, ",", )[[1]])
+    newdata <- as.data.frame(seq(1, 4096, 1))
+    intercept <- as.numeric(xmllist[["ClassInstance"]][["ClassInstance"]][["CalibAbs"]])
+    slope <- as.numeric(xmllist[["ClassInstance"]][["ClassInstance"]][["CalibLin"]])
+    time <- as.numeric(xmllist[[2]][["TRTHeaderedClass"]][[3]][["LifeTime"]])/1000
+    
+    cps <- counts/time
+    energy <- newdata[,1]*slope+intercept
+    
+    spectra.frame <- data.frame(energy, cps, filename.vector)
+    colnames(spectra.frame) <- c("Energy", "CPS", "Spectrum")
+    return(spectra.frame)
+    
+}
+
+
+readPDZ25DataExpiremental <- function(filepath, filename){
+    
+    filename <- gsub(".pdz", "", filename)
+    filename.vector <- rep(filename, 2048)
+    
+    nbrOfRecords <- 3000
+    integers <- int_to_unit(readBin(con=filepath, what= "int", n=3000, endian="little"))
+    floats <- readBin(con=filepath, what="float", size=4, n=nbrOfRecords, endian="little")
+    integer.sub <- integers[124:2171]
+    
+    sequence <- seq(1, length(integer.sub), 1)
+    
+    time.est <- integers[144]/10
+    
+    channels <- sequence
+    energy <- sequence*.02
+    counts <- integer.sub/(integers[144]/10)
+    
+    unfold(data.frame(Energy=energy, CPS=counts, Spectrum=filename.vector))
+    
+}
+
+
+readPDZ24DataExpiremental <- function(filepath, filename){
+    
+    filename <- gsub(".pdz", "", filename)
+    filename.vector <- rep(filename, 2048)
+    
+    nbrOfRecords <- 3000
+    integers <- int_to_unit(readBin(con=filepath, what= "int", n=3000, endian="little"))
+    floats <- readBin(con=filepath, what="float", size=4, n=nbrOfRecords, endian="little")
+    integer.sub <- integers[90:2137]
+    sequence <- seq(1, length(integer.sub), 1)
+    
+    time.est <- integer.sub[21]
+    
+    channels <- sequence
+    energy <- sequence*.02
+    counts <- integer.sub/(integer.sub[21]/10)
+    
+    unfold(data.frame(Energy=energy, CPS=counts, Spectrum=filename.vector))
+    
+}
+
+
 #Rcpp::sourceCpp("pdz.cpp")
 
 readPDZ25Data <- function(filepath, filename){
@@ -163,6 +316,28 @@ readPDZ24Data<- function(filepath, filename){
     channels <- sequence
     energy <- sequence*.02
     counts <- integers/(integers[21]/10)
+    
+    data.frame(Energy=energy, CPS=counts, Spectrum=filename.vector)
+    
+}
+
+
+
+readPDZ25DataManual <- function(filepath, filename, binaryshift){
+    
+    filename <- gsub(".pdz", "", filename)
+    filename.vector <- rep(filename, 2020)
+    
+    nbrOfRecords <- 2020
+    integers <- readPDZ25(filepath, start=binaryshift, size=nbrOfRecords)
+    
+    sequence <- seq(1, length(integers), 1)
+    
+    time.est <- integers[21]
+    
+    channels <- sequence
+    energy <- sequence*.02
+    counts <- integers/(integers[144]/10)
     
     data.frame(Energy=energy, CPS=counts, Spectrum=filename.vector)
     

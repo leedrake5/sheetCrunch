@@ -30,6 +30,10 @@ tags$hr(),
 
 textInput('projectname', label="Project Name", value=""),
 
+checkboxInput('advanced', "Advanced", value=FALSE),
+uiOutput('gainshiftui'),
+uiOutput('binaryui'),
+
 tags$hr(),
 
 

@@ -146,6 +146,51 @@ shinyServer(function(input, output, session) {
         }
         
     })
+    
+    
+    
+    output$gainshiftui <- renderUI({
+        
+        if(input$advanced==TRUE){
+            numericInput('gainshift', "Gain Shift (keV)", min=-1, max=1, value=0)
+        } else {
+            p()
+        }
+        
+    })
+    
+    
+    output$binaryui <- renderUI({
+        
+        if(input$advanced==TRUE && input$filetype=="PDZ"){
+            numericInput('binaryshift', "Binary Shift (bits)", min=0, max=1000, value=0)
+        } else {
+            p()
+        }
+        
+    })
+    
+    
+    binaryHold <- reactive({
+        
+        if(input$advanced==TRUE){
+            input$binaryshift
+        } else if(input$advanced==FALSE){
+            500
+        }
+        
+    })
+    
+    
+    gainshiftHold <- reactive({
+        
+        if(input$advanced==TRUE){
+            input$gainshift
+        } else if(input$advanced==FALSE){
+            0
+        }
+        
+    })
 
     
 
@@ -206,8 +251,12 @@ dataType <- reactive({
             n <- length(inFile$datapath)
             names <- inFile$name
             
-            myfiles.frame <- as.data.frame(do.call(rbind, lapply(seq(1, n, 1), function(x) readPDZData(filepath=inFile$datapath[x], filename=inFile$name[x]))))
-            
+            if(input$advanced==FALSE){
+                myfiles.frame <- as.data.frame(do.call(rbind, lapply(seq(1, n, 1), function(x) readPDZData(filepath=inFile$datapath[x], filename=inFile$name[x]))))
+            } else if(input$advanced==TRUE){
+                myfiles.frame <- as.data.frame(do.call(rbind, lapply(seq(1, n, 1), function(x) readPDZ25DataManual(filepath=inFile$datapath[x], filename=inFile$name[x], binaryshift=binaryHold()))))
+                
+            }
             
             incProgress(1/n)
             Sys.sleep(0.1)
@@ -3241,8 +3290,8 @@ choiceLines <- reactive({
       wellPanel(
       style = style,
       p(HTML(paste0("<b> Spectrum: </b>", point$Spectrum, "<br/>",
-      "<b> PC1: </b>", point$PC1, "<br/>",
-      "<b> PC2: </b>", point$PC2, "<br/>"
+      "<b> PC1: </b>", round(point$PC1, 2), "<br/>",
+      "<b> PC2: </b>", round(point$PC2, 2), "<br/>"
 
       )))
       )
@@ -3680,8 +3729,8 @@ observeEvent(input$plot_dblclickmatch, {
         wellPanel(
         style = style,
         p(HTML(paste0("<b> Spectrum: </b>", point$Spectrum, "<br/>",
-        "<b> Energy: </b>", point$Energy, "<br/>",
-        "<b> Counts: </b>", point$CPS, "<br/>"
+        "<b> Energy: </b>", round(point$Energy, 2), "<br/>",
+        "<b> Counts: </b>", round(point$CPS, 2), "<br/>"
         
         )))
         
@@ -3809,8 +3858,8 @@ observeEvent(input$plot_dblclickmatch, {
             wellPanel(
             style = style,
             p(HTML(paste0("<b> Spectrum: </b>", point$Spectrum, "<br/>",
-            "<b> Energy: </b>", point$Energy, "<br/>",
-            "<b> Counts: </b>", point$CPS, "<br/>"
+            "<b> Energy: </b>", round(point$Energy, 2), "<br/>",
+            "<b> Counts: </b>", round(point$CPS, 2), "<br/>"
             
             )))
             
