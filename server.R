@@ -9,7 +9,6 @@ library(ggtern)
 library(random)
 library(rhandsontable)
 library(random)
-library(Cairo)
 library(gghighlight)
 library(scales)
 library(openxlsx)
@@ -1937,7 +1936,7 @@ print(plotInput())
     
         filename = function() { paste(paste(c(input$projectname, "-", plotname), collapse=''), '.tiff', sep='') },
         content = function(file) {
-            ggsave(file,plotInput(), device="tiff", compression="lzw", type="cairo",  dpi=300, width=12, height=7)
+            ggsave(file,plotInput(), device="tiff", compression="lzw",  dpi=300, width=12, height=7)
         }
         )
         
@@ -3316,7 +3315,7 @@ choiceLines <- reactive({
   output$downloadPlot2 <- downloadHandler(
   filename = function() { paste(paste(c(input$projectname, "_", "PCAPlot"), collapse=''), '.tiff',  sep='') },
   content = function(file) {
-      ggsave(file,plotInput2(), device="tiff", compression="lzw", type="cairo",  dpi=300, width=12, height=7)
+      ggsave(file,plotInput2(), device="tiff", compression="lzw",  dpi=300, width=12, height=7)
   }
   )
   
@@ -4454,7 +4453,7 @@ secondDefaultSelect <- reactive({
    
    filename = function() { paste(ratioTerm(), '.tiff', sep='') },
    content = function(file) {
-       ggsave(file,plotInput4(), device="tiff", compression="lzw", type="cairo",  dpi=300, width=12, height=7)
+       ggsave(file,plotInput4(), device="tiff", compression="lzw",  dpi=300, width=12, height=7)
    }
    )
 
@@ -5119,7 +5118,7 @@ output$downloadPlot5 <- downloadHandler(
 
 filename = function() { paste(axisTerm(), '.tiff', sep='') },
 content = function(file) {
-    ggsave(file,plotInput5(), device="tiff", compression="lzw", type="cairo",  dpi=300, width=12, height=7)
+    ggsave(file,plotInput5(), device="tiff", compression="lzw",  dpi=300, width=12, height=7)
 }
 )
 

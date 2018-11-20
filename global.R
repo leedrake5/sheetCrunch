@@ -23,9 +23,9 @@ list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2"
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
-if(packageVersion("ggplot2")!="2.2.1") devtools::install_version("ggplot2", version = "2.2.1", repos = "http://cran.us.r-project.org", checkBuilt=TRUE)
-if(packageVersion("gghighlight")!="0.0.1") devtools::install_version("gghighlight", version = "0.0.1", repos = "http://cran.us.r-project.org", checkBuilt=TRUE)
-if(packageVersion("ggtern")!="2.2.0") devtools::install_version("ggtern", version = "2.2.0", repos = "http://cran.us.r-project.org", checkBuilt=TRUE)
+#if(packageVersion("ggplot2")!="2.2.1") devtools::install_version("ggplot2", version = "2.2.1", repos = "http://cran.us.r-project.org", checkBuilt=TRUE)
+#if(packageVersion("gghighlight")!="0.0.1") devtools::install_version("gghighlight", version = "0.0.1", repos = "http://cran.us.r-project.org", checkBuilt=TRUE)
+#if(packageVersion("ggtern")!="2.2.0") devtools::install_version("ggtern", version = "2.2.0", repos = "http://cran.us.r-project.org", checkBuilt=TRUE)
 
 
 
