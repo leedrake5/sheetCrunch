@@ -12,10 +12,11 @@ library(random)
 library(gghighlight)
 library(scales)
 library(openxlsx)
-library(gRbase)
+#library(gRbase)
 
 
 
+options(shiny.maxRequestSize=9000000*1024^40)
 
 
 shinyServer(function(input, output, session) {
@@ -203,6 +204,8 @@ dataType <- reactive({
         "Net"
     } else if (input$filetype=="Spreadsheet"){
         "Spreadsheet"
+    } else if (input$filetype=="Artax Excel"){
+        "Artax Excel"
     }
     
 })
@@ -342,10 +345,10 @@ dataType <- reactive({
         
         proto.fish <- loadWorkbook(file=inFile$datapath)
         just.fish <- readWorkbook(proto.fish, sheet=2)
-        colnames(just.fish)[1] <- "Spectrum"
+        colnames(just.fish)[4] <- "Spectrum"
 
         
-        just.fish
+        just.fish[,4:length(just.fish)]
         
         
         
@@ -2288,6 +2291,24 @@ print(plotInput())
       choices=qualitativeSelect6(), selected = NULL)
   })
 
+  dataMerge0 <- reactive({
+      
+      spectra.line.table <- dataMerge()
+      quality.table <- values[["DF"]]
+      
+      spectra.line.table$Qualitative1 <- quality.table$Qualitative1
+      spectra.line.table$Qualitative2 <- quality.table$Qualitative2
+      spectra.line.table$Qualitative3 <- quality.table$Qualitative3
+      spectra.line.table$Qualitative4 <- quality.table$Qualitative4
+      spectra.line.table$Qualitative5 <- quality.table$Qualitative5
+      spectra.line.table$Qualitative6 <- quality.table$Qualitative6
+      
+      
+      
+      spectra.line.table$Quantitative <- quality.table$Quantitative
+      
+      spectra.line.table
+  })
 
 
 dataMerge1a <- reactive({
@@ -2352,8 +2373,13 @@ dataMerge1b <- reactive({
 
 mergedHold <- reactive({
     
-    merged.table <- merge(dataMerge1a(), dataMerge1b(), all=TRUE)
-    merged.table$Spectrum
+    #merged.table <- merge(dataMerge1a(), dataMerge1b(), all=TRUE)
+        
+    if(input$usefull==FALSE){
+        c(dataMerge1a()$Spectrum,  dataMerge1b()$Spectrum)
+    } else if(input$usefull==TRUE){
+        dataMerge()$Spectrum
+    }
     
 })
 
@@ -2366,7 +2392,13 @@ output$clipsubsetfinal <- renderUI({
 
 dataMerge2 <- reactive({
     
-    merged.table <- merge(dataMerge1a(), dataMerge1b(), all=TRUE)
+    merged.table <- if(input$usefull==FALSE){
+        rbindlist(list(dataMerge1a(), dataMerge1b()))
+    } else if(input$usefull==TRUE){
+        dataMerge0()
+    }
+    
+    #merge(dataMerge1a(), dataMerge1b(), all=TRUE)
     
     filter(merged.table,
     Spectrum %in% input$show_rows
@@ -2446,7 +2478,13 @@ content = function(file
 
 
 dataMerge3 <- reactive({
-    spectra.line.table <- dataMerge2()
+    
+    spectra.line.table <- if(input$usefull==FALSE){
+        dataMerge2()
+    } else if(input$usefull==TRUE){
+        dataMerge0()
+    }
+    
     quality.table <- values[["DF"]]
 
     spectra.line.table <- spectra.line.table[,c("Spectrum", input$show_vars, ls(quality.table[,-1]))]

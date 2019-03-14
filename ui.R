@@ -264,6 +264,7 @@ sidebarLayout(
 
 sidebarPanel(
 downloadButton("downloadsubsetfinal", label = "Download"),
+checkboxInput("usefull", "Use full table", value=T),
 uiOutput('clipsubsetfinal')
 ),
 
@@ -299,10 +300,12 @@ uiOutput('pcaFocusUI'),
 uiOutput('pcaFocusLabel'),
 
 
-sliderInput("spotsize", label = "Point Size", value=5, min=2, max=15),
+sliderInput("spotsize", label = "Point Size", value=2, min=2, max=15),
 
 checkboxInput('elipseplot1', "Elipse"),
 checkboxInput('logtrans', "Log Transform"),
+
+checkboxInput('usesubset', "Subset Data", value=FALSE),
 
 
 uiOutput('inxlimrangepca'),
