@@ -4089,7 +4089,7 @@ secondDefaultSelect <- reactive({
       
       
       ratio.frame <- data.frame(first.ratio, second.ratio, third.ratio, fourth.ratio, spectra.line.table$Cluster, spectra.line.table$Qualitative1, spectra.line.table$Qualitative2, spectra.line.table$Qualitative3, spectra.line.table$Qualitative4, spectra.line.table$Quantitative, spectra.line.table$Spectrum)
-      colnames(ratio.frame) <- c(input$elementratioa, input$elementratiob, input$elementratioc, input$elementratiod, "Cluster", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Quantitative", "Spectrum")
+      colnames(ratio.frame) <- c("A", "B", "C","D", "Cluster", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Quantitative", "Spectrum")
       
             
             if(input$elementratiob!="None"){ratio.names.x <- c(names(ratio.frame[1]), "/", names(ratio.frame[2]))}
