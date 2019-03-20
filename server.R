@@ -4092,11 +4092,11 @@ secondDefaultSelect <- reactive({
       colnames(ratio.frame) <- c("A", "B", "C","D", "Cluster", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Quantitative", "Spectrum")
       
             
-            if(input$elementratiob!="None"){ratio.names.x <- c(names(ratio.frame[1]), "/", names(ratio.frame[2]))}
-            if(input$elementratiod!="None"){ratio.names.y <- c(names(ratio.frame[3]), "/", names(ratio.frame[4]))}
+            if(input$elementratiob!="None"){ratio.names.x <- c(input$elementratioa, "/", input$elementratiob)}
+            if(input$elementratiod!="None"){ratio.names.y <- c(input$elementratioc, "/", input$elementratiod)}
             
-            if(input$elementratiob=="None"){ratio.names.x <- c(names(ratio.frame[1]))}
-            if(input$elementratiod=="None"){ratio.names.y <- c(names(ratio.frame[3]))}
+            if(input$elementratiob=="None"){ratio.names.x <- c(input$elementratioa)}
+            if(input$elementratiod=="None"){ratio.names.y <- c(input$elementratioc)}
       
       ratio.names.x <- paste(ratio.names.x, sep=",", collapse="")
       ratio.names.y <- paste(ratio.names.y, sep=",", collapse="")
