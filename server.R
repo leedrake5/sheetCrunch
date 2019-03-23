@@ -2376,7 +2376,7 @@ mergedHold <- reactive({
     #merged.table <- merge(dataMerge1a(), dataMerge1b(), all=TRUE)
         
     if(input$usefull==FALSE){
-        c(dataMerge1a()$Spectrum,  dataMerge1b()$Spectrum)
+        c(as.vector(dataMerge1a()$Spectrum),  as.vector(dataMerge1b()$Spectrum))
     } else if(input$usefull==TRUE){
         dataMerge()$Spectrum
     }
@@ -2392,11 +2392,11 @@ output$clipsubsetfinal <- renderUI({
 
 dataMerge2 <- reactive({
     
-    merged.table <- if(input$usefull==FALSE){
-        rbindlist(list(dataMerge1a(), dataMerge1b()))
-    } else if(input$usefull==TRUE){
-        dataMerge0()
-    }
+    merged.table.first <-  dataMerge0()
+    
+    merged.table <- merged.table.first[merged.table.first$Spectrum %in% mergedHold(),]
+        
+    
     
     #merge(dataMerge1a(), dataMerge1b(), all=TRUE)
     
