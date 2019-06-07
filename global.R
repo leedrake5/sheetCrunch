@@ -14,10 +14,15 @@ get_os <- function(){
     tolower(os)
 }
 
+#options(repos = BiocInstaller::biocinstallRepos())
+#getOption("repos")
+#options(download.file.method="libcurl", url.method="libcurl")
+if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
 list.of.bioconductor <- c("graph", "RBGL", "Rgraphviz")
 new.bioconductor <- list.of.bioconductor[!(list.of.bioconductor %in% installed.packages()[,"Package"])]
-if(length(new.bioconductor)) source("https://bioconductor.org/biocLite.R")
-if(length(new.bioconductor)) biocLite(new.bioconductor)
+#if(length(new.bioconductor)) source("https://www.bioconductor.org/biocLite.R")
+if(length(new.bioconductor)) BiocManager::install(new.bioconductor)
+
 
 list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "gghighlight", "scales", "openxlsx", "devtools", "digest")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
