@@ -292,6 +292,8 @@ selectInput("pcacolour", "Colour", choices=c(
 "Qualitative2"="Qualitative2",
 "Qualitative3"="Qualitative3",
 "Qualitative4"="Qualitative4",
+"Qualitative5"="Qualitative5",
+"Qualitative6"="Qualitative6",
 "Quantitative"="Quantitative"),
 selected="Cluster"),
 
@@ -508,6 +510,8 @@ selectInput("ternarycolour", "Colour", choices=c(
 "Qualitative2"="Qualitative2",
 "Qualitative3"="Qualitative3",
 "Qualitative4"="Qualitative4",
+"Qualitative5"="Qualitative5",
+"Qualitative6"="Qualitative6",
 "Quantitative" = "Quantitative"),
 selected="Cluster"),
 
@@ -565,6 +569,8 @@ c(
 "Qualitative2"="Qualitative2",
 "Qualitative3"="Qualitative3",
 "Qualitative4"="Qualitative4",
+"Qualitative5"="Qualitative5",
+"Qualitative6"="Qualitative6",
 "Quantitative" = "Quantitative"
 ), selected="Cluster"),
 
