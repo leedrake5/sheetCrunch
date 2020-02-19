@@ -33,8 +33,8 @@ library(randomForest)
 library(doParallel)
 library(rBayesianOptimization)
 library(tidyverse)
-library(mlr)
-library(parallelMap)
+if(get_os!="windows"){library(mlr)}
+if(get_os!="windows"){library(parallelMap)}
 #Detect the available computer cores. One is reserved for the operating system
 my.cores <- if(parallel::detectCores()>=3){
     paste0(parallel::detectCores()-1)
