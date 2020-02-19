@@ -16,11 +16,8 @@ get_os <- function(){
 }
 
 #Check to see if needed packages exist, and automatically install them if needed
-list.of.packages <- if(as.character(get_os())!="windows"){
-    c("caret", "xgboost", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse")
-} else if(as.character(get_os())=="windows"){
-    c("caret", "xgboost", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "tidyverse")
-}
+list.of.packages <- c("caret", "xgboost", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse")
+
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) lapply(new.packages, function(x) install.packages(x, repos="http://cran.rstudio.com/", dep = TRUE))
 
