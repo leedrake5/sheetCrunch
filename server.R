@@ -2113,6 +2113,9 @@ print(plotInput())
       
       empty.line.table <- data.frame(spectra.line.vector, na.vector, na.vector, na.vector, na.vector, na.vector, na.vector)
       colnames(empty.line.table) <- c("Spectrum", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Qualitative5", "Qualitative6")
+      empty.line.table$Quantitative <- lin.vector
+      
+
       
       
       if(dataType()=="Spreadsheet" && length(qualExcelData())>=2){empty.line.table$Qualitative1 <- qualExcelData()[,2]}
@@ -2122,10 +2125,14 @@ print(plotInput())
                             if(dataType()=="Spreadsheet" && length(qualExcelData())>=6){empty.line.table$Qualitative5 <- qualExcelData()[,6]}
                                 if(dataType()=="Spreadsheet" && length(qualExcelData())>=7){empty.line.table$Qualitative6 <- qualExcelData()[,7]}
      
-     empty.line.table$Quantitative <- lin.vector
+     new.line.table <- if(dataType()=="Spreadsheet"){
+         merge(qualExcelData(), empty.line.table, by="Spectrum")
+     } else if(dataType()!="Spreadsheet"){
+         empty.line.table
+     }
+
       
-      
-      empty.line.table
+      new.line.table
       
   })
   
@@ -2295,40 +2302,16 @@ print(plotInput())
       
       spectra.line.table <- dataMerge()
       quality.table <- values[["DF"]]
+
       
-      spectra.line.table$Qualitative1 <- quality.table$Qualitative1
-      spectra.line.table$Qualitative2 <- quality.table$Qualitative2
-      spectra.line.table$Qualitative3 <- quality.table$Qualitative3
-      spectra.line.table$Qualitative4 <- quality.table$Qualitative4
-      spectra.line.table$Qualitative5 <- quality.table$Qualitative5
-      spectra.line.table$Qualitative6 <- quality.table$Qualitative6
-      
-      
-      
-      spectra.line.table$Quantitative <- quality.table$Quantitative
-      
-      spectra.line.table
+      merge(spectra.line.table, quality.table, by="Spectrum")
   })
 
 
 dataMerge1a <- reactive({
     
-    spectra.line.table <- dataMerge()
-    quality.table <- values[["DF"]]
-
-    spectra.line.table$Qualitative1 <- quality.table$Qualitative1
-    spectra.line.table$Qualitative2 <- quality.table$Qualitative2
-    spectra.line.table$Qualitative3 <- quality.table$Qualitative3
-    spectra.line.table$Qualitative4 <- quality.table$Qualitative4
-    spectra.line.table$Qualitative5 <- quality.table$Qualitative5
-    spectra.line.table$Qualitative6 <- quality.table$Qualitative6
-
-
+    spectra.line.table <- dataMerge0()
     
-    spectra.line.table$Quantitative <- quality.table$Quantitative
-    
-
-
     
     filter(spectra.line.table,
     Qualitative1 %in% input$qual_select1a,
@@ -2343,19 +2326,7 @@ dataMerge1a <- reactive({
 
 dataMerge1b <- reactive({
     
-    spectra.line.table <- dataMerge()
-    quality.table <- values[["DF"]]
-
-    spectra.line.table$Qualitative1 <- quality.table$Qualitative1
-    spectra.line.table$Qualitative2 <- quality.table$Qualitative2
-    spectra.line.table$Qualitative3 <- quality.table$Qualitative3
-    spectra.line.table$Qualitative4 <- quality.table$Qualitative4
-    spectra.line.table$Qualitative5 <- quality.table$Qualitative5
-    spectra.line.table$Qualitative6 <- quality.table$Qualitative6
-    
-    
-    
-    spectra.line.table$Quantitative <- quality.table$Quantitative
+        spectra.line.table <- dataMerge0()
     
     
     
@@ -2487,7 +2458,7 @@ dataMerge3 <- reactive({
     
     quality.table <- values[["DF"]]
 
-    spectra.line.table <- spectra.line.table[,c("Spectrum", input$show_vars, ls(quality.table[,-1]))]
+    spectra.line.table <- spectra.line.table[,c("Spectrum", input$show_vars, names(quality.table[,-1]))]
     
     #spectra.line.table <- spectra.line.table[complete.cases(spectra.line.table[,input$show_vars]),]
     
@@ -2913,12 +2884,22 @@ choiceLines <- reactive({
       xrf.pca.results
   })
   
+  qualChoices <- reactive({
+      c(names(values[["DF"]]), "Cluster")
+  })
+  
+  output$pcacolourui <- renderUI({
+      
+      selectInput("pcacolour", "Colour", choices=c(qualChoices(), "Focus"), selected="Cluster")
+      
+  })
+  
 
   
   
   output$pcaFocusVariable <- renderUI({
       
-      if(input$pcacolour=="Focus"){selectInput('pcafocusvariable', "Choose Variable", choices=names(values[["DF"]]), selected="Qualitative1")} else {
+      if(input$pcacolour=="Focus"){selectInput('pcafocusvariable', "Choose Variable", choices=qualChoices(), selected="Qualitative1")} else {
           p()
       }
       
@@ -2940,426 +2921,17 @@ choiceLines <- reactive({
   })
   
   
-
-  plotInput2 <- reactive({
+  clusterFrame <- reactive({
       
-      spectra.line.table <- dataMerge3()
-      
+          spectra.line.table <- dataMerge3()
+          
 
-      
-  xrf.pca.results <- xrfKReactive()
-  
-  xrf.k <- xrfKReactive()
-  
-  quality.table <-qualityTable()
-  
-  colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
-  colnames(colour.table) <- c("Cluster", names(spectra.line.table))
-  
-  
-  
-  
-  unique.spec <- seq(1, length(colour.table$Spectrum), 1)
-  null <- rep(1, length(unique.spec))
-  
-  spectra.line.table$Cluster <- xrf.k$Cluster
-  spectra.line.table$PC1 <- xrf.k$PC1
-  spectra.line.table$PC2 <- xrf.k$PC2
-  
-  
-  if(input$pcacolour=="Cluster"){
-      spectra.line.table <- spectra.line.table[order(spectra.line.table[input$ratiocolour]),]
-  } else if(input$pcacolour=="Qualitative1"){
-      spectra.line.table <- spectra.line.table[order(spectra.line.table[input$ratiocolour]),]
-  } else if(input$pcacolour=="Qualitative2"){
-      spectra.line.table <- spectra.line.table[order(spectra.line.table[input$ratiocolour]),]
-  } else if(input$pcacolour=="Qualitative3"){
-      spectra.line.table <- spectra.line.table[order(spectra.line.table[input$ratiocolour]),]
-  } else if(input$pcacolour=="Qualitative4"){
-      spectra.line.table <- spectra.line.table[order(spectra.line.table[input$ratiocolour]),]
-  } else if(input$pcacolour=="Qualitative5"){
-       spectra.line.table <- spectra.line.table[order(spectra.line.table[input$ratiocolour]),]
-   } else if(input$pcacolour=="Qualitative6"){
-        spectra.line.table <- spectra.line.table[order(spectra.line.table[input$ratiocolour]),]
-    }
-  
-
-  
-  
-  basic <- ggplot(data= spectra.line.table) +
-  geom_point(aes(PC1, PC2), size = input$spotsize) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-  
-  
-  regular <- ggplot(data= spectra.line.table) +
-  geom_point(aes(PC1, PC2, colour=as.factor(Cluster), shape=as.factor(Cluster)), size = input$spotsize+1) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  scale_shape_manual("Cluster", values=1:nlevels(as.factor(spectra.line.table$Cluster))) +
-  scale_colour_discrete("Cluster") +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-
-
-  ellipse <- ggplot(data= spectra.line.table)+
-  geom_point(aes(PC1, PC2, colour=as.factor(Cluster), shape=as.factor(Cluster)), size = input$spotsize+1) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  stat_ellipse(aes(PC1, PC2, colour=as.factor(Cluster), linetype=as.factor(Cluster))) +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  guides(linetype=FALSE) +
-  scale_shape_manual("Cluster", values=1:nlevels(as.factor(spectra.line.table$Cluster))) +
-  scale_colour_discrete("Cluster") +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-
-
-  qual.regular.1 <- ggplot(data= spectra.line.table) +
-  geom_point(aes(PC1, PC2, colour=as.factor(Qualitative1), shape=as.factor(Qualitative1)), size = input$spotsize+1) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  scale_shape_manual("Qualitative1", values=1:nlevels(as.factor(spectra.line.table$Qualitative1))) +
-  scale_colour_discrete("Qualitative1") +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-  
-  
-  qual.ellipse.1 <- ggplot(data= spectra.line.table)+
-  geom_point(aes(PC1, PC2, colour=as.factor(Qualitative1), shape=as.factor(Qualitative1)), size = input$spotsize+1) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  stat_ellipse(aes(PC1, PC2, colour=as.factor(Qualitative1), linetype=as.factor(Qualitative1))) +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  guides(linetype=FALSE) +
-  scale_shape_manual("Qualitative1", values=1:nlevels(as.factor(spectra.line.table$Qualitative1))) +
-  scale_colour_discrete("Qualitative1") +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-  
-  qual.regular.2 <- ggplot(data= spectra.line.table) +
-  geom_point(aes(PC1, PC2, colour=as.factor(Qualitative2), shape=as.factor(Qualitative2)), size = input$spotsize+1) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  scale_shape_manual("Qualitative2", values=1:nlevels(as.factor(spectra.line.table$Qualitative2))) +
-  scale_colour_discrete("Qualitative2") +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-  
-  qual.ellipse.2 <- ggplot(data= spectra.line.table)+
-  geom_point(aes(PC1, PC2, colour=as.factor(Qualitative2), shape=as.factor(Qualitative2)), size = input$spotsize+1) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  stat_ellipse(aes(PC1, PC2, colour=as.factor(Qualitative2), linetype=as.factor(Qualitative2))) +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  guides(linetype=FALSE) +
-  scale_shape_manual("Qualitative2", values=1:nlevels(as.factor(spectra.line.table$Qualitative2))) +
-  scale_colour_discrete("Qualitative2") +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-  
-  
-  qual.ellipse.3 <- ggplot(data= spectra.line.table)+
-  geom_point(aes(PC1, PC2, colour=as.factor(Qualitative3), shape=as.factor(Qualitative3)), size = input$spotsize+1) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  stat_ellipse(aes(PC1, PC2, colour=as.factor(Qualitative3), linetype=as.factor(Qualitative3))) +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  guides(linetype=FALSE) +
-  scale_shape_manual("Qualitative3", values=1:nlevels(as.factor(spectra.line.table$Qualitative3))) +
-  scale_colour_discrete("Qualitative3") +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-  
-  qual.regular.3 <- ggplot(data= spectra.line.table) +
-  geom_point(aes(PC1, PC2, colour=as.factor(Qualitative3), shape=as.factor(Qualitative3)), size = input$spotsize+1) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  scale_shape_manual("Qualitative3", values=1:nlevels(as.factor(spectra.line.table$Qualitative3))) +
-  scale_colour_discrete("Qualitative3") +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-  
-  
-  qual.ellipse.4 <- ggplot(data= spectra.line.table)+
-  geom_point(aes(PC1, PC2, colour=as.factor(Qualitative4), shape=as.factor(Qualitative4)), size = input$spotsize+1) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  stat_ellipse(aes(PC1, PC2, colour=as.factor(Qualitative4), linetype=as.factor(Qualitative4))) +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  guides(linetype=FALSE) +
-  scale_shape_manual("Qualitative4", values=1:nlevels(as.factor(spectra.line.table$Qualitative4))) +
-  scale_colour_discrete("Qualitative4") +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-  
-  qual.regular.4 <- ggplot(data= spectra.line.table) +
-  geom_point(aes(PC1, PC2, colour=as.factor(Qualitative4), shape=as.factor(Qualitative4)), size = input$spotsize+1) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  scale_shape_manual("Qualitative4", values=1:nlevels(as.factor(spectra.line.table$Qualitative4))) +
-  scale_colour_discrete("Qualitative4") +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-  
-  qual.ellipse.5 <- ggplot(data= spectra.line.table)+
-  geom_point(aes(PC1, PC2, colour=as.factor(Qualitative5), shape=as.factor(Qualitative5)), size = input$spotsize+1) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  stat_ellipse(aes(PC1, PC2, colour=as.factor(Qualitative5), linetype=as.factor(Qualitative5))) +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  guides(linetype=FALSE) +
-  scale_shape_manual("Qualitative5", values=1:nlevels(as.factor(spectra.line.table$Qualitative5))) +
-  scale_colour_discrete("Qualitative5") +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-  
-  qual.regular.4 <- ggplot(data= spectra.line.table) +
-  geom_point(aes(PC1, PC2, colour=as.factor(Qualitative5), shape=as.factor(Qualitative5)), size = input$spotsize+1) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  scale_shape_manual("Qualitative5", values=1:nlevels(as.factor(spectra.line.table$Qualitative5))) +
-  scale_colour_discrete("Qualitative5") +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-  
-  qual.ellipse.6 <- ggplot(data= spectra.line.table)+
-  geom_point(aes(PC1, PC2, colour=as.factor(Qualitative6), shape=as.factor(Qualitative6)), size = input$spotsize+1) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  stat_ellipse(aes(PC1, PC2, colour=as.factor(Qualitative6), linetype=as.factor(Qualitative6))) +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  guides(linetype=FALSE) +
-  scale_shape_manual("Qualitative6", values=1:nlevels(as.factor(spectra.line.table$Qualitative6))) +
-  scale_colour_discrete("Qualitative6") +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-  
-  qual.regular.6 <- ggplot(data= spectra.line.table) +
-  geom_point(aes(PC1, PC2, colour=as.factor(Qualitative6), shape=as.factor(Qualitative6)), size = input$spotsize+1) +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
-  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
-  scale_x_continuous("Principle Component 1") +
-  scale_y_continuous("Principle Component 2") +
-  theme_light() +
-  theme(axis.text.x = element_text(size=15)) +
-  theme(axis.text.y = element_text(size=15)) +
-  theme(axis.title.x = element_text(size=15)) +
-  theme(axis.title.y = element_text(size=15, angle=90)) +
-  theme(plot.title=element_text(size=20)) +
-  theme(legend.title=element_text(size=15)) +
-  theme(legend.text=element_text(size=15)) +
-  scale_shape_manual("Qualitative6", values=1:nlevels(as.factor(spectra.line.table$Qualitative6))) +
-  scale_colour_discrete("Qualitative6") +
-  geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-  
-  if (input$pcacolour == "Focus" && input$pcafocuslabel=="None") {new.spectra.line.table <- spectra.line.table[,c("Spectrum", "PC1", "PC2", input$pcafocusvariable)]}
-  
-  if (input$pcacolour == "Focus" && input$pcafocuslabel=="None") {colnames(new.spectra.line.table) <- c("Spectrum", "PC1", "PC2", "Selected")}
-  
-  if (input$elipseplot1 == FALSE && input$pcacolour == "Focus" && input$pcafocuslabel=="None") {select.plot <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize,  use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme(legend.text=element_text(size=15)) + theme_light()}
-  
-  if (input$elipseplot1 == TRUE && input$pcacolour == "Focus"  && input$pcafocuslabel=="None") {select.plot.ellipse <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, use_group_by=FALSE, use_direct_label=FALSE) +  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
-  
-  if (input$pcacolour == "Focus" && input$pcafocuslabel!="None") {newer.spectra.line.table <- spectra.line.table[,c("Spectrum", "PC1", "PC2", input$pcafocusvariable, input$pcafocuslabel)]}
-  
-  if (input$pcacolour == "Focus" && input$pcafocuslabel!="None") {colnames(newer.spectra.line.table) <- c("Spectrum", "PC1", "PC2", "Selected", "Label")}
-  
-  if (input$elipseplot1 == FALSE && input$pcacolour == "Focus" && input$pcafocuslabel!="None") {select.plot <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
-  
-  if (input$elipseplot1 == TRUE && input$pcacolour == "Focus"  && input$pcafocuslabel!="None") {select.plot.ellipse <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
-  
-  
-  #quant.regular <- ggplot(data= spectra.line.table) +
-  #geom_point(aes(PC1, PC2, colour=Quantitative), size = input$spotsize) +
-  #scale_x_continuous("Principle Component 1") +
-  #scale_y_continuous("Principle Component 2") +
-  #theme_light() +
-  #theme(axis.text.x = element_text(size=15)) +
-  #theme(axis.text.y = element_text(size=15)) +
-  #theme(axis.title.x = element_text(size=15)) +
-  #theme(axis.title.y = element_text(size=15, angle=90)) +
-  #theme(plot.title=element_text(size=20)) +
-  #theme(legend.title=element_text(size=15)) +
-  #theme(legend.text=element_text(size=15)) +
-  #scale_colour_gradientn("Quantitative", colours=rainbow(length(spectra.line.table$Quantitative))) +
-  #geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-
-
-  if (input$elipseplot1 == FALSE && input$pcacolour == "black") {
-      basic
-  } else if (input$elipseplot1 == TRUE && input$pcacolour == "Cluster") {
-      ellipse
-  } else if (input$elipseplot1 == FALSE && input$pcacolour == "Cluster") {
-      regular
-  } else if (input$elipseplot1 == TRUE && input$pcacolour == "Qualitative1") {
-      qual.ellipse.1
-  } else if (input$elipseplot1 == FALSE && input$pcacolour == "Qualitative1") {
-      qual.regular.1
-  } else if (input$elipseplot1 == TRUE && input$pcacolour == "Qualitative2") {
-      qual.ellipse.2
-  } else if (input$elipseplot1 == FALSE && input$pcacolour == "Qualitative2") {
-      qual.regular.2
-  } else if (input$elipseplot1 == TRUE && input$pcacolour == "Qualitative3") {
-      qual.ellipse.3
-  } else if (input$elipseplot1 == FALSE && input$pcacolour == "Qualitative3") {
-      qual.regular.3
-  } else if (input$elipseplot1 == TRUE && input$pcacolour == "Qualitative4") {
-      qual.ellipse.4
-  } else if (input$elipseplot1 == FALSE && input$pcacolour == "Qualitative4") {
-      qual.regular.4
-  } else if (input$elipseplot1 == TRUE && input$pcacolour == "Qualitative5") {
-       qual.ellipse.5
-   } else if (input$elipseplot1 == FALSE && input$pcacolour == "Qualitative5") {
-       qual.regular.5
-   } else if (input$elipseplot1 == TRUE && input$pcacolour == "Qualitative6") {
-        qual.ellipse.6
-    } else if (input$elipseplot1 == FALSE && input$pcacolour == "Qualitative6") {
-        qual.regular.6
-    } else if (input$elipseplot1 == FALSE && input$pcacolour == "Focus") {
-      select.plot
-  }  else if (input$elipseplot1 == TRUE && input$pcacolour == "Focus") {
-      select.plot.ellipse
-  }
-
-
-
-  })
-  
-  
-  output$xrfpcaplot <- renderPlot({
-      plotInput2()
-      
-  })
-  
-  hoverHold <- reactive({
-      
-      spectra.line.table <- dataMerge3()
-
+          
       xrf.pca.results <- xrfKReactive()
       
       xrf.k <- xrfKReactive()
       
+      quality.table <-qualityTable()
       
       colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
       colnames(colour.table) <- c("Cluster", names(spectra.line.table))
@@ -3374,19 +2946,106 @@ choiceLines <- reactive({
       spectra.line.table$PC1 <- xrf.k$PC1
       spectra.line.table$PC2 <- xrf.k$PC2
       
+      spectra.line.table
       
-      point.table <- spectra.line.table[,c("Spectrum", "PC1", "PC2")]
+  })
+  
+  
+  plotInput2color <- reactive({
       
-      point.table
+      spectra.line.table <- clusterFrame()
+      
+      color.plot <- if(input$elipseplot1==FALSE){
+          ggplot(data= spectra.line.table) +
+          geom_point(aes(PC1, PC2, colour=as.factor(spectra.line.table[,input$pcacolour]), shape=as.factor(spectra.line.table[,input$pcacolour])), size = input$spotsize+1) +
+          geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
+          coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
+          scale_x_continuous("Principle Component 1") +
+          scale_y_continuous("Principle Component 2") +
+          theme_light() +
+          theme(axis.text.x = element_text(size=15)) +
+          theme(axis.text.y = element_text(size=15)) +
+          theme(axis.title.x = element_text(size=15)) +
+          theme(axis.title.y = element_text(size=15, angle=90)) +
+          theme(plot.title=element_text(size=20)) +
+          theme(legend.title=element_text(size=15)) +
+          theme(legend.text=element_text(size=15)) +
+          scale_shape_manual(input$pcacolour, values=1:nlevels(as.factor(spectra.line.table[,input$pcacolour]))) +
+          scale_colour_discrete(input$pcacolour) +
+          geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
+      } else if(input$elipseplot1==TRUE){
+          ggplot(data= spectra.line.table) +
+          stat_ellipse(aes(PC1, PC2, colour=as.factor(spectra.line.table[,input$pcacolour]), linetype=as.factor(spectra.line.table[,input$pcacolour]))) +
+          geom_point(aes(PC1, PC2, colour=as.factor(spectra.line.table[,input$pcacolour]), shape=as.factor(spectra.line.table[,input$pcacolour])), size = input$spotsize+1) +
+          geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
+          coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) +
+          scale_x_continuous("Principle Component 1") +
+          scale_y_continuous("Principle Component 2") +
+          theme_light() +
+          theme(axis.text.x = element_text(size=15)) +
+          theme(axis.text.y = element_text(size=15)) +
+          theme(axis.title.x = element_text(size=15)) +
+          theme(axis.title.y = element_text(size=15, angle=90)) +
+          theme(plot.title=element_text(size=20)) +
+          theme(legend.title=element_text(size=15)) +
+          theme(legend.text=element_text(size=15)) +
+          scale_shape_manual(input$pcacolour, values=1:nlevels(as.factor(spectra.line.table[,input$pcacolour]))) +
+          scale_colour_discrete(input$pcacolour) +
+          scale_linetype_discrete(input$pcacolour) +
+          geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
+      }
+      
+      color.plot
+      
+  })
+  
+  plotInput2focus <- reactive({
+      
+      spectra.line.table <- clusterFrame()
+
+      if (input$pcacolour == "Focus" && input$pcafocuslabel=="None") {new.spectra.line.table <- spectra.line.table[,c("Spectrum", "PC1", "PC2", input$pcafocusvariable)]}
+      
+      if (input$pcacolour == "Focus" && input$pcafocuslabel=="None") {colnames(new.spectra.line.table) <- c("Spectrum", "PC1", "PC2", "Selected")}
+      
+      if (input$elipseplot1 == FALSE && input$pcacolour == "Focus" && input$pcafocuslabel=="None") {select.plot <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize,  use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme(legend.text=element_text(size=15)) + theme_light()}
+      
+      if (input$elipseplot1 == TRUE && input$pcacolour == "Focus"  && input$pcafocuslabel=="None") {select.plot <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, use_group_by=FALSE, use_direct_label=FALSE) +  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      
+      if (input$pcacolour == "Focus" && input$pcafocuslabel!="None") {newer.spectra.line.table <- spectra.line.table[,c("Spectrum", "PC1", "PC2", input$pcafocusvariable, input$pcafocuslabel)]}
+      
+      if (input$pcacolour == "Focus" && input$pcafocuslabel!="None") {colnames(newer.spectra.line.table) <- c("Spectrum", "PC1", "PC2", "Selected", "Label")}
+      
+      if (input$elipseplot1 == FALSE && input$pcacolour == "Focus" && input$pcafocuslabel!="None") {select.plot <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
+      
+      if (input$elipseplot1 == TRUE && input$pcacolour == "Focus"  && input$pcafocuslabel!="None") {select.plot <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      
+      select.plot
+      
+  })
+  
+  
+  plotInput2 <- reactive({
+      
+      if(input$pcacolour!="Focus"){
+          plotInput2color()
+      } else if(input$pcacolour=="Focus"){
+          plotInput2focus()
+      }
+      
+  })
+  
+  
+  
+  output$xrfpcaplot <- renderPlot({
+      plotInput2()
       
   })
   
 
-
   
   output$hover_infopca <- renderUI({
       
-      point.table <- hoverHold()
+      point.table <- clusterFrame()
       
       hover <- input$plot_hoverpca
       point <- nearPoints(point.table,  coordinfo=hover,   threshold = 5, maxpoints = 1, addDist = TRUE)
@@ -4110,14 +3769,18 @@ secondDefaultSelect <- reactive({
 
   
 
-  
+  output$ratiocolourui <- renderUI({
+      
+      selectInput("ratiocolour", "Ratio Plot Type", choices=c("Black", qualChoices(), "Focus"), selected="Cluster")
+      
+  })
   
 
   
   
   output$ratioFocusVariable <- renderUI({
       
-      if(input$ratiocolour=="Focus"){selectInput('ratiofocusvariable', "Choose Variable", choices=names(values[["DF"]]), selected="Qualitative1")} else {
+      if(input$ratiocolour=="Focus"){selectInput('ratiofocusvariable', "Choose Variable", choices=qualChoices(), selected="Qualitative1")} else {
           p()
       }
       
@@ -4138,77 +3801,56 @@ secondDefaultSelect <- reactive({
       
   })
   
-  
-  
-  plotInput4 <- reactive({
-      
+  ratioFrame <- reactive({
       
       spectra.line.table <- dataMerge3()
       spectra.line.table$None <- rep(1, length(spectra.line.table$Spectrum))
-
       
-     
-     xrf.k <- xrfKReactive()
-     
-     colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
-     colnames(colour.table) <- c("Cluster", names(spectra.line.table))
-     
-     
-     
-     
-     unique.spec <- seq(1, length(colour.table$Spectrum), 1)
-     null <- rep(1, length(unique.spec))
-     
-     spectra.line.table$Cluster <- xrf.k$Cluster
-
-
-
-
-
-      first.ratio <-spectra.line.table[input$elementratioa]
-      second.ratio <- spectra.line.table[input$elementratiob]
-      third.ratio <- spectra.line.table[input$elementratioc]
-      fourth.ratio <- spectra.line.table[input$elementratiod]
+      xrf.k <- xrfKReactive()
       
-      first.ratio.norm <- first.ratio/sum(first.ratio)
-      second.ratio.norm <- second.ratio/sum(second.ratio)
-      third.ratio.norm <- third.ratio/sum(third.ratio)
-      fourth.ratio.norm <- fourth.ratio/sum(fourth.ratio)
+      colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
+      colnames(colour.table) <- c("Cluster", names(spectra.line.table))
+      
+      unique.spec <- seq(1, length(colour.table$Spectrum), 1)
+      null <- rep(1, length(unique.spec))
+      
+      spectra.line.table$Cluster <- xrf.k$Cluster
+      
+           first.ratio <-spectra.line.table[input$elementratioa]
+           second.ratio <- spectra.line.table[input$elementratiob]
+           third.ratio <- spectra.line.table[input$elementratioc]
+           fourth.ratio <- spectra.line.table[input$elementratiod]
+           
+           first.ratio.norm <- first.ratio/sum(first.ratio)
+           second.ratio.norm <- second.ratio/sum(second.ratio)
+           third.ratio.norm <- third.ratio/sum(third.ratio)
+           fourth.ratio.norm <- fourth.ratio/sum(fourth.ratio)
+           
+           ratio.frame <- data.frame(A=first.ratio, B=second.ratio, C=third.ratio, D=fourth.ratio, spectra.line.table, stringsAsFactors=FALSE)
+           
+           
+           ratio.frame$X <- ratio.frame[,1]/ratio.frame[,2]
+           ratio.frame$Y <- ratio.frame[,3]/ratio.frame[,4]
+           
+           
+           
+           ratio.frame
       
       
-      ratio.frame <- data.frame(first.ratio, second.ratio, third.ratio, fourth.ratio, spectra.line.table$Cluster, spectra.line.table$Qualitative1, spectra.line.table$Qualitative2, spectra.line.table$Qualitative3, spectra.line.table$Qualitative4, spectra.line.table$Qualitative5, spectra.line.table$Qualitative6, spectra.line.table$Quantitative, spectra.line.table$Spectrum)
-      colnames(ratio.frame) <- c("A", "B", "C","D", "Cluster", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Qualitative5", "Qualitative6", "Quantitative", "Spectrum")
+  })
+  
+  plotInput4black <- reactive({
       
-            
-            if(input$elementratiob!="None"){ratio.names.x <- c(input$elementratioa, "/", input$elementratiob)}
-            if(input$elementratiod!="None"){ratio.names.y <- c(input$elementratioc, "/", input$elementratiod)}
-            
-            if(input$elementratiob=="None"){ratio.names.x <- c(input$elementratioa)}
-            if(input$elementratiod=="None"){ratio.names.y <- c(input$elementratioc)}
+      ratio.frame <- ratioFrame()
+      
+      if(input$elementratiob!="None"){ratio.names.x <- c(input$elementratioa, "/", input$elementratiob)}
+      if(input$elementratiod!="None"){ratio.names.y <- c(input$elementratioc, "/", input$elementratiod)}
+      
+      if(input$elementratiob=="None"){ratio.names.x <- c(input$elementratioa)}
+      if(input$elementratiod=="None"){ratio.names.y <- c(input$elementratioc)}
       
       ratio.names.x <- paste(ratio.names.x, sep=",", collapse="")
       ratio.names.y <- paste(ratio.names.y, sep=",", collapse="")
-
-      ratio.frame$X <- ratio.frame[,1]/ratio.frame[,2]
-      ratio.frame$Y <- ratio.frame[,3]/ratio.frame[,4]
-      
-      if(input$ratiocolour=="Cluster"){
-          spectra.line.table <- spectra.line.table[order(spectra.line.table$Cluster),]
-      } else if(input$ratiocolour=="Qualitative1"){
-          spectra.line.table <- spectra.line.table[order(spectra.line.table$Qualitative1),]
-      } else if(input$ratiocolour=="Qualitative2"){
-          spectra.line.table <- spectra.line.table[order(spectra.line.table$Qualitative2),]
-      } else if(input$ratiocolour=="Qualitative3"){
-          spectra.line.table <- spectra.line.table[order(spectra.line.table$Qualitative3),]
-      } else if(input$ratiocolour=="Qualitative4"){
-          spectra.line.table <- spectra.line.table[order(spectra.line.table$Qualitative4),]
-      } else if(input$ratiocolour=="Qualitative5"){
-               spectra.line.table <- spectra.line.table[order(spectra.line.table$Qualitative5),]
-       } else if(input$ratiocolour=="Qualitative6"){
-                spectra.line.table <- spectra.line.table[order(spectra.line.table$Qualitative6),]
-       }
-      
-
       
       black.ratio.plot <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
       geom_point(lwd=input$spotsize2) +
@@ -4224,238 +3866,77 @@ secondDefaultSelect <- reactive({
       geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01) +
       scale_color_hue(direction = input$colourdirectionratio)
       
-      cluster.ratio.plot <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
-      geom_point(aes(colour=as.factor(ratio.frame$Cluster), shape=as.factor(ratio.frame$Cluster)), size=input$spotsize2+1) +
-      geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
-      scale_shape_manual("Cluster", values=1:nlevels(as.factor(as.factor(ratio.frame$Cluster)))) +
-      scale_colour_discrete("Cluster") +
-      theme_light() +
-      theme(axis.text.x = element_text(size=15)) +
-      theme(axis.text.y = element_text(size=15)) +
-      theme(axis.title.x = element_text(size=15)) +
-      theme(axis.title.y = element_text(size=15, angle=90)) +
-      theme(plot.title=element_text(size=20)) +
-      theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15)) +
-      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
+      black.ratio.plot
       
-      cluster.ratio.ellipse.plot <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.factor(ratio.frame$Cluster))) +
-      geom_point(aes(colour=as.factor(ratio.frame$Cluster), shape=as.factor(ratio.frame$Cluster)), size=input$spotsize2+1) +
-      geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
-      scale_shape_manual("Cluster", values=1:nlevels(as.factor(as.factor(ratio.frame$Cluster)))) +
-      scale_colour_discrete("Cluster") +
-      theme_light() +
-      theme(axis.text.x = element_text(size=15)) +
-      theme(axis.text.y = element_text(size=15)) +
-      theme(axis.title.x = element_text(size=15)) +
-      theme(axis.title.y = element_text(size=15, angle=90)) +
-      theme(plot.title=element_text(size=20)) +
-      theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15)) +
-      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
+  })
+  
+  plotInput4color <- reactive({
       
-      qualitative.ratio.plot.1 <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
-      geom_point(aes(colour=as.character(ratio.frame$Qualitative1), shape=as.character(ratio.frame$Qualitative1)), size=input$spotsize2+1) +
-      geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
-      scale_shape_manual("Qualitative1", values=1:nlevels(ratio.frame$Qualitative1)) +
-      scale_colour_discrete("Qualitative1") +
-      theme_light() +
-      theme(axis.text.x = element_text(size=15)) +
-      theme(axis.text.y = element_text(size=15)) +
-      theme(axis.title.x = element_text(size=15)) +
-      theme(axis.title.y = element_text(size=15, angle=90)) +
-      theme(plot.title=element_text(size=20)) +
-      theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15)) +
-      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
+      ratio.frame <- ratioFrame()
       
-      qualitative.ratio.ellipse.plot.1 <- qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.character(ratio.frame$Qualitative1))) +
-      geom_point(aes(colour=as.character(ratio.frame$Qualitative1), shape=as.character(ratio.frame$Qualitative1)), size=input$spotsize2+1) +
-      geom_point(colour="grey30", size=input$spotsize2-2) +
-      scale_shape_manual("Qualitative1", values=1:nlevels(ratio.frame$Qualitative1)) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
-      scale_colour_discrete("Qualitative1") +
-      theme_light() +
-      theme(axis.text.x = element_text(size=15)) +
-      theme(axis.text.y = element_text(size=15)) +
-      theme(axis.title.x = element_text(size=15)) +
-      theme(axis.title.y = element_text(size=15, angle=90)) +
-      theme(plot.title=element_text(size=20)) +
-      theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15)) +
-      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
+      if(input$elementratiob!="None"){ratio.names.x <- c(input$elementratioa, "/", input$elementratiob)}
+      if(input$elementratiod!="None"){ratio.names.y <- c(input$elementratioc, "/", input$elementratiod)}
       
+      if(input$elementratiob=="None"){ratio.names.x <- c(input$elementratioa)}
+      if(input$elementratiod=="None"){ratio.names.y <- c(input$elementratioc)}
       
-      qualitative.ratio.plot.2 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      geom_point(aes(colour=as.character(ratio.frame$Qualitative2), shape=as.character(ratio.frame$Qualitative2)), size=input$spotsize2+1) +
-      geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
-      scale_shape_manual("Qualitative2", values=1:nlevels(ratio.frame$Qualitative2)) +
-      scale_colour_discrete("Qualitative2") +
-      theme_light() +
-      theme(axis.text.x = element_text(size=15)) +
-      theme(axis.text.y = element_text(size=15)) +
-      theme(axis.title.x = element_text(size=15)) +
-      theme(axis.title.y = element_text(size=15, angle=90)) +
-      theme(plot.title=element_text(size=20)) +
-      theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15)) +
-      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
+      ratio.names.x <- paste(ratio.names.x, sep=",", collapse="")
+      ratio.names.y <- paste(ratio.names.y, sep=",", collapse="")
       
-      qualitative.ratio.ellipse.plot.2 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.factor(ratio.frame$Qualitative2))) +
-      geom_point(aes(colour=as.character(ratio.frame$Qualitative2), shape=as.character(ratio.frame$Qualitative2)), size=input$spotsize2+1) +
-      geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
-      scale_shape_manual("Qualitative2", values=1:nlevels(ratio.frame$Qualitative2)) +
-      scale_colour_discrete("Qualitative2") +
-      theme_light() +
-      theme(axis.text.x = element_text(size=15)) +
-      theme(axis.text.y = element_text(size=15)) +
-      theme(axis.title.x = element_text(size=15)) +
-      theme(axis.title.y = element_text(size=15, angle=90)) +
-      theme(plot.title=element_text(size=20)) +
-      theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15)) +
-      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
+      color.plot <- if(input$elipseplot2==FALSE){
+          qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
+          geom_point(aes(colour=as.factor(ratio.frame[,input$ratiocolour]), shape=as.factor(ratio.frame[,input$ratiocolour])), size=input$spotsize2+1) +
+          geom_point(colour="grey30", size=input$spotsize2-2) +
+          coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
+          scale_shape_manual(input$ratiocolour, values=1:nlevels(as.factor(as.factor(ratio.frame[,input$ratiocolour])))) +
+          scale_colour_discrete(input$ratiocolour) +
+          theme_light() +
+          theme(axis.text.x = element_text(size=15)) +
+          theme(axis.text.y = element_text(size=15)) +
+          theme(axis.title.x = element_text(size=15)) +
+          theme(axis.title.y = element_text(size=15, angle=90)) +
+          theme(plot.title=element_text(size=20)) +
+          theme(legend.title=element_text(size=15)) +
+          theme(legend.text=element_text(size=15)) +
+          geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
+      } else if(input$elipseplot2==TRUE){
+          ggplot(data=ratio.frame) +
+          stat_ellipse(aes(X, Y, colour=as.factor(ratio.frame[,input$ratiocolour]), linetype=as.factor(ratio.frame[,input$ratiocolour]))) +
+          geom_point(aes(X, Y, colour=as.factor(ratio.frame[,input$ratiocolour]), shape=as.factor(ratio.frame[,input$ratiocolour])), size = input$spotsize2+1) +
+          geom_point(aes(X, Y), colour="grey30", size=input$spotsize2-2) +
+          coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
+          scale_x_continuous(ratio.names.x) +
+          scale_y_continuous(ratio.names.y) +
+          theme_light() +
+          theme(axis.text.x = element_text(size=15)) +
+          theme(axis.text.y = element_text(size=15)) +
+          theme(axis.title.x = element_text(size=15)) +
+          theme(axis.title.y = element_text(size=15, angle=90)) +
+          theme(plot.title=element_text(size=20)) +
+          theme(legend.title=element_text(size=15)) +
+          theme(legend.text=element_text(size=15)) +
+          scale_shape_manual(input$ratiocolour, values=1:nlevels(as.factor(ratio.frame[,input$ratiocolour]))) +
+          scale_colour_discrete(input$ratiocolour) +
+          scale_linetype_discrete(input$ratiocolour) +
+          geom_point(aes(X, Y), colour="grey30", size=input$spotsize2-2)
+      }
       
-      qualitative.ratio.plot.3 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      geom_point(aes(colour=as.character(ratio.frame$Qualitative3), shape=as.character(ratio.frame$Qualitative3)), size=input$spotsize2+1) +
-      geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
-      scale_shape_manual("Qualitative3", values=1:nlevels(ratio.frame$Qualitative3)) +
-      scale_colour_discrete("Qualitative3") +
-      theme_light() +
-      theme(axis.text.x = element_text(size=15)) +
-      theme(axis.text.y = element_text(size=15)) +
-      theme(axis.title.x = element_text(size=15)) +
-      theme(axis.title.y = element_text(size=15, angle=90)) +
-      theme(plot.title=element_text(size=20)) +
-      theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15)) +
-      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
+      color.plot
       
-      qualitative.ratio.ellipse.plot.3 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.character(ratio.frame$Qualitative3))) +
-      geom_point(aes(colour=as.character(ratio.frame$Qualitative3), shape=as.character(ratio.frame$Qualitative3)), size=input$spotsize2+1) +
-      geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
-      scale_shape_manual("Qualitative3", values=1:nlevels(ratio.frame$Qualitative3)) +
-      scale_colour_discrete("Qualitative3") +
-      theme_light() +
-      theme(axis.text.x = element_text(size=15)) +
-      theme(axis.text.y = element_text(size=15)) +
-      theme(axis.title.x = element_text(size=15)) +
-      theme(axis.title.y = element_text(size=15, angle=90)) +
-      theme(plot.title=element_text(size=20)) +
-      theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15)) +
-      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
+  })
+  
+  plotInput4focus <- reactive({
       
-      qualitative.ratio.plot.4 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      geom_point(aes(colour=as.character(ratio.frame$Qualitative4), shape=as.character(ratio.frame$Qualitative4)), size=input$spotsize2+1) +
-      geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
-      scale_shape_manual("Qualitative4", values=1:nlevels(ratio.frame$Qualitative4)) +
-      scale_colour_discrete("Qualitative4") +
-      theme_light() +
-      theme(axis.text.x = element_text(size=15)) +
-      theme(axis.text.y = element_text(size=15)) +
-      theme(axis.title.x = element_text(size=15)) +
-      theme(axis.title.y = element_text(size=15, angle=90)) +
-      theme(plot.title=element_text(size=20)) +
-      theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15)) +
-      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
+      ratio.frame <- ratioFrame()
       
-      qualitative.ratio.ellipse.plot.4 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.character(ratio.frame$Qualitative4))) +
-      geom_point(aes(colour=as.character(ratio.frame$Qualitative4), shape=as.character(ratio.frame$Qualitative4)), size=input$spotsize2+1) +
-      geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
-      scale_shape_manual("Qualitative4", values=1:nlevels(ratio.frame$Qualitative4)) +
-      scale_colour_discrete("Qualitative4") +
-      theme_light() +
-      theme(axis.text.x = element_text(size=15)) +
-      theme(axis.text.y = element_text(size=15)) +
-      theme(axis.title.x = element_text(size=15)) +
-      theme(axis.title.y = element_text(size=15, angle=90)) +
-      theme(plot.title=element_text(size=20)) +
-      theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15)) +
-      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
+      if(input$elementratiob!="None"){ratio.names.x <- c(input$elementratioa, "/", input$elementratiob)}
+      if(input$elementratiod!="None"){ratio.names.y <- c(input$elementratioc, "/", input$elementratiod)}
       
-      qualitative.ratio.plot.5 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      geom_point(aes(colour=as.character(ratio.frame$Qualitative5), shape=as.character(ratio.frame$Qualitative5)), size=input$spotsize2+1) +
-      geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
-      scale_shape_manual("Qualitative5", values=1:nlevels(ratio.frame$Qualitative5)) +
-      scale_colour_discrete("Qualitative5") +
-      theme_light() +
-      theme(axis.text.x = element_text(size=15)) +
-      theme(axis.text.y = element_text(size=15)) +
-      theme(axis.title.x = element_text(size=15)) +
-      theme(axis.title.y = element_text(size=15, angle=90)) +
-      theme(plot.title=element_text(size=20)) +
-      theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15)) +
-      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
+      if(input$elementratiob=="None"){ratio.names.x <- c(input$elementratioa)}
+      if(input$elementratiod=="None"){ratio.names.y <- c(input$elementratioc)}
       
-      qualitative.ratio.ellipse.plot.5 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.character(ratio.frame$Qualitative5))) +
-      geom_point(aes(colour=as.character(ratio.frame$Qualitative5), shape=as.character(ratio.frame$Qualitative5)), size=input$spotsize2+1) +
-      geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
-      scale_shape_manual("Qualitative5", values=1:nlevels(ratio.frame$Qualitative5)) +
-      scale_colour_discrete("Qualitative5") +
-      theme_light() +
-      theme(axis.text.x = element_text(size=15)) +
-      theme(axis.text.y = element_text(size=15)) +
-      theme(axis.title.x = element_text(size=15)) +
-      theme(axis.title.y = element_text(size=15, angle=90)) +
-      theme(plot.title=element_text(size=20)) +
-      theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15)) +
-      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
-      
-      qualitative.ratio.plot.6 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      geom_point(aes(colour=as.character(ratio.frame$Qualitative6), shape=as.character(ratio.frame$Qualitative6)), size=input$spotsize2+1) +
-      geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
-      scale_shape_manual("Qualitative6", values=1:nlevels(ratio.frame$Qualitative6)) +
-      scale_colour_discrete("Qualitative6") +
-      theme_light() +
-      theme(axis.text.x = element_text(size=15)) +
-      theme(axis.text.y = element_text(size=15)) +
-      theme(axis.title.x = element_text(size=15)) +
-      theme(axis.title.y = element_text(size=15, angle=90)) +
-      theme(plot.title=element_text(size=20)) +
-      theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15)) +
-      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
-      
-      qualitative.ratio.ellipse.plot.6 <- qplot(X, Y, data=ratio.frame,  xlab = ratio.names.x, ylab = ratio.names.y ) +
-      stat_ellipse(aes(ratio.frame$X, ratio.frame$Y, colour=as.character(ratio.frame$Qualitative6))) +
-      geom_point(aes(colour=as.character(ratio.frame$Qualitative6), shape=as.character(ratio.frame$Qualitative6)), size=input$spotsize2+1) +
-      geom_point(colour="grey30", size=input$spotsize2-2) +
-      coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +
-      scale_shape_manual("Qualitative6", values=1:nlevels(ratio.frame$Qualitative6)) +
-      scale_colour_discrete("Qualitative6") +
-      theme_light() +
-      theme(axis.text.x = element_text(size=15)) +
-      theme(axis.text.y = element_text(size=15)) +
-      theme(axis.title.x = element_text(size=15)) +
-      theme(axis.title.y = element_text(size=15, angle=90)) +
-      theme(plot.title=element_text(size=20)) +
-      theme(legend.title=element_text(size=15)) +
-      theme(legend.text=element_text(size=15)) +
-      geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
-      
+      ratio.names.x <- paste(ratio.names.x, sep=",", collapse="")
+      ratio.names.y <- paste(ratio.names.y, sep=",", collapse="")
       
       if (input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {new.ratio.table <- ratio.frame[,c("Spectrum", "X", "Y", input$ratiofocusvariable)]}
       
@@ -4463,7 +3944,7 @@ secondDefaultSelect <- reactive({
       
       if (input$elipseplot2 == FALSE && input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {select.plot <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
       
-      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel=="None") {select.plot.ellipse <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + scale_x_continuous(ratio.names.x) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel=="None") {select.plot <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + scale_x_continuous(ratio.names.x) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
       
       if (input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {newer.ratio.table <- ratio.frame[,c("Spectrum", "X", "Y", input$ratiofocusvariable, input$ratiofocuslabel)]}
       
@@ -4471,128 +3952,38 @@ secondDefaultSelect <- reactive({
       
       if (input$elipseplot2 == FALSE && input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {select.plot <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
       
-      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel!="None") {select.plot.ellipse <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel!="None") {select.plot <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
       
+      select.plot
       
-
-      
-      
-
-
-      
-      
-      if (input$ratiocolour == "Black" && input$elipseplotnorm==FALSE) {
-          black.ratio.plot
-      } else if (input$ratiocolour == "Cluster" && input$elipseplot2==FALSE) {
-          cluster.ratio.plot
-      } else if (input$ratiocolour == "Cluster" && input$elipseplot2==TRUE) {
-          cluster.ratio.ellipse.plot
-      } else if (input$ratiocolour == "Qualitative1" && input$elipseplot2==FALSE) {
-          qualitative.ratio.plot.1
-      } else if (input$ratiocolour == "Qualitative1" && input$elipseplot2==TRUE ) {
-          qualitative.ratio.ellipse.plot.1
-      } else if (input$ratiocolour == "Qualitative2" && input$elipseplot2==FALSE) {
-          qualitative.ratio.plot.2
-      } else if (input$ratiocolour == "Qualitative2" && input$elipseplot2==TRUE ) {
-          qualitative.ratio.ellipse.plot.2
-      } else if (input$ratiocolour == "Qualitative3" && input$elipseplot2==FALSE) {
-          qualitative.ratio.plot.3
-      } else if (input$ratiocolour == "Qualitative3" && input$elipseplot2==TRUE ) {
-          qualitative.ratio.ellipse.plot.3
-      } else if (input$ratiocolour == "Qualitative4" && input$elipseplot2==FALSE) {
-          qualitative.ratio.plot.4
-      } else if (input$ratiocolour == "Qualitative4" && input$elipseplot2==TRUE ) {
-          qualitative.ratio.ellipse.plot.4
-      } else if (input$ratiocolour == "Qualitative5" && input$elipseplot2==FALSE) {
-               qualitative.ratio.plot.5
-      } else if (input$ratiocolour == "Qualitative5" && input$elipseplot2==TRUE ) {
-               qualitative.ratio.ellipse.plot.5
-       } else if (input$ratiocolour == "Qualitative6" && input$elipseplot2==FALSE) {
-                qualitative.ratio.plot.6
-      } else if (input$ratiocolour == "Qualitative6" && input$elipseplot2==TRUE ) {
-                qualitative.ratio.ellipse.plot.6
-      } else if (input$ratiocolour == "Quantitative" && input$elipseplot2==FALSE ) {
-          quanitative.ratio.plot
-      } else if (input$ratiocolour == "Quantitative" && input$elipseplot2==TRUE) {
-          quantitative.ratio.plot
-      } else if (input$ratiocolour == "Focus" && input$elipseplot2==FALSE) {
-          select.plot
-      } else if (input$ratiocolour == "Focus" && input$elipseplot2==TRUE) {
-          select.plot.ellipse
-      }
-
   })
-
+  
+  plotInput4 <- reactive({
+      
+      if(input$ratiocolour == "Black"){
+          plotInput4black()
+      } else if(input$ratiocolour != "Black" && input$ratiocolour != "Focus"){
+          plotInput4color()
+      } else if(input$ratiocolour == "Focus"){
+          plotInput4focus()
+      }
+      
+  })
+  
+  
+  
 
    output$elementratiotimeseries <- renderPlot({
        plotInput4()
-
-
     })
    
-   
-   
-   hoverHoldRatio <- reactive({
-       
-       spectra.line.table <- dataMerge3()
-       spectra.line.table$None <- rep(1, length(spectra.line.table$Spectrum))
-
-       
-       
-       xrf.k <- xrfKReactive()
-       
-       colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
-       colnames(colour.table) <- c("Cluster", names(spectra.line.table))
-       
-       
-       
-       
-       unique.spec <- seq(1, length(colour.table$Spectrum), 1)
-       null <- rep(1, length(unique.spec))
-       
-       spectra.line.table$Cluster <- xrf.k$Cluster
-       
-       
-       
-       
-       
-       first.ratio <-spectra.line.table[input$elementratioa]
-       second.ratio <- spectra.line.table[input$elementratiob]
-       third.ratio <- spectra.line.table[input$elementratioc]
-       fourth.ratio <- spectra.line.table[input$elementratiod]
-       
-       first.ratio.norm <- first.ratio/sum(first.ratio)
-       second.ratio.norm <- second.ratio/sum(second.ratio)
-       third.ratio.norm <- third.ratio/sum(third.ratio)
-       fourth.ratio.norm <- fourth.ratio/sum(fourth.ratio)
-       
-       
-       ratio.frame <- data.frame(first.ratio, second.ratio, third.ratio, fourth.ratio, spectra.line.table$Cluster, spectra.line.table$Qualitative1, spectra.line.table$Qualitative2, spectra.line.table$Qualitative3, spectra.line.table$Qualitative4, spectra.line.table$Qualitative5, spectra.line.table$Qualitative6,, spectra.line.table$Quantitative, spectra.line.table$Spectrum)
-       colnames(ratio.frame) <- gsub("[.]", "", c(substr(input$elementratioa, 1, 2), substr(input$elementratiob, 1, 2), substr(input$elementratioc, 1, 2), substr(input$elementratiod, 1, 2), "Cluster", "Qualitative1", "Qualitative2", "Qualitative3", "Qualitative4", "Qualitative5", "Qualitative6", "Quantitative", "Spectrum"))
-       
-       
-       if(input$elementratiob!="None"){ratio.names.x <- c(names(ratio.frame[1]), "/", names(ratio.frame[2]))}
-       if(input$elementratiod!="None"){ratio.names.y <- c(names(ratio.frame[3]), "/", names(ratio.frame[4]))}
-       
-       if(input$elementratiob=="None"){ratio.names.x <- c(names(ratio.frame[1]))}
-       if(input$elementratiod=="None"){ratio.names.y <- c(names(ratio.frame[3]))}
-       
-       ratio.names.x <- paste(ratio.names.x, sep=",", collapse="")
-       ratio.names.y <- paste(ratio.names.y, sep=",", collapse="")
-       
-       ratio.frame$X <- ratio.frame[,1]/ratio.frame[,2]
-       ratio.frame$Y <- ratio.frame[,3]/ratio.frame[,4]
-
-       ratio.frame
-       
-   })
    
    
    
    
    output$hover_inforatio <- renderUI({
        
-       point.table <- hoverHoldRatio()
+       point.table <- ratioFrame()
        
        hover <- input$plot_hoverratio
        point <- nearPoints(point.table,  coordinfo=hover,   threshold = 5, maxpoints = 1, addDist = TRUE)
@@ -4727,717 +4118,173 @@ output$inaxisc <- renderUI({
     selectInput("axisc", "Axis C", choices=choiceLines(), selected=ternaryChooseC())
 })
 
+output$ternarycolourui <- renderUI({
+    
+    selectInput("ternarycolour", "Ternary Plot Type", choices=c("Black", qualChoices()), selected="Cluster")
+    
+})
+
+firstAxis <- reactive({
+    
+    spectra.line.table <- dataMerge3()
+    
+    first.axis.nonorm <- as.vector(spectra.line.table[,input$axisa])
+    first.axis.norm <- first.axis.nonorm/sum(first.axis.nonorm)
+    first.axis <- if(input$ternnormplot==FALSE){
+        first.axis.nonorm
+    } else if(input$ternnormplot==TRUE){
+        first.axis.norm
+    }
+    first.axis
+})
+
+secondAxis <- reactive({
+    
+    spectra.line.table <- dataMerge3()
+    
+    second.axis.nonorm <- as.vector(spectra.line.table[,input$axisb])
+    second.axis.norm <- second.axis.nonorm/sum(second.axis.nonorm)
+    second.axis <- if(input$ternnormplot==FALSE){
+        second.axis.nonorm
+    } else if(input$ternnormplot==TRUE){
+        second.axis.norm
+    }
+    second.axis
+})
+
+thirdAxis <- reactive({
+    
+    spectra.line.table <- dataMerge3()
+    
+    third.axis.nonorm <- as.vector(spectra.line.table[,input$axisc])
+    third.axis.norm <- third.axis.nonorm/sum(third.axis.nonorm)
+    third.axis <- if(input$ternnormplot==FALSE){
+        third.axis.nonorm
+    } else if(input$ternnormplot==TRUE){
+        third.axis.norm
+    }
+    third.axis
+})
+
+tenaryFrame <- reactive({
+    
+    spectra.line.table <- dataMerge3()[,!colnames(dataMerge3()) %in%  c(input$axisa, input$axisb, input$axisc)]
+    
+      
+      xrf.k <- xrfKReactive()
+      
+      quality.table <-qualityTable()
+      
+      
+      colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
+      colnames(colour.table) <- c("Cluster", names(spectra.line.table))
+      
+      
+      
+      
+      unique.spec <- seq(1, length(colour.table$Spectrum), 1)
+      null <- rep(1, length(unique.spec))
+      
+      first.axis <- firstAxis()
+      second.axis <- secondAxis()
+      third.axis <- thirdAxis()
+      
+      spectra.line.table$Cluster <- xrf.k$Cluster
+      
+      axis.frame <- data.frame(Hold1=first.axis, Hold2=second.axis, Hold3=third.axis, spectra.line.table, stringsAsFactors=FALSE)
+      colnames(axis.frame)[1:3] <- c(input$axisa, input$axisb, input$axisc)
+      
+      axis.frame
+    
+    
+})
+
+
+plotInput5black <- reactive({
+    
+    axis.frame <- tenaryFrame()
+    
+    ternaryplot <- if(input$terndensityplot==FALSE){
+            ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
+            geom_point(size=input$ternpointsize) +
+            theme_light() +
+            theme(axis.text.x = element_text(size=15)) +
+            theme(axis.text.y = element_text(size=15)) +
+            theme(axis.title.x = element_text(size=15)) +
+            theme(axis.title.y = element_text(size=15, angle=90)) +
+            theme(plot.title=element_text(size=20)) +
+            theme(legend.title=element_text(size=15)) +
+            theme(legend.text=element_text(size=15))
+        } else if(input$terndensityplot==TRUE){
+            ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
+            geom_density_tern() +
+            geom_point(size=input$ternpointsize) +
+            theme_light() +
+            theme(axis.text.x = element_text(size=15)) +
+            theme(axis.text.y = element_text(size=15)) +
+            theme(axis.title.x = element_text(size=15)) +
+            theme(axis.title.y = element_text(size=15, angle=90)) +
+            theme(plot.title=element_text(size=20)) +
+            theme(legend.title=element_text(size=15)) +
+            theme(legend.text=element_text(size=15))
+        }
+        
+        ternaryplot
+
+})
+
+plotInput5color <- reactive({
+    
+    axis.frame <- tenaryFrame()
+    
+    ternaryplot <- if(input$terndensityplot==FALSE){
+            ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
+            geom_point(aes(colour = as.factor(axis.frame[,input$ternarycolour]), shape=as.factor(axis.frame[,input$ternarycolour])), size=input$ternpointsize+1) +
+            geom_point(colour="grey30", size=input$ternpointsize-2) +
+            scale_shape_manual(input$ternarycolour, values=1:nlevels(as.factor(axis.frame[,input$ternarycolour]))) +
+            scale_colour_discrete(input$ternarycolour) +
+            theme_light() +
+            theme(axis.text.x = element_text(size=15)) +
+            theme(axis.text.y = element_text(size=15)) +
+            theme(axis.title.x = element_text(size=15)) +
+            theme(axis.title.y = element_text(size=15, angle=90)) +
+            theme(plot.title=element_text(size=20)) +
+            theme(legend.title=element_text(size=15)) +
+            theme(legend.text=element_text(size=15))
+        } else if(input$terndensityplot==TRUE){
+            ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
+            geom_density_tern() +
+            geom_point(aes(colour = as.factor(axis.frame[,input$ternarycolour]), shape=as.factor(axis.frame[,input$ternarycolour])), size=input$ternpointsize) +
+            geom_point(colour="grey30", size=input$ternpointsize-2) +
+            scale_shape_manual("Cluster", values=1:nlevels(as.factor(axis.frame[,input$ternarycolour]))) +
+            scale_colour_discrete("Cluster") +
+            theme_light() +
+            theme(axis.text.x = element_text(size=15)) +
+            theme(axis.text.y = element_text(size=15)) +
+            theme(axis.title.x = element_text(size=15)) +
+            theme(axis.title.y = element_text(size=15, angle=90)) +
+            theme(plot.title=element_text(size=20)) +
+            theme(legend.title=element_text(size=15)) +
+            theme(legend.text=element_text(size=15))
+        }
+        
+        ternaryplot
+    
+})
 
 plotInput5 <- reactive({
     
-    spectra.line.table <- dataMerge3()
-
-    
-    xrf.k <- xrfKReactive()
-    
-    quality.table <-qualityTable()
-    
-    
-    colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
-    colnames(colour.table) <- c("Cluster", names(spectra.line.table))
-    
-    
-    
-    
-    unique.spec <- seq(1, length(colour.table$Spectrum), 1)
-    null <- rep(1, length(unique.spec))
-    
-    spectra.line.table$Cluster <- xrf.k$Cluster
-
-
-
-    
-    first.axis <- spectra.line.table[input$axisa]
-    second.axis <- spectra.line.table[input$axisb]
-    third.axis <- spectra.line.table[input$axisc]
-    
-    first.axis.norm <- first.axis/sum(first.axis)
-    second.axis.norm <- second.axis/sum(second.axis)
-    third.axis.norm <- third.axis/sum(third.axis)
-    
-    axis.frame <- data.frame(first.axis, second.axis, third.axis, spectra.line.table$Cluster, spectra.line.table$Qualitative1, spectra.line.table$Qualitative2, spectra.line.table$Qualitative3, spectra.line.table$Qualitative4, spectra.line.table$Qualitative5, spectra.line.table$Qualitative6, spectra.line.table$Quantitative)
-    colnames(axis.frame) <- c(input$axisa, input$axisb, input$axisc, "Cluster", "Qualitative1",  "Qualitative2", "Qualitative3", "Qualitative4", "Qualitative5", "Qualitative6","Quantitative")
-    
-    axis.frame.norm <- data.frame(first.axis.norm, second.axis.norm, third.axis.norm, spectra.line.table$Cluster, spectra.line.table$Qualitative1, spectra.line.table$Qualitative2, spectra.line.table$Qualitative3, spectra.line.table$Qualitative4, spectra.line.table$Qualitative5, spectra.line.table$Qualitative6, spectra.line.table$Quantitative)
-    colnames(axis.frame.norm) <- c(input$axisa, input$axisb, input$axisc, "Cluster", "Qualitative1",  "Qualitative2", "Qualitative3", "Qualitative4", "Qualitative5", "Qualitative6","Quantitative")
-
-    ternaryplot1 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_point(size=input$ternpointsize) +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplot2 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_density_tern() +
-    geom_point(size=input$ternpointsize) +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotcluster <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_point(aes(colour = as.factor(Cluster), shape=as.factor(Cluster)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Cluster", values=1:nlevels(as.factor(axis.frame$Cluster))) +
-    scale_colour_discrete("Cluster") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15)) 
-    
-    
-    ternaryplotclusterellipse <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = as.factor(Cluster), shape=as.factor(Cluster)), size=input$ternpointsize) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Cluster", values=1:nlevels(as.factor(axis.frame$Cluster))) +
-    scale_colour_discrete("Cluster") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitative.1 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_point(aes(colour = as.factor(Qualitative1), shape=as.factor(Qualitative1)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative1", values=1:nlevels(axis.frame$Qualitative1)) +
-    scale_colour_discrete("Qualitative1") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitativeellipse.1 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = as.factor(Qualitative1), shape=as.factor(Qualitative1)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative1", values=1:nlevels(axis.frame$Qualitative1)) +
-    scale_colour_discrete("Qualitative1") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitative.2 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_point(aes(colour = as.factor(Qualitative2), shape=as.factor(Qualitative2)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative2", values=1:nlevels(axis.frame$Qualitative2)) +
-    scale_colour_discrete("Qualitative2") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitativeellipse.2 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = as.factor(Qualitative2), shape=as.factor(Qualitative2)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative2", values=1:nlevels(axis.frame$Qualitative2)) +
-    scale_colour_discrete("Qualitative2") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitative.3 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_point(aes(colour = as.factor(Qualitative3), shape=as.factor(Qualitative3)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative3", values=1:nlevels(axis.frame$Qualitative3)) +
-    scale_colour_discrete("Qualitative3") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitativeellipse.3 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = as.factor(Qualitative3), shape=as.factor(Qualitative3)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative3", values=1:nlevels(axis.frame$Qualitative3)) +
-    scale_colour_discrete("Qualitative3") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitative.4 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_point(aes(colour = as.factor(Qualitative4), shape=as.factor(Qualitative4)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative4", values=1:nlevels(axis.frame$Qualitative4)) +
-    scale_colour_discrete("Qualitative4") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitativeellipse.4 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = as.factor(Qualitative4), shape=as.factor(Qualitative4)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative4", values=1:nlevels(axis.frame$Qualitative4)) +
-    scale_colour_discrete("Qualitative4") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitative.5 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_point(aes(colour = as.factor(Qualitative5), shape=as.factor(Qualitative5)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative5", values=1:nlevels(axis.frame$Qualitative5)) +
-    scale_colour_discrete("Qualitative5") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitativeellipse.5 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = as.factor(Qualitative5), shape=as.factor(Qualitative5)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative5", values=1:nlevels(axis.frame$Qualitative5)) +
-    scale_colour_discrete("Qualitative5") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitative.6 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_point(aes(colour = as.factor(Qualitative6), shape=as.factor(Qualitative6)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative6", values=1:nlevels(axis.frame$Qualitative6)) +
-    scale_colour_discrete("Qualitative6") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitativeellipse.6 <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = as.factor(Qualitative6), shape=as.factor(Qualitative6)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative6", values=1:nlevels(axis.frame$Qualitative6)) +
-    scale_colour_discrete("Qualitative6") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotquantitative <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_point(aes(colour = Quantitative), size=input$ternpointsize+1) +
-    geom_point(size=input$ternpointsize-2) +
-    scale_colour_gradientn("Quantitative", colours=rainbow(length(axis.frame$Quantitative))) +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotquanitativeellipse <- ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = Quantitative), size=input$ternpointsize) +
-    scale_colour_gradientn("Quantitative", colours=rainbow(length(axis.frame$Quantitative))) +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    
-    
-    #####Normalization
-    
-    ternaryplot1.norm <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_point(size=input$ternpointsize) +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplot2.norm <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_density_tern() +
-    geom_point(size=input$ternpointsize) +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotcluster.norm <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_point(aes(colour = as.factor(Cluster), shape=as.factor(Cluster)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Cluster", values=1:nlevels(as.factor(axis.frame$Cluster))) +
-    scale_colour_discrete("Cluster") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotclusterellipse.norm <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = as.factor(Cluster), shape=as.factor(Cluster)), size=input$ternpointsize) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Cluster", values=1:nlevels(as.factor(axis.frame$Cluster))) +
-    scale_colour_discrete("Cluster") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitative.norm.1 <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_point(aes(colour = as.factor(Qualitative1), shape=as.factor(Qualitative1)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative1", values=1:nlevels(axis.frame$Qualitative1)) +
-    scale_colour_discrete("Qualitative1") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitativeellipse.norm.1 <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = as.factor(Qualitative1), shape=as.factor(Qualitative1)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative1", values=1:nlevels(axis.frame$Qualitative1)) +
-    scale_colour_discrete("Qualitative1") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitative.norm.2 <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_point(aes(colour = as.factor(Qualitative2), shape=as.factor(Qualitative2)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative2", values=1:nlevels(axis.frame$Qualitative2)) +
-    scale_colour_discrete("Qualitative2") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitativeellipse.norm.2 <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = as.factor(Qualitative2), shape=as.factor(Qualitative2)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative2", values=1:nlevels(axis.frame$Qualitative2)) +
-    scale_colour_discrete("Qualitative2") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitative.norm.3 <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_point(aes(colour = as.factor(Qualitative3), shape=as.factor(Qualitative3)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative3", values=1:nlevels(axis.frame$Qualitative3)) +
-    scale_colour_discrete("Qualitative3") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitativeellipse.norm.3 <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = as.factor(Qualitative3), shape=as.factor(Qualitative3)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative3", values=1:nlevels(axis.frame$Qualitative3)) +
-    scale_colour_discrete("Qualitative3") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitative.norm.4 <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_point(aes(colour = as.factor(Qualitative4), shape=as.factor(Qualitative4)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative4", values=1:nlevels(axis.frame$Qualitative4)) +
-    scale_colour_discrete("Qualitative4") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitativeellipse.norm.4 <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = as.factor(Qualitative4), shape=as.factor(Qualitative4)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative4", values=1:nlevels(axis.frame$Qualitative4)) +
-    scale_colour_discrete("Qualitative4") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitative.norm.5 <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_point(aes(colour = as.factor(Qualitative5), shape=as.factor(Qualitative5)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative5", values=1:nlevels(axis.frame$Qualitative5)) +
-    scale_colour_discrete("Qualitative5") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitativeellipse.norm.5 <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = as.factor(Qualitative5), shape=as.factor(Qualitative5)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative5", values=1:nlevels(axis.frame$Qualitative5)) +
-    scale_colour_discrete("Qualitative5") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitative.norm.6 <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_point(aes(colour = as.factor(Qualitative6), shape=as.factor(Qualitative6)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative6", values=1:nlevels(axis.frame$Qualitative6)) +
-    scale_colour_discrete("Qualitative6") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotqualitativeellipse.norm.6 <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = as.factor(Qualitative6), shape=as.factor(Qualitative6)), size=input$ternpointsize+1) +
-    geom_point(colour="grey30", size=input$ternpointsize-2) +
-    scale_shape_manual("Qualitative6", values=1:nlevels(axis.frame$Qualitative6)) +
-    scale_colour_discrete("Qualitative6") +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotquantitative.norm <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_point(aes(colour = Quantitative), size=input$ternpointsize+1) +
-    geom_point(size=input$ternpointsize-2) +
-    scale_colour_gradientn("Quantitative", colours=rainbow(length(axis.frame$Quantitative))) +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-    
-    ternaryplotquanitativeellipse.norm <- ggtern(data=axis.frame.norm, aes_string(x = colnames(axis.frame.norm)[1], y = colnames(axis.frame.norm)[2], z = colnames(axis.frame.norm)[3])) +
-    geom_density_tern() +
-    geom_point(aes(colour = Quantitative), size=input$ternpointsize) +
-    scale_colour_gradientn("Quantitative", colours=rainbow(length(axis.frame$Quantitative))) +
-    theme_light() +
-    theme(axis.text.x = element_text(size=15)) +
-    theme(axis.text.y = element_text(size=15)) +
-    theme(axis.title.x = element_text(size=15)) +
-    theme(axis.title.y = element_text(size=15, angle=90)) +
-    theme(plot.title=element_text(size=20)) +
-    theme(legend.title=element_text(size=15)) +
-    theme(legend.text=element_text(size=15))
-
-
-    if (input$ternarycolour == "black" && input$terndensityplot==FALSE && input$ternnormplot==FALSE) {
-        ternaryplot1
-    } else if (input$ternarycolour == "black" && input$terndensityplot==TRUE && input$ternnormplot==FALSE) {
-        ternaryplot2
-    } else if (input$ternarycolour == "Cluster" && input$terndensityplot==FALSE && input$ternnormplot==FALSE) {
-        ternaryplotcluster
-    } else if (input$ternarycolour == "Cluster" && input$terndensityplot==TRUE && input$ternnormplot==FALSE) {
-        ternaryplotclusterellipse
-    } else if (input$ternarycolour == "Qualitative1" && input$terndensityplot==FALSE && input$ternnormplot==FALSE) {
-        ternaryplotqualitative.1
-    } else if (input$ternarycolour == "Qualitative1" && input$terndensityplot==TRUE && input$ternnormplot==FALSE) {
-                ternaryplotqualitativeellipse.1
-    } else if (input$ternarycolour == "Qualitative2" && input$terndensityplot==FALSE && input$ternnormplot==FALSE) {
-        ternaryplotqualitative.2
-    } else if (input$ternarycolour == "Qualitative2" && input$terndensityplot==TRUE && input$ternnormplot==FALSE) {
-        ternaryplotqualitativeellipse.2
-    } else if (input$ternarycolour == "Qualitative3" && input$terndensityplot==FALSE && input$ternnormplot==FALSE) {
-        ternaryplotqualitative.3
-    } else if (input$ternarycolour == "Qualitative3" && input$terndensityplot==TRUE && input$ternnormplot==FALSE) {
-        ternaryplotqualitativeellipse.3
-    } else if (input$ternarycolour == "Qualitative4" && input$terndensityplot==FALSE && input$ternnormplot==FALSE) {
-        ternaryplotqualitative.4
-    } else if (input$ternarycolour == "Qualitative4" && input$terndensityplot==TRUE && input$ternnormplot==FALSE) {
-        ternaryplotqualitativeellipse.4
-    } else if (input$ternarycolour == "Qualitative5" && input$terndensityplot==FALSE && input$ternnormplot==FALSE) {
-           ternaryplotqualitative.5
-    } else if (input$ternarycolour == "Qualitative5" && input$terndensityplot==TRUE && input$ternnormplot==FALSE) {
-           ternaryplotqualitativeellipse.45
-    } else if (input$ternarycolour == "Qualitative6" && input$terndensityplot==FALSE && input$ternnormplot==FALSE) {
-           ternaryplotqualitative.6
-    } else if (input$ternarycolour == "Qualitative6" && input$terndensityplot==TRUE && input$ternnormplot==FALSE) {
-           ternaryplotqualitativeellipse.6
-    } else if (input$ternarycolour == "Quantitative" && input$terndensityplot==FALSE && input$ternnormplot==FALSE) {
-        ternaryplotquantitative
-    } else if (input$ternarycolour == "Quantitative" && input$terndensityplot==TRUE && input$ternnormplot==FALSE) {
-            ternaryplotquanitativeellipse
-    } else if (input$ternarycolour == "black" && input$terndensityplot==FALSE && input$ternnormplot==TRUE) {
-        ternaryplot1.norm
-    } else if (input$ternarycolour == "black" && input$terndensityplot==TRUE && input$ternnormplot==TRUE) {
-        ternaryplot2.norm
-    } else if (input$ternarycolour == "Cluster" && input$terndensityplot==FALSE && input$ternnormplot==TRUE) {
-        ternaryplotcluster.norm
-    } else if (input$ternarycolour == "Cluster" && input$terndensityplot==TRUE && input$ternnormplot==TRUE) {
-        ternaryplotclusterellipse.norm
-    } else if (input$ternarycolour == "Qualitative1" && input$terndensityplot==FALSE && input$ternnormplot==TRUE) {
-        ternaryplotqualitative.norm.1
-    } else if (input$ternarycolour == "Qualitative1" && input$terndensityplot==TRUE && input$ternnormplot==TRUE) {
-        ternaryplotqualitativeellipse.norm.1
-    } else if (input$ternarycolour == "Qualitative2" && input$terndensityplot==FALSE && input$ternnormplot==TRUE) {
-        ternaryplotqualitative.norm.2
-    } else if (input$ternarycolour == "Qualitative2" && input$terndensityplot==TRUE && input$ternnormplot==TRUE) {
-        ternaryplotqualitativeellipse.norm.2
-    } else if (input$ternarycolour == "Qualitative3" && input$terndensityplot==FALSE && input$ternnormplot==TRUE) {
-        ternaryplotqualitative.norm.3
-    } else if (input$ternarycolour == "Qualitative3" && input$terndensityplot==TRUE && input$ternnormplot==TRUE) {
-        ternaryplotqualitativeellipse.norm.3
-    } else if (input$ternarycolour == "Qualitative4" && input$terndensityplot==FALSE && input$ternnormplot==TRUE) {
-        ternaryplotqualitative.norm.4
-    } else if (input$ternarycolour == "Qualitative4" && input$terndensityplot==TRUE && input$ternnormplot==TRUE) {
-        ternaryplotqualitativeellipse.norm.4
-    } else if (input$ternarycolour == "Qualitative5" && input$terndensityplot==FALSE && input$ternnormplot==TRUE) {
-           ternaryplotqualitative.norm.5
-    } else if (input$ternarycolour == "Qualitative5" && input$terndensityplot==TRUE && input$ternnormplot==TRUE) {
-           ternaryplotqualitativeellipse.norm.5
-    } else if (input$ternarycolour == "Qualitative6" && input$terndensityplot==FALSE && input$ternnormplot==TRUE) {
-           ternaryplotqualitative.norm.6
-    } else if (input$ternarycolour == "Qualitative6" && input$terndensityplot==TRUE && input$ternnormplot==TRUE) {
-           ternaryplotqualitativeellipse.norm.6
-    } else if (input$ternarycolour == "Quantitative" && input$terndensityplot==FALSE && input$ternnormplot==TRUE) {
-        ternaryplotquantitative.norm
-    } else if (input$ternarycolour == "Quantitative" && input$terndensityplot==TRUE && input$ternnormplot==TRUE) {
-        ternaryplotquanitativeellipse.norm
+    if(input$ternarycolour=="Black"){
+        print(plotInput5black())
+    } else if(input$ternarycolour!="Black"){
+        print(plotInput5color())
     }
-
-
+    
 })
 
 output$ternaryplot <- renderPlot({
-    
-    print(plotInput5())
-    
+    plotInput5()
 })
-
-
-hoverHoldTern <- reactive({
-    
-    spectra.line.table <- dataMerge3()
-    
-    
-    xrf.k <- xrfKReactive()
-    
-    quality.table <-qualityTable()
-    
-    colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
-    colnames(colour.table) <- c("Cluster", names(spectra.line.table))
-    
-    
-    
-    
-    unique.spec <- seq(1, length(colour.table$Spectrum), 1)
-    null <- rep(1, length(unique.spec))
-    
-    spectra.line.table$Cluster <- xrf.k$Cluster
-    
-    
-    
-    
-    first.axis <- spectra.line.table[input$axisa]
-    second.axis <- spectra.line.table[input$axisb]
-    third.axis <- spectra.line.table[input$axisc]
-    
-    first.axis.norm <- first.axis/sum(first.axis)
-    second.axis.norm <- second.axis/sum(second.axis)
-    third.axis.norm <- third.axis/sum(third.axis)
-    
-    axis.frame <- data.frame(first.axis, second.axis, third.axis, spectra.line.table$Spectrum)
-    colnames(axis.frame) <- gsub("[.]", "", c(substr(input$axisa, 1, 2), substr(input$axisb, 1, 2), substr(input$axisc, 1, 2), "Spectrum"))
-    
-    axis.frame
-    
-})
-
-
-hoverHoldTernNorm <- reactive({
-    
-    spectra.line.table <- dataMerge3()
-    
-    
-    xrf.k <- xrfKReactive()
-    
-    quality.table <-qualityTable()
-    
-    colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
-    colnames(colour.table) <- c("Cluster", names(spectra.line.table))
-    
-    
-    
-    
-    unique.spec <- seq(1, length(colour.table$Spectrum), 1)
-    null <- rep(1, length(unique.spec))
-    
-    spectra.line.table$Cluster <- xrf.k$Cluster
-    
-    
-    
-    
-    first.axis <- spectra.line.table[input$axisa]
-    second.axis <- spectra.line.table[input$axisb]
-    third.axis <- spectra.line.table[input$axisc]
-    
-    first.axis.norm <- first.axis/sum(first.axis)
-    second.axis.norm <- second.axis/sum(second.axis)
-    third.axis.norm <- third.axis/sum(third.axis)
-    
-    
-    axis.frame.norm <- data.frame(first.axis.norm, second.axis.norm, third.axis.norm, spectra.line.table$Spectrum)
-    colnames(axis.frame.norm) <- gsub("[.]", "", c(substr(input$axisa, 1, 2), substr(input$axisb, 1, 2), substr(input$axisc, 1, 2), "Spectrum"))
-    
-    axis.frame.norm
-    
-})
-
 
 
 
@@ -5455,6 +4302,713 @@ output$downloadPlot5 <- downloadHandler(
 filename = function() { paste(axisTerm(), '.tiff', sep='') },
 content = function(file) {
     ggsave(file,plotInput5(), device="tiff", compression="lzw",  dpi=300, width=12, height=7)
+}
+)
+
+####Machine Learning
+
+allVars <- reactive({
+    colnames(dataMerge3())
+})
+
+output$variableui <- renderUI({
+    
+    selectInput('variable', "Variable", choices=allVars(), selected="Qualitative1", multiple=FALSE)
+    
+})
+
+output$predictorsui <- renderUI({
+    req(input$variable)
+    selectInput('predictors', "Predictors", choices=allVars()[!allVars() %in% input$variable], selected=input$show_vars, multiple=TRUE)
+    
+})
+
+
+modelKind <- reactive({
+    if(is.numeric(dataMerge3()[,input$variable])==TRUE){
+        "Regression"
+    } else if(is.numeric(dataMerge3()[,input$variable])==FALSE){
+        "Classification"
+    }
+})
+
+
+needTry <- reactive({
+    if(input$modeltype==1){
+        FALSE
+    } else if(input$modeltype==2){
+        FALSE
+    } else if(input$modeltype==3){
+        FALSE
+    } else if(input$modeltype==4){
+        TRUE
+    }  else if(input$modeltype==5){
+        TRUE
+    } else if(input$modeltype==6 && input$neuralhiddenlayers == 1){
+        FALSE
+    } else if(input$modeltype==6 && input$neuralhiddenlayers > 1){
+        TRUE
+    } else if(input$modeltype==7 && input$neuralhiddenlayers == 1){
+        FALSE
+    } else if(input$modeltype==7 && input$neuralhiddenlayers > 1){
+        TRUE
+    } else if(input$modeltype==8){
+        FALSE
+    } else if(input$modeltype==9){
+        FALSE
+    }
+})
+
+needCaret <- reactive({
+    if(input$modeltype==1){
+        FALSE
+    } else if(input$modeltype==2){
+        FALSE
+    } else if(input$modeltype==3){
+        FALSE
+    } else if(input$modeltype==4){
+        TRUE
+    }  else if(input$modeltype==5){
+        TRUE
+    } else if(input$modeltype==6){
+        TRUE
+    } else if(input$modeltype==7){
+        TRUE
+    } else if(input$modeltype==8){
+        TRUE
+    } else if(input$modeltype==9){
+        TRUE
+    }
+})
+
+needForest <- reactive({
+    if(input$modeltype==1){
+        FALSE
+    } else if(input$modeltype==2){
+        FALSE
+    } else if(input$modeltype==3){
+        FALSE
+    } else if(input$modeltype==4){
+        TRUE
+    }  else if(input$modeltype==5){
+        TRUE
+    } else if(input$modeltype==6){
+        FALSE
+    } else if(input$modeltype==7){
+        FALSE
+    } else if(input$modeltype==8){
+        TRUE
+    } else if(input$modeltype==9){
+        TRUE
+    }
+})
+
+needNeuralNet <- reactive({
+    if(input$modeltype==1){
+        FALSE
+    } else if(input$modeltype==2){
+        FALSE
+    } else if(input$modeltype==3){
+        FALSE
+    } else if(input$modeltype==4){
+        FALSE
+    }  else if(input$modeltype==5){
+        FALSE
+    } else if(input$modeltype==6){
+        TRUE
+    } else if(input$modeltype==7){
+        TRUE
+    } else if(input$modeltype==8){
+        FALSE
+    } else if(input$modeltype==9){
+        FALSE
+    }
+})
+
+needXGBoost <- reactive({
+    if(input$modeltype==1){
+        FALSE
+    } else if(input$modeltype==2){
+        FALSE
+    } else if(input$modeltype==3){
+        FALSE
+    } else if(input$modeltype==4){
+        FALSE
+    }  else if(input$modeltype==5){
+        FALSE
+    } else if(input$modeltype==6){
+        FALSE
+    } else if(input$modeltype==7){
+        FALSE
+    } else if(input$modeltype==8){
+        TRUE
+    } else if(input$modeltype==9){
+        TRUE
+    }
+})
+
+
+modelType <- reactive({
+    if(input$modeltype==4){
+        "Forest"
+    } else if(input$modeltype==8){
+        req(input$xgbtype)
+        if(input$xgbtype=="Linear"){
+            "XGBLinear"
+        } else if(input$xgbtype=="Tree"){
+            "XGBTree"
+        }
+    }
+})
+
+mlSplit <- reactive({
+    result <- input$split
+            if(result==0){
+                result <- NULL
+            }
+            result
+})
+
+minN <- reactive({
+    result <- input$min_n
+            if(result==0){
+                result <- NULL
+            }
+            result
+})
+
+output$foresttryui <- renderUI({
+    req(input$modeltype)
+    if(needTry()==TRUE){
+        forestTryUI(radiocal=input$modeltype, neuralhiddenlayers=2, selection=10, maxsample=100)
+    } else if(needTry()==FALSE){
+        NULL
+    }
+})
+
+forestTry <- reactive({
+    if(needTry()==TRUE){
+        input$foresttry
+    } else if(needTry()==FALSE){
+        NULL
+    }
+})
+
+
+output$forestmetricui <- renderUI({
+    if(needCaret()==TRUE){
+        if(modelKind()=="Regression"){
+            forestMetricQuantUI(radiocal=input$modeltype, selection="RMSE")
+        } else if(modelKind()=="Classification"){
+            forestMetricQualUI(radiocal=input$modeltype, selection="Accuracy")
+        }
+        
+    } else if(needCaret()==FALSE){
+        NULL
+    }
+})
+
+forestMetric <- reactive({
+    if(needCaret()==TRUE){
+        input$forestmetric
+    } else if(needCaret()==FALSE){
+        NULL
+    }
+})
+
+
+output$foresttrainui <- renderUI({
+    req(input$modeltype)
+    if(needCaret()==TRUE){
+        forestTrainUI(radiocal=input$modeltype, selection="repeatedcv")
+    } else if(needCaret()==FALSE){
+        NULL
+    }
+})
+
+forestTrain <- reactive({
+    if(needCaret()==TRUE){
+        input$foresttrain
+    } else if(needCaret()==FALSE){
+        NULL
+    }
+})
+
+output$forestnumberui <- renderUI({
+    req(input$modeltype)
+    if(needCaret()==TRUE){
+        forestNumberUI(radiocal=input$modeltype, selection=30)
+    } else if(needCaret()==FALSE){
+        NULL
+    }
+})
+
+forestNumber <- reactive({
+    if(needCaret()==TRUE){
+        input$forestnumber
+    } else if(needCaret()==FALSE){
+        NULL
+    }
+})
+
+output$cvrepeatsui <- renderUI({
+    req(input$modeltype, input$forestnumber)
+    if(forestTrain()=="repeatedcv"){
+        cvRepeatsUI(radiocal=input$modeltype, foresttrain=forestTrain(), selection=3)
+    } else if(forestTrain()!="repeatedcv"){
+        NULL
+    }
+})
+
+cvRepeats <- reactive({
+    if(forestTrain()=="repeatedcv"){
+        input$cvrepeats
+    } else if(forestTrain()!="repeatedcv"){
+        NULL
+    }
+})
+
+
+output$foresttreesui <- renderUI({
+    req(input$modeltype)
+    if(needForest()==TRUE){
+        forestTreesUI(radiocal=input$modeltype, selection=1000)
+    } else if(needXGBoost()==TRUE){
+        forestTreesUI(radiocal=input$modeltype, selection=1000)
+    } else {
+        NULL
+    }
+})
+
+forestTrees <- reactive({
+    req(input$modeltype)
+    if(needForest()==TRUE){
+        input$foresttrees
+    } else if(needXGBoost()==TRUE){
+        input$foresttrees
+    } else {
+        NULL
+    }
+})
+
+
+output$neuralhiddenlayersui <- renderUI({
+    req(input$modeltype)
+    if(needNeuralNet()==TRUE){
+        neuralHiddenLayersUI(radiocal=input$modeltype, selection=1)
+    } else if(needNeuralNet()==FALSE){
+        NULL
+    }
+})
+
+neuralHiddenLayer <- reactive({
+    tryCatch(input$neuralhiddenlayer,
+        error=function(e)
+            1)
+})
+
+
+output$neuralhiddenunitsui <- renderUI({
+    req(input$modeltype)
+    if(needNeuralNet()==TRUE){
+        neuralHiddenUnitsUi(radiocal=input$modeltype, selection=c(2, 4))
+    } else if(needNeuralNet()==FALSE){
+        NULL
+    }
+})
+
+neuralHiddenUnits <- reactive({
+    if(modelType()=="ShallowNeuralNet"){
+        paste0(input$neuralhiddenunits[1], "-", input$neuralhiddenunits[2])
+    } else if(modelType()=="DeepNeuralNet"){
+        paste0(input$neuralhiddenunits[1], "-", input$neuralhiddenunits[2])
+    } else {
+        NULL
+    }
+})
+
+
+output$neuralweightdecayui <- renderUI({
+    req(input$modeltype)
+    if(needNeuralNet()==TRUE){
+        neuralWeightDecayUI(radiocal=input$modeltype, selection=c(0.3, 0.5), neuralhiddenlayers=input$neuralhiddenlayers)
+    } else if(needNeuralNet()==FALSE){
+        NULL
+    }
+})
+
+neuralWeightDecay <- reactive({
+    if(modelType()=="ShallowNeuralNet"){
+        paste0(input$neuralweightdecay[1], "-", input$neuralweightdecay[2])
+    } else if(modelType()!="ShallowNeuralNet"){
+        NULL
+    }
+})
+
+output$neuralmaxiterationsui <- renderUI({
+    req(input$modeltype)
+    if(needNeuralNet()==TRUE){
+        neuralMaxIterationsUI(radiocal=input$modeltype, selection=2000, neuralhiddenlayers=input$neuralhiddenlayers)
+    } else if(needNeuralNet()==FALSE){
+        NULL
+    }
+    
+})
+
+neuralMaxIterations <- reactive({
+    tryCatch(input$neuralmaxiterations,
+        error=function(e)
+            1000)
+})
+
+
+output$xgbtypeui <- renderUI({
+    req(input$modeltype)
+    if(needXGBoost()==TRUE){
+        xgbTypeUI(radiocal=input$modeltype, selection="Linear")
+    } else if(needXGBoost()==FALSE){
+        NULL
+    }
+})
+
+xgbType <- reactive({
+        if(needXGBoost()==TRUE){
+        input$xgbtype
+    } else if(needXGBoost()==FALSE){
+        NULL
+    }
+})
+
+
+output$usebayesui <- renderUI({
+    req(input$modeltype)
+    if(needXGBoost()==TRUE){
+        checkboxInput("usebayes", "Use Bayesian Parameter Estimation", value=FALSE)
+    } else {
+        NULL
+    }
+})
+
+useBayes <- reactive({
+    if(needXGBoost()==TRUE){
+        input$usebayes
+    } else {
+        FALSE
+    }
+})
+
+output$foldsui <- renderUI({
+    req(input$modeltype, input$usebayes)
+    if(useBayes()==TRUE){
+        sliderInput("folds", "K-folds", min=2, max=50, value=5)
+    } else if(useBayes()==FALSE){
+        NULL
+    }
+})
+
+output$testingroundsui <- renderUI({
+    req(input$modeltype)
+    if(needXGBoost()==TRUE){
+        sliderInput("testrounds", "Testing Rounds", min=2, max=1000, value=200)
+    } else if(needXGBoost()==FALSE){
+        NULL
+    }
+})
+
+testRounds <- reactive({
+    req(input$modeltype)
+    if(needXGBoost()==TRUE){
+        input$testrounds
+    } else if(needXGBoost()==FALSE){
+        NULL
+    }
+})
+
+bayesFolds <- reactive({
+    if(needXGBoost()==TRUE){
+        input$folds
+    } else if(needXGBoost()==FALSE){
+        NULL
+    }
+})
+
+output$init_pointsui <- renderUI({
+    req(input$modeltype, input$usebayes)
+    if(useBayes()==TRUE){
+        sliderInput("init_points", "Initial Runs", min=2, max=150, value=50)
+    } else if(useBayes()==FALSE){
+        50
+    }
+})
+
+bayesInitPoints <- reactive({
+    if(needXGBoost()==TRUE){
+        input$init_points
+    } else if(needXGBoost()==FALSE){
+        NULL
+    }
+})
+
+output$n_iterui <- renderUI({
+    req(input$modeltype, input$usebayes)
+    if(useBayes()==TRUE){
+        sliderInput("n_iter", "Bayesian Iterations", min=2, max=50, value=10)
+    } else if(useBayes()==FALSE){
+        NULL
+    }
+})
+
+bayesNIter <- reactive({
+    if(needXGBoost()==TRUE){
+        input$n_iter
+    } else if(needXGBoost()==FALSE){
+        NULL
+    }
+})
+
+output$treedepthui <- renderUI({
+    req(input$modeltype)
+    if(needXGBoost()==TRUE){
+        req(input$xgbtype)
+        if(input$usebayes==TRUE){
+            treeDepthUI(radiocal=input$modeltype, selection=c(2, 40), xgbtype=input$xgbtype)
+        } else if(input$usebayes==FALSE){
+            treeDepthUI(radiocal=input$modeltype, selection=c(2, 7), xgbtype=input$xgbtype)
+        }
+    } else if(needXGBoost()==FALSE){
+        NULL
+    }
+})
+
+treeDepth <- reactive({
+    if(modelType()=="XGBTree"){
+        paste0(input$treedepth[1], "-", input$treedepth[2])
+    } else if(modelType()!="XGBTree"){
+        NULL
+    }
+})
+
+
+output$xgbalphaui <- renderUI({
+    req(input$modeltype)
+    if(needXGBoost()==TRUE){
+        req(input$xgbtype)
+        if(input$usebayes==TRUE){
+            xgbAlphaUI(radiocal=input$modeltype, selection=c(0, 10), xgbtype=input$xgbtype)
+        } else if(input$usebayes==FALSE){
+            xgbAlphaUI(radiocal=input$modeltype, selection=c(0.05, 0.95), xgbtype=input$xgbtype)
+        }
+    } else if(needXGBoost()==FALSE){
+        NULL
+    }
+})
+
+xgbAlpha <- reactive({
+    if(modelType()=="XGBLinear"){
+        paste0(input$xgbalpha[1], "-", input$xgbalpha[2])
+    } else if(modelType()!="XGBLinear"){
+        NULL
+    }
+})
+
+
+output$xgbgammaui <- renderUI({
+    req(input$modeltype)
+    if(needXGBoost()==TRUE){
+        req(input$xgbtype)
+        if(input$usebayes==TRUE){
+            xgbGammaUI(radiocal=input$modeltype, selection=c(0.0, 1), xgbtype=input$xgbtype)
+        } else if(input$usebayes==FALSE){
+            xgbGammaUI(radiocal=input$modeltype, selection=c(0.0, 1), xgbtype=input$xgbtype)
+        }
+    } else if(needXGBoost()==FALSE){
+        NULL
+    }
+})
+
+xgbGamma <- reactive({
+    if(modelType()=="XGBTree"){
+        paste0(input$xgbgamma[1], "-", input$xgbgamma[2])
+    } else if(modelType()!="XGBTree"){
+        NULL
+    }
+})
+
+output$xgbetaui <- renderUI({
+    req(input$modeltype)
+    if(needXGBoost()==TRUE){
+        req(input$xgbtype)
+        if(input$usebayes==TRUE){
+            xgbEtaUI(radiocal=input$modeltype, selection=c(0.01, 0.999))
+        } else if(input$usebayes==FALSE){
+            xgbEtaUI(radiocal=input$modeltype, selection=c(0.01, 0.99))
+        }
+    } else if(needXGBoost()==FALSE){
+        NULL
+    }
+})
+
+xgbEta <- reactive({
+    if(modelType()=="XGBTree"){
+        paste0(input$xgbeta[1], "-", input$xgbeta[2])
+    } else if(modelType()=="XGBLinear"){
+        paste0(input$xgbeta[1], "-", input$xgbeta[2])
+    } else {
+        NULL
+    }
+})
+
+output$xgblambdaui <- renderUI({
+    req(input$modeltype)
+    if(needXGBoost()==TRUE){
+        req(input$xgbtype)
+        if(input$usebayes==TRUE){
+            xgbLambdaUI(radiocal=input$modeltype, selection=c(0, 10), xgbtype=input$xgbtype)
+        } else if(input$usebayes==FALSE){
+            xgbLambdaUI(radiocal=input$modeltype, selection=c(0.05, 0.95), xgbtype=input$xgbtype)
+        }
+    } else if(needXGBoost()==FALSE){
+        NULL
+    }
+})
+
+xgbLambda <- reactive({
+    if(modelType()=="XGBLinear"){
+        paste0(input$xgblambda[1], "-", input$xgblambda[2])
+    } else if(modelType()!="XGBLinear"){
+        NULL
+    }
+})
+
+
+output$xgbsubsampleui <- renderUI({
+    req(input$modeltype)
+    if(needXGBoost()==TRUE){
+        req(input$xgbtype)
+        if(input$usebayes==TRUE){
+            xgbSubSampleUI(radiocal=input$modeltype, selection=c(0.05, 0.95), xgbtype=input$xgbtype)
+        } else if(input$usebayes==FALSE){
+            xgbSubSampleUI(radiocal=input$modeltype, selection=c(0.05, 0.95), xgbtype=input$xgbtype)
+        }
+    } else if(needXGBoost()==FALSE){
+        NULL
+    }
+})
+
+xgbSubSample <- reactive({
+    if(modelType()=="XGBTree"){
+        paste0(input$xgbsubsample[1], "-", input$xgbsubsample[2])
+    } else if(modelType()!="XGBTree"){
+        NULL
+    }
+})
+
+
+output$xgbcolsampleui <- renderUI({
+    req(input$modeltype)
+    if(needXGBoost()==TRUE){
+        req(input$xgbtype)
+        if(input$usebayes==TRUE){
+            xgbColSampleUI(radiocal=input$modeltype, selection=c(0.05, 0.95), xgbtype=input$xgbtype)
+        } else if(input$usebayes==FALSE){
+            xgbColSampleUI(radiocal=input$modeltype, selection=c(0.05, 0.95), xgbtype=input$xgbtype)
+        }
+    } else if(needXGBoost()==FALSE){
+        NULL
+    }
+})
+
+xgbColSample <- reactive({
+    if(modelType()=="XGBTree"){
+        paste0(input$xgbcolsample[1], "-", input$xgbcolsample[2])
+    } else if(modelType()!="XGBTree"){
+        NULL
+    }
+})
+
+output$xgbminchildui <- renderUI({
+    req(input$modeltype)
+    if(needXGBoost()==TRUE){
+        req(input$xgbtype)
+        xgbMinChildUI(radiocal=input$modeltype, selection=c(1, 3), xgbtype=input$xgbtype)
+    } else if(needXGBoost()==FALSE){
+        NULL
+    }
+})
+
+xgbMinChild <- reactive({
+    if(modelType()=="XGBTree"){
+        paste0(input$xgbminchild[1], "-", input$xgbminchild[2])
+    } else if(modelType()!="XGBTree"){
+        NULL
+    }
+})
+
+output$paralleltypeui <- renderUI({
+    selectInput("paralleltype", "Parallel Processing Type", choices=c("windows", "osx", "linux"), selected=get_os())
+
+})
+
+Model <- reactive({
+    
+    
+        withProgress(message = 'Running Model', value = 0, {
+
+            model <- autoMLTable(data=dataMerge3(), variable=input$variable, predictors=input$predictors, min.n=minN(), split=mlSplit()/100, type=modelType(), treedepth=treeDepth(), xgbalpha=xgbAlpha(), xgbeta=xgbEta(), xgbgamma=xgbGamma(), xgblambda=xgbLambda(), xgbcolsample=xgbColSample(), xgbsubsample=xgbSubSample(), xgbminchild=xgbMinChild(), nrounds=forestTrees(), test_nrounds=testRounds(), try=forestTry(), trees=forestTrees(), metric=forestMetric(), train=forestTrain(), cvrepeats=cvRepeats(), number=forestNumber(), Bayes=useBayes(), folds=bayesFolds(), init_points=bayesInitPoints(), n_iter=bayesNIter(), parallelMethod=input$paralleltype)
+            #model <- autoMLTable(data=dataMerge3(), variable=input$variable, predictors=input$predictors, min.n=minN(), split=mlSplit()/100, type=modelType(), treedepth=treeDepth(), xgbalpha=xgbAlpha(), xgbeta=xgbEta(), xgbgamma=xgbGamma(), xgblambda=xgbLambda(), xgbcolsample=xgbColSample(), xgbsubsample=xgbSubSample(), xgbminchild=xgbMinChild(), nrounds=forestTrees(), test_nrounds=testRounds(), try=forestTry(), trees=forestTrees(), metric=forestMetric(), train=forestTrain(), cvrepeats=cvRepeats(), number=forestNumber(), Bayes=TRUE, folds=30, init_points=10, n_iter=2, parallelMethod=input$paralleltype)
+
+        incProgress(1/1)
+        })
+        
+        model
+})
+
+model_run <- reactiveValues()
+model_run$ran <- NULL
+
+observeEvent(input$runmodel, {
+    isolate(model_run$ran <- Model())
+})
+
+resultePlot <- reactive({
+    model_run$ran$ResultPlot
+    #Model()$ImportancePlot
+})
+
+output$resultplot <- renderPlot({
+    print(resultePlot())
+})
+
+importancePlot <- reactive({
+    model_run$ran$ImportancePlot
+    #Model()$ImportancePlot
+})
+
+output$importanceplot <- renderPlot({
+    print(importancePlot())
+})
+
+output$modeldownload <- downloadHandler(
+filename <- function(){
+    paste(input$qualname, "qual", sep=".")
+},
+
+content = function(file) {
+    saveRDS(Model(), file = file, compress="xz")
+}
+)
+
+output$downloadimportance <- downloadHandler(
+filename = function() { paste(input$qualname, '_Importance.tiff',  sep='') },
+content = function(file) {
+    ggsave(file,Model()$ImportancePlot, device="tiff", compression="lzw",  dpi=300, width=input$importancewidth, height=input$importanceheight)
+}
+)
+
+output$downloadresult <- downloadHandler(
+filename = function() { paste(input$qualname, '_Result.tiff',  sep='') },
+content = function(file) {
+    ggsave(file,Model()$ResultPlot, device="tiff", compression="lzw",  dpi=300, width=input$resultwidth, height=input$resultheight)
 }
 )
 

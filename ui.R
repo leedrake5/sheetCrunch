@@ -30,9 +30,9 @@ tags$hr(),
 
 textInput('projectname', label="Project Name", value=""),
 
-checkboxInput('advanced', "Advanced", value=FALSE),
-uiOutput('gainshiftui'),
-uiOutput('binaryui'),
+#checkboxInput('advanced', "Advanced", value=FALSE),
+#uiOutput('gainshiftui'),
+#uiOutput('binaryui'),
 
 tags$hr(),
 
@@ -284,18 +284,7 @@ sidebarLayout(
 sidebarPanel(
 uiOutput('knumui'),
 
-selectInput("pcacolour", "Colour", choices=c(
-"Black"="black",
-"Cluster"="Cluster",
-"Focus" = "Focus",
-"Qualitative1"="Qualitative1",
-"Qualitative2"="Qualitative2",
-"Qualitative3"="Qualitative3",
-"Qualitative4"="Qualitative4",
-"Qualitative5"="Qualitative5",
-"Qualitative6"="Qualitative6",
-"Quantitative"="Quantitative"),
-selected="Cluster"),
+uiOutput('pcacolourui'),
 
 uiOutput('pcaFocusVariable'),
 uiOutput('pcaFocusUI'),
@@ -503,17 +492,7 @@ sidebarLayout(
 sidebarPanel(
 
 
-selectInput("ternarycolour", "Colour", choices=c(
-"Black"="black",
-"Cluster"="Cluster",
-"Qualitative1"="Qualitative1",
-"Qualitative2"="Qualitative2",
-"Qualitative3"="Qualitative3",
-"Qualitative4"="Qualitative4",
-"Qualitative5"="Qualitative5",
-"Qualitative6"="Qualitative6",
-"Quantitative" = "Quantitative"),
-selected="Cluster"),
+uiOutput('ternarycolourui'),
 
 
 tags$hr(),
@@ -552,67 +531,27 @@ resetOnNew = TRUE
 
 tabPanel("Elemental Ratios",
 div(class="outer",
-
-
 fluidRow(
 sidebarLayout(
-
 sidebarPanel(
-
-selectInput(
-"ratiocolour", "Ratio Plot Type",
-c(
-"Black" = "Black",
-"Cluster" = "Cluster",
-"Focus" = "Focus",
-"Qualitative1"="Qualitative1",
-"Qualitative2"="Qualitative2",
-"Qualitative3"="Qualitative3",
-"Qualitative4"="Qualitative4",
-"Qualitative5"="Qualitative5",
-"Qualitative6"="Qualitative6",
-"Quantitative" = "Quantitative"
-), selected="Cluster"),
-
+uiOutput('ratiocolourui'),
 uiOutput('ratioFocusVariable'),
 uiOutput('ratioFocusUI'),
 uiOutput('ratioFocusLabel'),
-
 tags$hr(),
-
-
-
 uiOutput('inelementratioa'),
 uiOutput('inelementratiob'),
-
 uiOutput('inelementratioc'),
 uiOutput('inelementratiod'),
-
 tags$hr(),
-
 sliderInput("spotsize2", label = "Point Size", value=5, min=2, max=15),
-
 uiOutput('inxlimrangeratio'),
 uiOutput('inylimrangeratio'),
-
-
-
-
 checkboxInput('elipseplot2', "Elipse"),
-
-
-
 tags$hr(),
-
-
 downloadButton('downloadPlot4', "Plot")
-
-
-
 ),
-
 mainPanel(
-tabPanel('Element Ratios',
 div(
 style = "position:relative",
 plotOutput("elementratiotimeseries", height = 650,
@@ -621,13 +560,70 @@ dblclick = "plot_ratio_dblclick",
 brush = brushOpts(id = "plot_ratio_brush", resetOnNew = TRUE)),
 uiOutput("hover_inforatio")
 )
+))
+))
 
+
+),
+
+tabPanel("Machine Learning",
+sidebarLayout(
+sidebarPanel(
+actionButton('runmodel', "Run"),
+tags$hr(),
+textInput("qualname", label = "Model Name", value="myModel"),
+uiOutput('variableui'),
+uiOutput('predictorsui'),
+tags$hr(),
+selectInput('modeltype', "Model Type", choices=list("Forest"=4, "XGBoost"=8), selected=4),
+sliderInput('split', "Cross-Validation Split", min=0, max=99, value=20),
+sliderInput('min_n', "Minimum Class Category", min=0, max=25, value=5),
+uiOutput('xgbtypeui'),
+uiOutput('usebayesui'),
+uiOutput('foldsui'),
+uiOutput('init_pointsui'),
+uiOutput('n_iterui'),
+uiOutput('forestmetricui'),
+uiOutput('foresttrainui'),
+uiOutput('cvrepeatsui'),
+uiOutput('forestnumberui'),
+uiOutput('foresttryui'),
+uiOutput('testingroundsui'),
+uiOutput('foresttreesui'),
+uiOutput('neuralhiddenlayersui'),
+uiOutput('neuralhiddenunitsui'),
+uiOutput('neuralweightdecayui'),
+uiOutput('neuralmaxiterationsui'),
+uiOutput('treedepthui'),
+uiOutput('xgbalphaui'),
+uiOutput('xgbgammaui'),
+uiOutput('xgbetaui'),
+uiOutput('xgblambdaui'),
+uiOutput('xgbsubsampleui'),
+uiOutput('xgbcolsampleui'),
+uiOutput('xgbminchildui'),
+tags$hr(),
+uiOutput('paralleltypeui'),
+tags$hr(),
+downloadButton('modeldownload', "Model")
+),
+
+mainPanel(
+tabsetPanel(
+tabPanel('Result',
+plotOutput('resultplot', height="600px"),
+numericInput('resultwidth', "Width", min=1, max=100, value=5),
+numericInput('resultheight', "Height", min=1, max=100, value=7),
+downloadButton('downloadresult', "Result Plot")),
+tabPanel('Importance',
+plotOutput('importanceplot', height="600px"),
+downloadButton('downloadimportance', "Importance Plot"),
+numericInput('importancewidth', "Width", min=1, max=100, value=7),
+numericInput('importanceheight', "Height", min=1, max=100, value=10))
+)
 )
 
-))
-
-))
-
+)
 
 )
 
