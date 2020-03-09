@@ -208,6 +208,8 @@ dataPrep <- function(data, variable, predictors=NULL){
         qual.fish.dmy <- dummyVars(" ~ .", data = qual.fish)
         qual.fish.trsf <- data.frame(predict(qual.fish.dmy , newdata = qual.fish))
         qual.fish.coded <- data.frame(Sample=data$Sample, qual.fish.trsf)
+        qual.fish.coded <- qual.fish.coded[,colnames(qual.fish.coded[!grepl("FALSE", colnames(qual.fish.coded))])]
+        colnames(qual.fish.coded) <- gsub("TRUE", "", colnames(qual.fish.coded))
     }
     
     #Add samples back
