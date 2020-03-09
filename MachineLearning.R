@@ -194,11 +194,14 @@ dataPrep <- function(data, variable, predictors=NULL){
         as.data.frame(just.fish[, sapply(just.fish, is.numeric)]),
         error=function(e) as.data.frame(data[,"Sample"])
         )
+        colnames(quant.fish) <- colnames(just.fish)[sapply(just.fish, is.numeric)]
     #Create a dataframe of just qualitative values, with a fallback dataframe if there are none
     qual.fish <- tryCatch(
         as.data.frame(just.fish[, !sapply(just.fish, is.numeric)]),
         error=function(e) as.data.frame(data[,"Sample"])
         )
+        colnames(qual.fish) <- colnames(just.fish)[!sapply(just.fish, is.numeric)]
+
     
     #Thing is, we can't use qualitative data as predictors. But we can create new columns of 0 or 1 based on the row of the origional value. This way, qualitative data can be used as a predictor.
     if(length(qual.fish)>1){
@@ -225,7 +228,600 @@ dataPrep <- function(data, variable, predictors=NULL){
     return(results.final)
 }
 
+###XGBoost classification. This function will run a classification model, using probabilities to sort data. It will automatically search for the best paramters, and then run a full model based on those. Variables are encoded as "x-y", which will search in increments for every variable in between.
+classifyXGBoostTreeGPU <- function(data, class, predictors=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric="Accuracy", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5){
+    
+    ###Prepare the data
+    data <- dataPrep(data=data, variable=class, predictors=predictors)
 
+    
+    #Convert characters to numeric vectors
+    
+    #Set ranges of maximum tree depths
+    tree.depth.vec <- as.numeric(unlist(strsplit(as.character(treedepth), "-")))
+    #Set eta ranges - this is the learning rate
+    xgbeta.vec <- as.numeric(unlist(strsplit(as.character(xgbeta), "-")))
+    #Set gamma ranges, this is the regularization
+    xgbgamma.vec <- as.numeric(unlist(strsplit(as.character(xgbgamma), "-")))
+    #Choose subsamples - this chooses percentaages of rows to include in each iteration
+    xgbsubsample.vec <- as.numeric(unlist(strsplit(as.character(xgbsubsample), "-")))
+    #Choose columns - this chooses percentaages of colmns to include in each iteration
+    xgbcolsample.vec <- as.numeric(unlist(strsplit(as.character(xgbcolsample), "-")))
+    #Set minimum child weights - this affects how iterations are weighted for the next round
+    xgbminchild.vec <- as.numeric(unlist(strsplit(as.character(xgbminchild), "-")))
+
+    #Boring data frame stuff
+        classhold <- as.vector(make.names(data[,class]))
+        data <- data[, !colnames(data) %in% class]
+        data <- data[complete.cases(data),]
+        data$Class <- as.vector(as.character(classhold))
+    
+    #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
+    if(!is.null(split)){
+        #Generaate random numbers based on the user-selected split
+        a <- data$Sample %in% as.vector(sample(data$Sample, size=(1-split)*length(data$Sample)))
+        #Generate traaining and test sets
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Class
+        y_test <- data.test$Class
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Class")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Class")]
+    } else if(is.null(split)){
+        #This just puts placeholders for the whole data set
+        data.train <- data
+        y_train <- data$Class
+        x_train <- data[, !colnames(data) %in% c("Sample", "Class")]
+    }
+    
+    #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
+    xgbGridPre <- expand.grid(
+        nrounds = test_nrounds,
+        max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5),
+        colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1),
+        eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1),
+        gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1),
+        min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2], 1),
+        subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1)
+    )
+    
+    #Boring x_train stuff for later
+    x_train <- as.matrix(data.frame(x_train))
+    mode(x_train)="numeric"
+    
+    #Take out the Sample #, this could really cause problems with the machine learning process
+    data.training <- data.train[, !colnames(data.train) %in% "Sample"]
+    data.training$Class <- as.factor(as.character(data.training$Class))
+    
+    num_classes <- as.numeric(length(unique(data.training$Class)))
+     metric.mod <- if(num_classes>2){
+         "merror"
+     } else  if(num_classes==2){
+         "error"
+     }
+     objective.mod <- if(num_classes>2){
+         "multi:softprob"
+     } else  if(num_classes==2){
+         "binary:logistic"
+     }
+     eval_metric <- if(num_classes>2){
+         "merror"
+     } else  if(num_classes==2){
+         "error"
+     }
+     summary_function <- if(num_classes>2){
+           multiClassSummary
+       } else  if(num_classes==2){
+           twoClassSummary
+       }
+
+    #Begin parameter searching
+    if(nrow(xgbGridPre)==1){
+        #If there is only one unique combination, we'll make this quick
+       xgbGrid <- xgbGridPre
+       xgbGrid$nrounds=nrounds
+    } else if(nrow(xgbGridPre)>1 && Bayes==FALSE){
+        #Create train controls. Only one iteration with optimism bootstrapping
+        tune_control_pre <- if(parallel_method!="linux"){
+            caret::trainControl(
+            method = "optimism_boot",
+            classProbs = TRUE,
+            number = 1,
+            summaryFunction = summary_function,
+            verboseIter = TRUE,
+            allowParallel=TRUE
+            )
+        } else if(parallel_method=="linux"){
+            caret::trainControl(
+            method = "optimism_boot",
+            classProbs = TRUE,
+            number = 1,
+            summaryFunction = summary_function,
+            verboseIter = TRUE
+            )
+        }
+        
+        #Prepare the computer's CPU for what's comming
+         if(parallel_method!="linux"){
+             #cl will be the CPU sockets. This will be serialized for Windows because Windows is bad, and forked for Mac because Macs are good
+            cl <- if(parallel_method=="windows"){
+                makePSOCKcluster(as.numeric(my.cores))
+            } else if(parallel_method!="windows"){
+                makeForkCluster(as.numeric(my.cores))
+            }
+            registerDoParallel(cl)
+            #Run the model
+            xgb_model_pre <- if(num_classes>2){
+                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = objective.mod, num_class=num_classes, na.action=na.omit)
+            } else if(num_classes==2){
+                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = objective.mod, na.action=na.omit)
+            }
+            #Close the CPU sockets
+            stopCluster(cl)
+            #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
+        } else if(parallel_method=="linux"){
+            xgb_model_pre <- if(num_classes>2){
+                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = objective.mod, num_class=num_classes, na.action=na.omit, nthread=as.numeric(my.cores))
+            } else if(num_classes==2){
+                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = objective.mod, na.action=na.omit, nthread=as.numeric(my.cores))
+            }
+        }
+        
+        #Now create a new tuning grid for the final model based on the best parameters following grid searching
+        xgbGrid <- expand.grid(
+            nrounds = nrounds,
+            max_depth = xgb_model_pre$bestTune$max_depth,
+            colsample_bytree = xgb_model_pre$bestTune$colsample_bytree,
+            eta = xgb_model_pre$bestTune$eta,
+            gamma = xgb_model_pre$bestTune$gamma,
+            min_child_weight = xgb_model_pre$bestTune$min_child_weight,
+            subsample = xgb_model_pre$bestTune$subsample
+        )
+    } else if(nrow(xgbGridPre)>1 && Bayes==TRUE){
+        #data.training.temp <- data.training
+        #data.training.temp$Class <- as.integer(data.training.temp$Class)
+        OPT_Res=xgb_cv_opt_tree(data = data.training,
+                   label = Class,
+                   classes=num_classes,
+                   nrounds_range=as.integer(c(100, nrounds)),
+                   eta_range=xgbeta.vec,
+                   gamma_range=xgbgamma.vec,
+                   max_depth_range=as.integer(tree.depth.vec),
+                   min_child_range=as.integer(xgbminchild.vec),
+                   subsample_range=xgbsubsample.vec,
+                   bytree_range=xgbcolsample.vec,
+                   objectfun = objective.mod,
+                   evalmetric = eval_metric,
+                   n_folds = folds,
+                   acq = "ucb",
+                   init_points = init_points,
+                   n_iter = n_iter)
+                   
+        best_param <- list(
+            booster = "gbtree",
+            nrounds=OPT_Res$Best_Par["nrounds_opt"],
+            eval.metric = metric.mod,
+            objective = objective.mod,
+            max_depth = OPT_Res$Best_Par["max_depth_opt"],
+            eta = OPT_Res$Best_Par["eta_opt"],
+            gamma = OPT_Res$Best_Par["gamma_opt"],
+            subsample = OPT_Res$Best_Par["subsample_opt"],
+            colsample_bytree = OPT_Res$Best_Par["bytree_opt"],
+            min_child_weight = OPT_Res$Best_Par["minchild_opt"])
+        
+        xgbGrid <- expand.grid(
+            nrounds = best_param$nrounds,
+            max_depth = best_param$max_depth,
+            colsample_bytree = best_param$colsample_bytree,
+            eta = best_param$eta,
+            gamma = best_param$gamma,
+            min_child_weight = best_param$min_child_weight,
+            subsample = best_param$subsample
+        )
+    }
+    
+    #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
+    tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
+        caret::trainControl(
+        classProbs = TRUE,
+        summaryFunction = summary_function,
+        method = train,
+        number = number,
+        verboseIter = TRUE,
+        allowParallel = TRUE
+        )
+    } else if(train=="repeatedcv" && parallel_method!="linux"){
+        caret::trainControl(
+        classProbs = TRUE,
+        summaryFunction = summary_function,
+        method = train,
+        number = number,
+        repeats = cvrepeats,
+        verboseIter = TRUE,
+        allowParallel = TRUE
+        )
+    } else if(train!="repeatedcv" && parallel_method=="linux"){
+        caret::trainControl(
+        classProbs = TRUE,
+        summaryFunction = summary_function,
+        method = train,
+        number = number,
+        verboseIter = TRUE
+        )
+    } else if(train=="repeatedcv" && parallel_method=="linux"){
+        caret::trainControl(
+        classProbs = TRUE,
+        summaryFunction = summary_function,
+        method = train,
+        number = number,
+        repeats = cvrepeats,
+        verboseIter = TRUE
+        )
+    }
+    
+    
+    #Same CPU instructions as before
+    if(parallel_method!="linux"){
+        cl <- if(parallel_method=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(parallel_method!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        xgb_model <- if(num_classes>2){
+            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = objective.mod, num_class=num_classes, na.action=na.omit)
+        } else if(num_classes==2){
+            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = objective.mod, na.action=na.omit)
+        }
+
+        stopCluster(cl)
+    } else if(parallel_method=="linux"){
+        data.training <- data.train[, !colnames(data.train) %in% "Sample"]
+        xgb_model <- if(num_classes>2){
+            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = objective.mod, num_class=num_classes, nthread=as.numeric(my.cores), na.action=na.omit)
+        } else if(num_classes==2){
+            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = objective.mod, nthread=as.numeric(my.cores), na.action=na.omit)
+        }
+    }
+    
+    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
+    y_predict_train <- predict(object=xgb_model, newdata=x_train, na.action = na.pass)
+    results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
+    accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    
+    
+    #If you chose a random split, we will generate the same accuracy metrics
+    if(!is.null(split)){
+        y_predict <- predict(object=xgb_model, newdata=x_test, na.action = na.pass)
+        results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Class, Predicted=y_predict)
+        accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
+        
+        ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
+        geom_bar(stat="identity") +
+        geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
+                  position = position_dodge(0.9), size=3.5) +
+        theme_light()
+        
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
+    } else if(is.null(split)){
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
+        
+        ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
+        geom_bar(stat="identity") +
+        geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
+                  position = position_dodge(0.9), size=3.5) +
+        theme_light()
+        
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, ImportancePlot=importanceBar(xgb_model), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
+    }
+    
+    #Model list includes the following objects in a list:
+        #Model data, a list that includes training and full data sets
+        #Model - the full model
+        #ImportancePlot, a ggplot of variables
+        #trainAccuracy - the performance of the model on its own training data
+        #testAccuracy - the performance of the model on the validation test data set - only if split is a number betweene 0 and 0.99
+        
+    return(model.list)
+}
+
+###XGBoost regression. This function will run a regression model, using rmse or mae (per your choice) to sort data. It will automatically search for the best paramters, and then run a full model based on those. Variables are encoded as "x-y", which will search in increments for every variable in between.
+regressXGBoostTreeGPU <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+    
+    ###Prepare the data
+    data <- dataPrep(data=data, variable=dependent, predictors=predictors)
+    data.orig <- data
+    #Use operating system as default if not manually set
+    parallel_method <- if(!is.null(parallelMethod)){
+        parallelMethod
+    } else if(is.null(parallelMethod)){
+        get_os()
+    }
+    
+    #Convert characters to numeric vectors
+        
+    #Set ranges of maximum tree depths
+    tree.depth.vec <- as.numeric(unlist(strsplit(as.character(treedepth), "-")))
+    #Set eta ranges - this is the learning rate
+    xgbeta.vec <- as.numeric(unlist(strsplit(as.character(xgbeta), "-")))
+    #Set gamma ranges, this is the regularization
+    xgbgamma.vec <- as.numeric(unlist(strsplit(as.character(xgbgamma), "-")))
+    #Choose subsamples - this chooses percentaages of rows to include in each iteration
+    xgbsubsample.vec <- as.numeric(unlist(strsplit(as.character(xgbsubsample), "-")))
+    #Choose columns - this chooses percentaages of colmns to include in each iteration
+    xgbcolsample.vec <- as.numeric(unlist(strsplit(as.character(xgbcolsample), "-")))
+    #Set minimum child weights - this affects how iterations are weighted for the next round
+    xgbminchild.vec <- as.numeric(unlist(strsplit(as.character(xgbminchild), "-")))
+
+    #Boring data frame stuff
+        data$Dependent <- as.vector(data[,dependent])
+        data <- data[, !colnames(data) %in% dependent]
+        data <- data[complete.cases(data),]
+        data$Dependent <- as.numeric(data$Dependent)
+    
+ 
+    #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
+    if(!is.null(split)){
+        #Generaate random numbers based on the user-selected split
+        a <- data$Sample %in% as.vector(sample(data$Sample, size=(1-split)*length(data$Sample)))
+        #Generate traaining and test sets
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Dependent
+        y_test <- data.test$Dependent
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
+    } else if(is.null(split)){
+        #This just puts placeholders for the whole data set
+        data.train <- data
+        y_train <- data$Dependent
+        x_train <- data[, !colnames(data) %in% c("Sample", "Dependent")]
+    }
+    
+    #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
+    xgbGridPre <- expand.grid(
+        nrounds = test_nrounds,
+        max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5),
+        colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1),
+        eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1),
+        gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1),
+        min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2], 1),
+        subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1)
+    )
+    
+    #Boring x_train stuff for later
+    x_train <- as.matrix(data.frame(x_train))
+    mode(x_train)="numeric"
+    
+    #Take out the Sample #, this could really cause problems with the machine learning process
+    data.training <- data.train[, !colnames(data.train) %in% "Sample"]
+    
+    
+    #Begin parameter searching
+    if(nrow(xgbGridPre)==1){
+        #If there is only one unique combination, we'll make this quick
+       xgbGrid <- xgbGridPre
+       xgbGrid$nrounds=nrounds
+    } else if(nrow(xgbGridPre)>1 && Bayes==FALSE){
+        #Create train controls. Only one iteration with optimism bootstrapping
+        tune_control_pre <- if(parallel_method!="linux"){
+            caret::trainControl(
+            method = "optimism_boot",
+            number = 1,
+            verboseIter = TRUE,
+            allowParallel=TRUE
+            )
+        } else if(parallel_method=="linux"){
+            caret::trainControl(
+            method = "optimism_boot",
+            number = 1,
+            verboseIter = TRUE
+            )
+        }
+        
+         if(parallel_method!="linux"){
+             #cl will be the CPU sockets. This will be serialized for Windows because Windows is bad, and forked for Mac because Macs are good
+            cl <- if(parallel_method=="windows"){
+                makePSOCKcluster(as.numeric(my.cores))
+            } else if(parallel_method!="windows"){
+                makeForkCluster(as.numeric(my.cores))
+            }
+            registerDoParallel(cl)
+            #Run the model
+            xgb_model_pre <- caret::train(Dependent~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = "reg:linear", na.action=na.omit)
+            #Close the CPU sockets
+            stopCluster(cl)
+            #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
+        } else if(parallel_method=="linux"){
+            xgb_model_pre <- caret::train(Dependent~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = "reg:linear", na.action=na.omit, nthread=as.numeric(my.cores))
+        }
+        
+        #Now create a new tuning grid for the final model based on the best parameters following grid searching
+        xgbGrid <- expand.grid(
+            nrounds = 100,
+            max_depth = xgb_model_pre$bestTune$max_depth,
+            colsample_bytree = xgb_model_pre$bestTune$colsample_bytree,
+            eta = xgb_model_pre$bestTune$eta,
+            gamma = xgb_model_pre$bestTune$gamma,
+            min_child_weight = xgb_model_pre$bestTune$min_child_weight,
+            subsample = xgb_model_pre$bestTune$subsample
+        )
+        } else if(nrow(xgbGridPre)>1 && Bayes==TRUE){
+            metric.mod <- if(metric=="RMSE"){
+                "rmse"
+            } else if(metric=="MAE"){
+                "mae"
+            } else if(metric!="RMSE" | metric!="MAE"){
+                "rmse"
+            }
+            tree_method <- 'hist'
+            n_threads <- as.numeric(my.cores)
+            dependent <- "Dependent"
+            x_train <- data.training[,!colnames(data.training) %in% dependent]
+            x_train <- as.matrix(x_train)
+            y_train <- as.vector(data.training[,dependent])
+            dtrain <- xgboost::xgb.DMatrix(x_train, label = y_train)
+            cv_folds <- KFold(data.training$Dependent, nfolds = folds, stratified = TRUE)
+                      xgb_cv_bayes <- function(max_depth, min_child_weight, subsample, eta, gamma, colsample_bytree) {
+                          param <- list(booster = "gbtree",
+                          max_depth = max_depth,
+                          min_child_weight = min_child_weight,
+                          eta=eta,
+                          gamma=gamma,
+                          subsample = subsample,
+                          colsample_bytree = colsample_bytree,
+                          objective = "reg:linear",
+                          eval_metric = metric.mod)
+                          cv <- xgb.cv(params = param, data = dtrain, folds=cv_folds, nround = 100, early_stopping_rounds = 25, tree_method = tree_method, nthread=n_threads, maximize = TRUE, verbose = FALSE)
+                          
+                          if(metric.mod=="rmse"){
+                              tryCatch(list(Score = cv$evaluation_log$test_rmse_mean[cv$best_iteration]*-1, Pred=cv$best_iteration*-1), error=function(e) list(Score=0, Pred=0))
+                          } else if(metric.mod=="mae"){
+                              tryCatch(list(Score = cv$evaluation_log$test_mae_mean[cv$best_iteration]*-1, Pred=cv$best_iteration*-1), error=function(e) list(Score=0, Pred=0))
+                          }
+                      }
+                      
+            OPT_Res <- BayesianOptimization(xgb_cv_bayes,
+            bounds = list(max_depth = as.integer(tree.depth.vec),
+                       min_child_weight = as.integer(xgbminchild.vec),
+                           subsample = xgbsubsample.vec,
+                           eta = xgbeta.vec,
+                           gamma = c(0L, xgbgamma.vec[2]),
+                           colsample_bytree=xgbcolsample.vec),
+                       init_grid_dt = NULL,
+                       init_points = init_points,
+                       n_iter = n_iter,
+                       acq = "ucb",
+                       kappa = 2.576,
+                       eps = 0.0,
+                       verbose = TRUE)
+                       
+            best_param <- list(
+                booster = "gbtree",
+                eval.metric = metric.mod,
+                objective = "reg:linear",
+                max_depth = OPT_Res$Best_Par["max_depth"],
+                eta = OPT_Res$Best_Par["eta"],
+                gamma = OPT_Res$Best_Par["gamma"],
+                subsample = OPT_Res$Best_Par["subsample"],
+                colsample_bytree = OPT_Res$Best_Par["colsample_bytree"],
+                min_child_weight = OPT_Res$Best_Par["min_child_weight"])
+            
+            xgbGrid <- expand.grid(
+                nrounds = foresttrees,
+                max_depth = best_param$max_depth,
+                colsample_bytree = best_param$colsample_bytree,
+                eta = best_param$eta,
+                gamma = best_param$gamma,
+                min_child_weight = best_param$min_child_weight,
+                subsample = best_param$subsample
+            )
+        }
+    #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
+    tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
+        caret::trainControl(
+        method = train,
+        number = number,
+        verboseIter = TRUE,
+        allowParallel = TRUE
+        )
+    } else if(train=="repeatedcv" && parallel_method!="linux"){
+        caret::trainControl(
+        method = train,
+        number = number,
+        repeats = cvrepeats,
+        verboseIter = TRUE,
+        allowParallel = TRUE
+        )
+    } else if(train!="repeatedcv" && parallel_method=="linux"){
+        caret::trainControl(
+        method = train,
+        number = number,
+        verboseIter = TRUE
+        )
+    } else if(train=="repeatedcv" && parallel_method=="linux"){
+        caret::trainControl(
+        method = train,
+        number = number,
+        repeats = cvrepeats,
+        verboseIter = TRUE
+        )
+    }
+    
+    
+    #Same CPU instructions as before
+    if(parallel_method!="linux"){
+        cl <- if(parallel_method=="windows"){
+            parallel::makePSOCKcluster(as.numeric(my.cores))
+        } else if(parallel_method!="windows"){
+            parallel::makeForkCluster(as.numeric(my.cores))
+        }
+        registerDoParallel(cl)
+        
+        xgb_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = "reg:linear", na.action=na.omit)
+
+        stopCluster(cl)
+    } else if(parallel_method=="linux"){
+        xgb_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = "reg:linear", nthread=as.numeric(my.cores), na.action=na.omit)
+    }
+    
+    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
+    y_predict_train <- predict(object=xgb_model, newdata=x_train)
+    results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Dependent, Predicted=y_predict_train)
+    accuracy.rate_train <- lm(Known~Predicted, data=results.frame_train)
+    
+    
+    #If you chose a random split, we will generate the same accuracy metrics
+    if(!is.null(split)){
+        y_predict <- predict(object=xgb_model, newdata=x_test, na.action = na.pass)
+        results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Dependent, Predicted=y_predict)
+        accuracy.rate <- lm(Known~Predicted, data=results.frame)
+        
+        all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
+        train.frame <- all.data[!all.data$Sample %in% results.frame,]
+        train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
+        KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
+        KnownSet$Type <- rep("Train", nrow(KnownSet))
+        results.frame$Type <- rep("2. Test", nrow(results.frame))
+        All <- rbind(KnownSet, results.frame)
+        
+        ResultPlot <- ggplot(All, aes(Known, Predicted, colour=Type, shape=Type)) +
+        geom_point(alpha=0.5) +
+        stat_smooth(method="lm") +
+        theme_light()
+        
+        
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate)
+    } else if(is.null(split)){
+        all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
+        train.frame <- all.data
+        train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
+        KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
+        KnownSet$Type <- rep("1. Train", nrow(KnownSet))
+        All <- KnownSet
+        
+        ResultPlot <- ggplot(All, aes(Known, Predicted, colour=Type, shape=Type)) +
+        geom_point(alpha=0.5) +
+        stat_smooth(method="lm") +
+        theme_light()
+        
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, ImportancePlot=importanceBar(xgb_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)
+    }
+    
+    #Model list includes the following objects in a list:
+        #Model data, a list that includes training and full data sets
+        #Model - the full model
+        #ImportancePlot, a ggplot of variables
+        #trainAccuracy - the performance of the model on its own training data
+        #testAccuracy - the performance of the model on the validation test data set - only if split is a number betweene 0 and 0.99
+    
+    return(model.list)
+}
 
 ###XGBoost classification. This function will run a classification model, using probabilities to sort data. It will automatically search for the best paramters, and then run a full model based on those. Variables are encoded as "x-y", which will search in increments for every variable in between.
 classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric="Accuracy", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
