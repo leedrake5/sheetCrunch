@@ -16,7 +16,7 @@ get_os <- function(){
 }
 
 #Check to see if needed packages exist, and automatically install them if needed
-list.of.packages <- c("caret", "xgboost", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics")
+list.of.packages <- c("caret", "xgboost", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab")
 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) lapply(new.packages, function(x) install.packages(x, repos="http://cran.rstudio.com/", dep = TRUE))
@@ -27,6 +27,7 @@ library(xgboost)
 library(ggplot2)
 library(nnet)
 library(randomForest)
+library(kernlab)
 library(doParallel)
 library(rBayesianOptimization)
 library(tidyverse)
@@ -2370,17 +2371,430 @@ autoForest<- function(data, variable, predictors=NULL, min.n=5, split=NULL, try=
     return(model)
 }
 
+###Support Vector Machine Classification
+classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type="Linear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", metric="Accuracy", train="repeatedcv", cvrepeats=5, number=100, parallelMethod=NULL){
+    
+    ###Prepare the data
+    data <- dataPrep(data=data, variable=class, predictors=predictors)
+    
+    #Use operating system as default if not manually set
+    parallel_method <- if(!is.null(parallelMethod)){
+        parallelMethod
+    } else if(is.null(parallelMethod)){
+        get_os()
+    }
+    
+    #Convert characters to numeric vectors
+    xgblambda.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(xgblambda), "-"))), error=function(x) "0.2-0.2")
+    svmc.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmc), "-"))), error=function(x) "2-2")
+    svmdegree.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmdegree), "-"))), error=function(x) "1-2")
+    svmdegree.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmdegree), "-"))), error=function(x) "1-2")
+    svmscale.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmscale), "-"))), error=function(x) "1-2")
+    svmsigma.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmsigma), "-"))), error=function(x) "1-2")
+    svmlength.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmlength), "-"))), error=function(x) "1-2")
+    
+    #Boring data frame stuff
+        classhold <- as.vector(make.names(data[,class]))
+        data <- data[, !colnames(data) %in% class]
+        data <- data[complete.cases(data),]
+        data$Class <- as.vector(as.character(classhold))
+    
+    #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
+    if(!is.null(split)){
+        #Generaate random numbers based on the user-selected split
+        a <- data$Sample %in% as.vector(sample(data$Sample, size=(1-split)*length(data$Sample)))
+        #Generate traaining and test sets
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Class
+        y_test <- data.test$Class
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Class")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Class")]
+    } else if(is.null(split)){
+        #This just puts placeholders for the whole data set
+        data.train <- data
+        y_train <- data$Class
+        x_train <- data[, !colnames(data) %in% c("Sample", "Class")]
+    }
+    
+    #Boring x_train stuff for later
+    x_train <- as.matrix(data.frame(x_train))
+    mode(x_train)="numeric"
+    
+    #Take out the Sample #, this could really cause problems with the machine learning process
+    data.training <- data.train[, !colnames(data.train) %in% "Sample"]
+    data.training$Class <- as.factor(as.character(data.training$Class))
+    
+    num_classes <- as.numeric(length(unique(data.training$Class)))
 
-autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, metric=NULL, train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+     summary_function <- if(num_classes>2){
+           multiClassSummary
+       } else  if(num_classes==2){
+           twoClassSummary
+       }
+
+       svmGrid <- if(type=="svmLinear"){
+           expand.grid(
+               C = seq(svmc.vec[1], svmc.vec[2], 1))
+       } else if(type=="svmPoly"){
+           expand.grid(
+               C = seq(svmc.vec[1], svmc.vec[2], 1),
+               scale=seq(svmscale.vec[1], svmscale.vec[2], 1),
+               degree=seq(svmdegree.vec[1], svmdegree.vec[2], 1))
+       } else if(type=="svmRadial"){
+           expand.grid(
+               C = seq(svmc.vec[1], svmc.vec[2], 1),
+               sigma=seq(svmsigma.vec[1], svmsigma.vec[2], 1))
+       } else if(type=="svmRadialCost"){
+           expand.grid(
+               C = seq(svmc.vec[1], svmc.vec[2], 1))
+       } else if(type=="svmRadialSigma"){
+           expand.grid(
+               C = seq(svmc.vec[1], svmc.vec[2], 1),
+               sigma=seq(svmsigma.vec[1], svmsigma.vec[2], 1))
+       } else if(type=="svmBoundrangeString"){
+           expand.grid(
+               C = seq(svmc.vec[1], svmc.vec[2], 1),
+               length=seq(svmlength.vec[1], svmlength.vec[2], 1))
+       } else if(type=="svmExpoString"){
+           expand.grid(
+               C = seq(svmc.vec[1], svmc.vec[2], 1),
+               lambda=seq(xgblambda.vec[1], xgblambda.vec[2], 1))
+       } else if(type=="svmSpectrumString"){
+           expand.grid(
+               C = seq(svmc.vec[1], svmc.vec[2], 1),
+               lambda=seq(xgblambda.vec[1], xgblambda.vec[2], 1))
+       }
+       
+
+       #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
+       tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
+           caret::trainControl(
+           classProbs = TRUE,
+           summaryFunction = summary_function,
+           method = train,
+           number = number,
+           verboseIter = TRUE
+           )
+       } else if(train=="repeatedcv" && parallel_method!="linux"){
+           caret::trainControl(
+           classProbs = TRUE,
+           summaryFunction = summary_function,
+           method = train,
+           number = number,
+           repeats = cvrepeats,
+           verboseIter = TRUE
+           )
+       } else if(train!="repeatedcv" && parallel_method=="linux"){
+           caret::trainControl(
+           classProbs = TRUE,
+           summaryFunction = summary_function,
+           method = train,
+           number = number,
+           verboseIter = TRUE
+           )
+       } else if(train=="repeatedcv" && parallel_method=="linux"){
+           caret::trainControl(
+           classProbs = TRUE,
+           summaryFunction = summary_function,
+           method = train,
+           number = number,
+           repeats = cvrepeats,
+           verboseIter = TRUE
+           )
+       }
+       
+       
+
+                  if(parallel_method!="linux"){
+                       cl <- if(parallel_method=="windows"){
+                           makePSOCKcluster(as.numeric(my.cores))
+                       } else if(parallel_method!="windows"){
+                           makeForkCluster(as.numeric(my.cores))
+                       }
+                       registerDoParallel(cl)
+                       svm_model <- caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit)
+                       stopCluster(cl)
+                   } else if(parallel_method=="linux"){
+                       parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
+                       svm_model <- caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
+                       parallelStop()
+                   } else if(parallel_method=="minimal"){
+                       svm_model <- caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method = type, na.action=na.omit)
+                   }
+
+
+
+    
+    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
+    y_predict_train <- predict(object=svm_model, newdata=x_train, na.action = na.pass)
+    results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
+    accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    
+    #If you chose a random split, we will generate the same accuracy metrics
+    if(!is.null(split)){
+        y_predict <- predict(object=svm_model, newdata=x_test, na.action = na.pass)
+        results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Class, Predicted=y_predict)
+        accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
+        
+        ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
+        geom_bar(stat="identity") +
+        geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
+                  position = position_dodge(0.9), size=3.5) +
+        theme_light()
+        
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=svm_model, ImportancePlot=importanceBar(svm_model), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
+    } else if(is.null(split)){
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
+        
+        ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
+        geom_bar(stat="identity") +
+        geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
+                  position = position_dodge(0.9), size=3.5) +
+        theme_light()
+        
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=svm_model, ImportancePlot=importanceBar(svm_model), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
+    }
+    
+    #Model list includes the following objects in a list:
+        #Model data, a list that includes training and full data sets
+        #Model - the full model
+        #ImportancePlot, a ggplot of variables
+        #trainAccuracy - the performance of the model on its own training data
+        #testAccuracy - the performance of the model on the validation test data set - only if split is a number betweene 0 and 0.99
+        
+    return(model.list)
+}
+
+###Support Vector Machine Regression
+regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, type="Linear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+    
+    ###Prepare the data
+    data <- dataPrep(data=data, variable=dependent, predictors=predictors)
+    data.orig <- data
+    
+    #Use operating system as default if not manually set
+    parallel_method <- if(!is.null(parallelMethod)){
+        parallelMethod
+    } else if(is.null(parallelMethod)){
+        get_os()
+    }
+        #Boring data frame stuff
+        data$Dependent <- as.vector(data[,dependent])
+        data <- data[, !colnames(data) %in% dependent]
+        data <- data[complete.cases(data),]
+        data$Dependent <- as.numeric(data$Dependent)
+    
+ 
+    #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
+    if(!is.null(split)){
+        #Generaate random numbers based on the user-selected split
+        a <- data$Sample %in% as.vector(sample(data$Sample, size=(1-split)*length(data$Sample)))
+        #Generate traaining and test sets
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Dependent
+        y_test <- data.test$Dependent
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
+    } else if(is.null(split)){
+        #This just puts placeholders for the whole data set
+        data.train <- data
+        y_train <- data$Dependent
+        x_train <- data[, !colnames(data) %in% c("Sample", "Dependent")]
+    }
+        
+    #Boring x_train stuff for later
+    x_train <- as.matrix(data.frame(x_train))
+    mode(x_train)="numeric"
+    
+    #Take out the Sample #, this could really cause problems with the machine learning process
+    data.training <- data.train[, !colnames(data.train) %in% "Sample"]
+    
+    xgblambda.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(xgblambda), "-"))), error=function(x) "0.2-0.2")
+    svmc.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmc), "-"))), error=function(x) "2-2")
+    svmdegree.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmdegree), "-"))), error=function(x) "1-2")
+    svmdegree.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmdegree), "-"))), error=function(x) "1-2")
+    svmscale.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmscale), "-"))), error=function(x) "1-2")
+    svmsigma.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmsigma), "-"))), error=function(x) "1-2")
+    svmlength.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmlength), "-"))), error=function(x) "1-2")
+    
+    svmGrid <- if(type=="svmLinear"){
+            expand.grid(
+                C = seq(svmc.vec[1], svmc.vec[2], 1))
+        } else if(type=="svmPoly"){
+            expand.grid(
+                C = seq(svmc.vec[1], svmc.vec[2], 1),
+                scale=seq(svmscale.vec[1], svmscale.vec[2], 1),
+                degree=seq(svmdegree.vec[1], svmdegree.vec[2], 1))
+        } else if(type=="svmRadial"){
+            expand.grid(
+                C = seq(svmc.vec[1], svmc.vec[2], 1),
+                sigma=seq(svmsigma.vec[1], svmsigma.vec[2], 1))
+        } else if(type=="svmRadialCost"){
+            expand.grid(
+                C = seq(svmc.vec[1], svmc.vec[2], 1))
+        } else if(type=="svmRadialSigma"){
+            expand.grid(
+                C = seq(svmc.vec[1], svmc.vec[2], 1),
+                sigma=seq(svmsigma.vec[1], svmsigma.vec[2], 1))
+        } else if(type=="svmBoundrangeString"){
+            expand.grid(
+                C = seq(svmc.vec[1], svmc.vec[2], 1),
+                length=seq(svmlength.vec[1], svmlength.vec[2], 1))
+        } else if(type=="svmExpoString"){
+            expand.grid(
+                C = seq(svmc.vec[1], svmc.vec[2], 1),
+                lambda=seq(xgblambda.vec[1], xgblambda.vec[2], 1))
+        } else if(type=="svmSpectrumString"){
+            expand.grid(
+                C = seq(svmc.vec[1], svmc.vec[2], 1),
+                lambda=seq(xgblambda.vec[1], xgblambda.vec[2], 1))
+        }
+    
+    
+    
+    #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
+    tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
+        caret::trainControl(
+        method = train,
+        number = number,
+        verboseIter = TRUE,
+        allowParallel = TRUE
+        )
+    } else if(train=="repeatedcv" && parallel_method!="linux"){
+        caret::trainControl(
+        method = train,
+        number = number,
+        repeats = cvrepeats,
+        verboseIter = TRUE,
+        allowParallel = TRUE
+        )
+    } else if(train!="repeatedcv" && parallel_method=="linux"){
+        caret::trainControl(
+        method = train,
+        number = number,
+        verboseIter = TRUE
+        )
+    } else if(train=="repeatedcv" && parallel_method=="linux"){
+        caret::trainControl(
+        method = train,
+        number = number,
+        repeats = cvrepeats,
+        verboseIter = TRUE
+        )
+    }
+    
+    
+    #Same CPU instructions as before
+    if(parallel_method!="linux"){
+         cl <- if(parallel_method=="windows"){
+             makePSOCKcluster(as.numeric(my.cores))
+         } else if(parallel_method!="windows"){
+             makeForkCluster(as.numeric(my.cores))
+         }
+         registerDoParallel(cl)
+         svm_model <- caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=svm.method, na.action=na.omit)
+         stopCluster(cl)
+     } else if(parallel_method=="linux"){
+         parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
+         svm_model <- caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
+         parallelStop()
+     } else if(parallel_method=="minimal"){
+         svm_model <- caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method = svm.method, na.action=na.omit)
+     }
+    
+    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
+    y_predict_train <- predict(object=svm_model, newdata=x_train, na.action = na.pass)
+    results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Dependent, Predicted=y_predict_train)
+    accuracy.rate_train <- lm(Known~Predicted, data=results.frame_train)
+    
+    #If you chose a random split, we will generate the same accuracy metrics
+    if(!is.null(split)){
+        y_predict <- predict(object=svm_model, newdata=x_test, na.action = na.pass)
+        results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Dependent, Predicted=y_predict)
+        accuracy.rate <- lm(Known~Predicted, data=results.frame)
+        
+        all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
+        train.frame <- all.data[!all.data$Sample %in% results.frame,]
+        train.predictions <- predict(forest_model, train.frame, na.action = na.pass)
+        KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
+        KnownSet$Type <- rep("Train", nrow(KnownSet))
+        results.frame$Type <- rep("2. Test", nrow(results.frame))
+        All <- rbind(KnownSet, results.frame)
+        
+        ResultPlot <- ggplot(All, aes(Known, Predicted, colour=Type, shape=Type)) +
+        geom_point(alpha=0.5) +
+        stat_smooth(method="lm") +
+        theme_light()
+        
+        
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=svm_model, ImportancePlot=importanceBar(svm_model), ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate)
+    } else if(is.null(split)){
+        all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
+        train.frame <- all.data
+        train.predictions <- predict(svm_model, train.frame, na.action = na.pass)
+        KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
+        KnownSet$Type <- rep("1. Train", nrow(KnownSet))
+        All <- KnownSet
+        
+        ResultPlot <- ggplot(All, aes(Known, Predicted, colour=Type, shape=Type)) +
+        geom_point(alpha=0.5) +
+        stat_smooth(method="lm") +
+        theme_light()
+        
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=svm_model, ImportancePlot=importanceBar(svm_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)    }
+    
+    #Model list includes the following objects in a list:
+        #Model data, a list that includes training and full data sets
+        #Model - the full model
+        #ImportancePlot, a ggplot of variables
+        #trainAccuracy - the performance of the model on its own training data
+        #testAccuracy - the performance of the model on the validation test data set - only if split is a number betweene 0 and 0.99
+    
+    return(model.list)
+}
+
+autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="svmLinear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", metric=NULL, train="repeatedcv", cvrepeats=5, number=30, parallelMethod=NULL){
+    
+    #Choose default metric based on whether the variable is numeric or not
+    metric <- if(!is.null(metric)){
+        metric
+    } else if(is.null(metric)){
+        if(!is.numeric(data[,variable])){
+            "Accuracy"
+        } else if(is.numeric(data[,variable])){
+            "RMSE"
+        }
+    }
+    
+    #Choose model type based on whether the variable is numeric or not
+    model <- if(!is.numeric(data[,variable])){
+        classifySVM(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+    } else if(is.numeric(data[,variable])){
+        regressSVM(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+    }
+    
+    return(model)
+}
+
+
+autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", metric=NULL, train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
     
     
     #Choose model class
-    model <- if(type=="XGBTree"){
+    model <- if(type=="xgbTree"){
         autoXGBoostTree(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
-    } else if(type=="XGBLinear"){
+    } else if(type=="xgbLinear"){
         autoXGBoostLinear(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
     } else if(type=="Forest"){
         autoForest(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, train=train, number=number, cvrepeats=cvrepeats, parallelMethod=parallelMethod)
+    } else if(type=="svmLinear" | type=="svmPoly" | type=="svmRadial" | type=="svmRadialCost" | type=="svmRadialSigma" | type=="svmBoundrangeString" | type=="svmExpoString" | type=="svmSpectrumString"){
+        autoSVM(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     }
     
     return(model)
