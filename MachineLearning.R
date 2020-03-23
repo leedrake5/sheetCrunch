@@ -214,7 +214,7 @@ dataPrep <- function(data, variable, predictors=NULL){
     }
     
     #Add samples back
-    if(length(quant.fish)>1){
+    if(length(quant.fish)>=1){
         quant.fish <- data.frame(Sample=data$Sample, quant.fish)
     }
     
@@ -254,9 +254,9 @@ classifyXGBoostTreeGPU <- function(data, class, predictors=NULL, min.n=5, split=
     xgbminchild.vec <- as.numeric(unlist(strsplit(as.character(xgbminchild), "-")))
 
     #Boring data frame stuff
+        data <- data[complete.cases(data),]
         classhold <- as.vector(make.names(data[,class]))
         data <- data[, !colnames(data) %in% class]
-        data <- data[complete.cases(data),]
         data$Class <- as.vector(as.character(classhold))
     
     #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
@@ -561,9 +561,9 @@ regressXGBoostTreeGPU <- function(data, dependent, predictors=NULL, merge.by=NUL
     xgbminchild.vec <- as.numeric(unlist(strsplit(as.character(xgbminchild), "-")))
 
     #Boring data frame stuff
+        data <- data[complete.cases(data),]
         data$Dependent <- as.vector(data[,dependent])
         data <- data[, !colnames(data) %in% dependent]
-        data <- data[complete.cases(data),]
         data$Dependent <- as.numeric(data$Dependent)
     
  
@@ -856,9 +856,9 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
     xgbminchild.vec <- as.numeric(unlist(strsplit(as.character(xgbminchild), "-")))
 
     #Boring data frame stuff
+        data <- data[complete.cases(data),]
         classhold <- as.vector(make.names(data[,class]))
         data <- data[, !colnames(data) %in% class]
-        data <- data[complete.cases(data),]
         data$Class <- as.vector(as.character(classhold))
     
     #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
@@ -1163,9 +1163,9 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
     xgbminchild.vec <- as.numeric(unlist(strsplit(as.character(xgbminchild), "-")))
 
     #Boring data frame stuff
+        data <- data[complete.cases(data),]
         data$Dependent <- as.vector(data[,dependent])
         data <- data[, !colnames(data) %in% dependent]
-        data <- data[complete.cases(data),]
         data$Dependent <- as.numeric(data$Dependent)
     
  
@@ -1477,9 +1477,9 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
     xgblambda.vec <- as.numeric(unlist(strsplit(as.character(xgblambda), "-")))
     
     #Boring data frame stuff
+        data <- data[complete.cases(data),]
         classhold <- as.vector(make.names(data[,class]))
         data <- data[, !colnames(data) %in% class]
-        data <- data[complete.cases(data),]
         data$Class <- as.vector(as.character(classhold))
     
     #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
@@ -1762,9 +1762,9 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
     xgblambda.vec <- as.numeric(unlist(strsplit(as.character(xgblambda), "-")))
 
     #Boring data frame stuff
+        data <- data[complete.cases(data),]
         data$Dependent <- as.vector(data[,dependent])
         data <- data[, !colnames(data) %in% dependent]
-        data <- data[complete.cases(data),]
         data$Dependent <- as.numeric(data$Dependent)
     
  
@@ -2047,9 +2047,9 @@ classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, tr
     }
     
     #Boring data frame stuff
+        data <- data[complete.cases(data),]
         classhold <- as.vector(make.names(data[,class]))
         data <- data[, !colnames(data) %in% class]
-        data <- data[complete.cases(data),]
         data$Class <- as.vector(as.character(classhold))
     
     #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
@@ -2212,10 +2212,10 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
         get_os()
     }
         #Boring data frame stuff
-        data$Dependent <- as.vector(data[,dependent])
-        data <- data[, !colnames(data) %in% dependent]
-        data <- data[complete.cases(data),]
-        data$Dependent <- as.numeric(data$Dependent)
+            data <- data[complete.cases(data),]
+            data$Dependent <- as.vector(data[,dependent])
+            data <- data[, !colnames(data) %in% dependent]
+            data$Dependent <- as.numeric(data$Dependent)
     
  
     #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
@@ -2394,9 +2394,9 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
     svmlength.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmlength), "-"))), error=function(x) "1-2")
     
     #Boring data frame stuff
+        data <- data[complete.cases(data),]
         classhold <- as.vector(make.names(data[,class]))
         data <- data[, !colnames(data) %in% class]
-        data <- data[complete.cases(data),]
         data$Class <- as.vector(as.character(classhold))
     
     #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
@@ -2583,10 +2583,10 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
         get_os()
     }
         #Boring data frame stuff
-        data$Dependent <- as.vector(data[,dependent])
-        data <- data[, !colnames(data) %in% dependent]
-        data <- data[complete.cases(data),]
-        data$Dependent <- as.numeric(data$Dependent)
+            data <- data[complete.cases(data),]
+            data$Dependent <- as.vector(data[,dependent])
+            data <- data[, !colnames(data) %in% dependent]
+            data$Dependent <- as.numeric(data$Dependent)
     
  
     #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
