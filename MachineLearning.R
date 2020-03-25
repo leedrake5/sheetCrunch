@@ -175,6 +175,11 @@ importanceBar <- function(model){
 #Prepare the data for machine learning. Data is the imported data, variable is the name of the variable you want to analyize. This function will automatically prepare qualitative data for analysis if needed.
 dataPrep <- function(data, variable, predictors=NULL){
     
+    ###Remove any columns that don't have more than one value
+    data <- data[,sapply(data, function(x) length(unique(x))>1)]
+    
+    
+    
     #Create a Sample ID column if one doesn't exist yet
     if(!"Sample" %in% colnames(data)){
         data$Sample <- make.names(seq(1, nrow(data), 1))
