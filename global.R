@@ -35,14 +35,14 @@ if(length(new.packages)) install.packages(new.packages)
 
 
 if("rPDZ" %in% installed.packages()[,"Package"]==FALSE && get_os()=="windows"){
-    install.packages("http://www.xrf.guru/packages/rPDZ_1.0.zip", repos=NULL, type="win.binary")
+    tryCatch(install.packages("http://www.xrf.guru/packages/rPDZ_1.0.zip", repos=NULL, type="win.binary"), error=function(e) NULL)
 } else if ("rPDZ" %in% installed.packages()[,"Package"]==FALSE && get_os()=="osx"){
-    install.packages("http://www.xrf.guru/packages/rPDZ_1.0.tgz", repos=NULL)
+    tryCatch(install.packages("http://www.xrf.guru/packages/rPDZ_1.0.tgz", repos=NULL), error=function(e) NULL)
 } else if ("rPDZ" %in% installed.packages()[,"Package"]==FALSE && get_os()=="linux"){
-    install.packages("http://www.xrf.guru/packages/rPDZ_1.0.tar.gz", repos=NULL)
+    tryCatch(install.packages("http://www.xrf.guru/packages/rPDZ_1.0.tar.gz", repos=NULL), error=function(e) NULL)
 }
 
-library(rPDZ)
+tryCatch(library(rPDZ), error=function(e) NULL)
 
 
 library(pbapply)
