@@ -2377,9 +2377,10 @@ autoForest<- function(data, variable, predictors=NULL, min.n=5, split=NULL, try=
 }
 
 ###Support Vector Machine Classification
-classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type="Linear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", metric="Accuracy", train="repeatedcv", cvrepeats=5, number=100, parallelMethod=NULL){
+classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type="Linear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric="Accuracy", train="repeatedcv", cvrepeats=5, number=100, parallelMethod=NULL){
     
     ###Prepare the data
+    data.hold <- data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
     
     #Use operating system as default if not manually set
@@ -2432,6 +2433,41 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
     data.training$Class <- as.factor(as.character(data.training$Class))
     
     num_classes <- as.numeric(length(unique(data.training$Class)))
+    
+    ###For string-based kernels
+    if(type=="svmBoundrangeString" | type=="svmExpoString" | type=="svmSpectrumString"){
+        
+        if(!is.null(split)){
+            if(!"Sample" %in% colnames(data.hold)){
+                data.hold$Sample <- make.names(seq(1, nrow(data.hold), 1))
+            }
+            a <- data.hold$Sample %in% as.vector(sample(data.hold$Sample, size=(1-split)*length(data.hold$Sample)))
+            data.train.hold <- data.hold[a,]
+            data.test.hold <- data.hold[!a,]
+            x_train <- data.train.hold[,!colnames(data.train.hold) %in% c("Sample", class)]
+            y_train <- data.train.hold[,class]
+            x_train <- x_train %>% mutate_all(as.character)
+            x_names <- colnames(x_train)
+            x_train <- as.matrix(x_train)
+            colnames(x_train) <- x_names
+            x_test <- data.test.hold[,!colnames(data.test.hold) %in% c("Sample", class)]
+            y_test <- data.test.hold[,class]
+            x_test <- x_test %>% mutate_all(as.character)
+            x_names <- colnames(x_test)
+            x_test <- as.matrix(x_test)
+            colnames(x_test) <- x_names
+        } else if(is.null(split)){
+            if(!"Sample" %in% colnames(data.hold)){
+                       data.hold$Sample <- make.names(seq(1, nrow(data.hold), 1))
+                   }
+                   x_train <- data.hold[,!colnames(data.hold) %in% c("Sample", class)]
+                   y_train <- data.hold[,class]
+                   x_train <- x_train %>% mutate_all(as.character)
+                   x_names <- colnames(x_train)
+                   x_train <- as.matrix(x_train)
+                   colnames(x_train) <- x_names
+        }
+    }
 
      summary_function <- if(num_classes>2){
            multiClassSummary
@@ -2448,16 +2484,28 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
                scale=seq(svmscale.vec[1], svmscale.vec[2], 1),
                degree=seq(svmdegree.vec[1], svmdegree.vec[2], 1))
        } else if(type=="svmRadial"){
-           expand.grid(
+           if(is.null(svmgammavector)){
+               expand.grid(
                C = seq(svmc.vec[1], svmc.vec[2], 1),
                sigma=seq(svmsigma.vec[1], svmsigma.vec[2], 1))
+           } else if(!is.null(svmgammavector)){
+               expand.grid(
+               C = seq(svmc.vec[1], svmc.vec[2], 1),
+               sigma=svmgammavector)
+           }
        } else if(type=="svmRadialCost"){
            expand.grid(
                C = seq(svmc.vec[1], svmc.vec[2], 1))
        } else if(type=="svmRadialSigma"){
-           expand.grid(
+           if(is.null(svmgammavector)){
+               expand.grid(
                C = seq(svmc.vec[1], svmc.vec[2], 1),
                sigma=seq(svmsigma.vec[1], svmsigma.vec[2], 1))
+           } else if(!is.null(svmgammavector)){
+               expand.grid(
+               C = seq(svmc.vec[1], svmc.vec[2], 1),
+               sigma=svmgammavector)
+           }
        } else if(type=="svmBoundrangeString"){
            expand.grid(
                C = seq(svmc.vec[1], svmc.vec[2], 1),
@@ -2519,14 +2567,14 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
                            makeForkCluster(as.numeric(my.cores))
                        }
                        registerDoParallel(cl)
-                       svm_model <- caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit)
+                       svm_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit)
                        stopCluster(cl)
                    } else if(parallel_method=="linux"){
                        parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
-                       svm_model <- caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
+                       svm_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
                        parallelStop()
                    } else if(parallel_method=="minimal"){
-                       svm_model <- caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method = type, na.action=na.omit)
+                       svm_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method = type, na.action=na.omit)
                    }
 
 
@@ -2575,7 +2623,7 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
 }
 
 ###Support Vector Machine Regression
-regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, type="Linear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, type="Linear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
@@ -2764,7 +2812,7 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
     return(model.list)
 }
 
-autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="svmLinear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", metric=NULL, train="repeatedcv", cvrepeats=5, number=30, parallelMethod=NULL){
+autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="svmLinear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric=NULL, train="repeatedcv", cvrepeats=5, number=30, parallelMethod=NULL){
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -2779,16 +2827,16 @@ autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifySVM(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        classifySVM(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
-        regressSVM(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        regressSVM(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     }
     
     return(model)
 }
 
 
-autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", metric=NULL, train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric=NULL, train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
     
     
     #Choose model class
@@ -2799,7 +2847,7 @@ autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, ty
     } else if(type=="Forest"){
         autoForest(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, train=train, number=number, cvrepeats=cvrepeats, parallelMethod=parallelMethod)
     } else if(type=="svmLinear" | type=="svmPoly" | type=="svmRadial" | type=="svmRadialCost" | type=="svmRadialSigma" | type=="svmBoundrangeString" | type=="svmExpoString" | type=="svmSpectrumString"){
-        autoSVM(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        autoSVM(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     }
     
     return(model)
