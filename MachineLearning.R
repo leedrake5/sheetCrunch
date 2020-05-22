@@ -16,7 +16,7 @@ get_os <- function(){
 }
 
 #Check to see if needed packages exist, and automatically install them if needed
-list.of.packages <- c("caret", "xgboost", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab")
+list.of.packages <- c("caret", "xgboost", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm")
 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) lapply(new.packages, function(x) install.packages(x, repos="http://cran.rstudio.com/", dep = TRUE))
@@ -28,6 +28,9 @@ library(ggplot2)
 library(nnet)
 library(randomForest)
 library(kernlab)
+tryCatch(library(bartMachine), error=function(e) NULL)
+tryCatch(library(brnn), error=function(e) NULL)
+tryCatch(library(arm), error=function(e) NULL)
 library(doParallel)
 library(rBayesianOptimization)
 library(tidyverse)
@@ -2774,7 +2777,7 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
         
         all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
         train.frame <- all.data[!all.data$Sample %in% results.frame,]
-        train.predictions <- predict(forest_model, train.frame, na.action = na.pass)
+        train.predictions <- predict(svm_model, train.frame, na.action = na.pass)
         KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
         KnownSet$Type <- rep("Train", nrow(KnownSet))
         results.frame$Type <- rep("2. Test", nrow(results.frame))
@@ -2836,7 +2839,461 @@ autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="
 }
 
 
-autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric=NULL, train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+###Bayes Classification
+classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", metric="Accuracy", train="repeatedcv", cvrepeats=5, number=100, parallelMethod=NULL){
+    
+    ###Prepare the data
+    data.hold <- data
+    data <- dataPrep(data=data, variable=class, predictors=predictors)
+    
+    #Use operating system as default if not manually set
+    parallel_method <- if(!is.null(parallelMethod)){
+        parallelMethod
+    } else if(is.null(parallelMethod)){
+        get_os()
+    }
+    
+    #Convert characters to numeric vectors
+    neuralhiddenunits.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(neuralhiddenunits), "-"))), error=function(x) "1-10")
+    xgbalpha.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(xgbalpha), "-"))), error=function(x) "2-2")
+    bartk.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(bartk), "-"))), error=function(x) "2-2")
+    bartbeta.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(bartbeta), "-"))), error=function(x) "1-2")
+    bartnu.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(bartnu), "-"))), error=function(x) "1-2")
+    
+    
+    #Boring data frame stuff
+        data <- data[complete.cases(data),]
+        classhold <- as.vector(make.names(data[,class]))
+        data <- data[, !colnames(data) %in% class]
+        data$Class <- as.vector(as.character(classhold))
+    
+    #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
+    if(!is.null(split)){
+        #Generaate random numbers based on the user-selected split
+        a <- data$Sample %in% as.vector(sample(data$Sample, size=(1-split)*length(data$Sample)))
+        #Generate traaining and test sets
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Class
+        y_test <- data.test$Class
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Class")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Class")]
+    } else if(is.null(split)){
+        #This just puts placeholders for the whole data set
+        data.train <- data
+        y_train <- data$Class
+        x_train <- data[, !colnames(data) %in% c("Sample", "Class")]
+    }
+    
+    #Boring x_train stuff for later
+    x_train <- as.matrix(data.frame(x_train))
+    mode(x_train)="numeric"
+    
+    #Take out the Sample #, this could really cause problems with the machine learning process
+    data.training <- data.train[, !colnames(data.train) %in% "Sample"]
+    data.training$Class <- as.factor(as.character(data.training$Class))
+    
+    num_classes <- as.numeric(length(unique(data.training$Class)))
+    
+     summary_function <- if(num_classes>2){
+           multiClassSummary
+       } else  if(num_classes==2){
+           twoClassSummary
+       }
+       
+       bayesGrid <- if(type=="bayesNeuralNet"){
+           expand.grid(neurons = seq(neuralhiddenunits.vec[1], neuralhiddenunits.vec[2], 1))
+       } else if(type=="bayesTree"){
+           expand.grid(
+               num_trees=trees,
+               alpha=seq(xgbalpha.vec[1], xgbalpha.vec[2], by=0.1),
+               k = seq(bartk.vec[1], bartk.vec[2], 1),
+               beta=seq(bartbeta.vec[1], bartbeta.vec[2], 1),
+               nu=seq(bartnu.vec[1], bartnu.vec[2], 1))
+       }
+       
+       bayes_type <- if(type=="bayesLinear"){
+           "bayesglm"
+       } else if(type=="bayesTree"){
+           "bartMachine"
+       } else if(type=="bayesNeuralNet"){
+           "brnn"
+       }
+       
+
+       #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
+       tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
+           caret::trainControl(
+           classProbs = TRUE,
+           summaryFunction = summary_function,
+           method = train,
+           number = number,
+           verboseIter = TRUE
+           )
+       } else if(train=="repeatedcv" && parallel_method!="linux"){
+           caret::trainControl(
+           classProbs = TRUE,
+           summaryFunction = summary_function,
+           method = train,
+           number = number,
+           repeats = cvrepeats,
+           verboseIter = TRUE
+           )
+       } else if(train!="repeatedcv" && parallel_method=="linux"){
+           caret::trainControl(
+           classProbs = TRUE,
+           summaryFunction = summary_function,
+           method = train,
+           number = number,
+           verboseIter = TRUE
+           )
+       } else if(train=="repeatedcv" && parallel_method=="linux"){
+           caret::trainControl(
+           classProbs = TRUE,
+           summaryFunction = summary_function,
+           method = train,
+           number = number,
+           repeats = cvrepeats,
+           verboseIter = TRUE
+           )
+       }
+       
+       
+       if(type=="bayesLinear"){
+           if(parallel_method!="linux"){
+               cl <- if(parallel_method=="windows"){
+                   makePSOCKcluster(as.numeric(my.cores))
+               } else if(parallel_method!="windows"){
+                   makeForkCluster(as.numeric(my.cores))
+               }
+               registerDoParallel(cl)
+               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, metric=metric, method=bayes_type, na.action=na.omit)
+               stopCluster(cl)
+           } else if(parallel_method=="linux"){
+               parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
+               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, metric=metric, method=bayes_type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
+               parallelStop()
+           } else if(parallel_method=="minimal"){
+               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, metric=metric, method = bayes_type, na.action=na.omit)
+           }
+       } else if(type=="bayesTree"){
+           if(parallel_method!="linux"){
+               #cl <- if(parallel_method=="windows"){
+                   #makePSOCKcluster(as.numeric(my.cores))
+               #} else if(parallel_method!="windows"){
+                   #makeForkCluster(as.numeric(my.cores))
+               #}
+               #registerDoParallel(cl)
+               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, na.action=na.omit, serialize=TRUE)
+               #stopCluster(cl)
+           } else if(parallel_method=="linux"){
+               #parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
+               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, na.action=na.omit, verboseIter=TRUE, serialize=TRUE, allowParallel=TRUE)
+               #parallelStop()
+           } else if(parallel_method=="minimal"){
+               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method = bayes_type, na.action=na.omit, serialize=TRUE)
+           }
+       } else if(type=="bayesNeuralNet"){
+           if(parallel_method!="linux"){
+               cl <- if(parallel_method=="windows"){
+                   makePSOCKcluster(as.numeric(my.cores))
+               } else if(parallel_method!="windows"){
+                   makeForkCluster(as.numeric(my.cores))
+               }
+               registerDoParallel(cl)
+               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, na.action=na.omit)
+               stopCluster(cl)
+           } else if(parallel_method=="linux"){
+               parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
+               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
+               parallelStop()
+           } else if(parallel_method=="minimal"){
+               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method = bayes_type, na.action=na.omit)
+           }
+       }
+                  
+
+
+
+    
+    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
+    y_predict_train <- predict(object=bayes_model, newdata=x_train, na.action = na.pass)
+    results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
+    accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    
+    #If you chose a random split, we will generate the same accuracy metrics
+    if(!is.null(split)){
+        y_predict <- predict(object=bayes_model, newdata=x_test, na.action = na.pass)
+        results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Class, Predicted=y_predict)
+        accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
+        
+        ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
+        geom_bar(stat="identity") +
+        geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
+                  position = position_dodge(0.9), size=3.5) +
+        theme_light()
+        
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=bayes_model, ImportancePlot=importanceBar(bayes_model), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
+    } else if(is.null(split)){
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
+        
+        ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
+        geom_bar(stat="identity") +
+        geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
+                  position = position_dodge(0.9), size=3.5) +
+        theme_light()
+        
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=bayes_model, ImportancePlot=importanceBar(bayes_model), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
+    }
+    
+    #Model list includes the following objects in a list:
+        #Model data, a list that includes training and full data sets
+        #Model - the full model
+        #ImportancePlot, a ggplot of variables
+        #trainAccuracy - the performance of the model on its own training data
+        #testAccuracy - the performance of the model on the validation test data set - only if split is a number betweene 0 and 0.99
+        
+    return(model.list)
+}
+
+###Bayes Regression
+regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+    
+    ###Prepare the data
+    data <- dataPrep(data=data, variable=dependent, predictors=predictors)
+    data.orig <- data
+    
+    #Use operating system as default if not manually set
+    parallel_method <- if(!is.null(parallelMethod)){
+        parallelMethod
+    } else if(is.null(parallelMethod)){
+        get_os()
+    }
+        #Boring data frame stuff
+            data <- data[complete.cases(data),]
+            data$Dependent <- as.vector(data[,dependent])
+            data <- data[, !colnames(data) %in% dependent]
+            data$Dependent <- as.numeric(data$Dependent)
+    
+ 
+    #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
+    if(!is.null(split)){
+        #Generaate random numbers based on the user-selected split
+        a <- data$Sample %in% as.vector(sample(data$Sample, size=(1-split)*length(data$Sample)))
+        #Generate traaining and test sets
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Dependent
+        y_test <- data.test$Dependent
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
+    } else if(is.null(split)){
+        #This just puts placeholders for the whole data set
+        data.train <- data
+        y_train <- data$Dependent
+        x_train <- data[, !colnames(data) %in% c("Sample", "Dependent")]
+    }
+        
+    #Boring x_train stuff for later
+    x_train <- as.matrix(data.frame(x_train))
+    mode(x_train)="numeric"
+    
+    #Take out the Sample #, this could really cause problems with the machine learning process
+    data.training <- data.train[, !colnames(data.train) %in% "Sample"]
+    
+    neuralhiddenunits.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(neuralhiddenunits), "-"))), error=function(x) "1-10")
+    xgbalpha.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(xgbalpha), "-"))), error=function(x) "2-2")
+    bartk.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(bartk), "-"))), error=function(x) "2-2")
+    bartbeta.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(bartbeta), "-"))), error=function(x) "1-2")
+    bartnu.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(bartnu), "-"))), error=function(x) "1-2")
+    
+    bayesGrid <- if(type=="bayesNeuralNet"){
+        expand.grid(neurons = seq(neuralhiddenunits.vec[1], neuralhiddenunits.vec[2], 1))
+    } else if(type=="bayesTree"){
+        expand.grid(
+            num_trees=trees,
+            alpha=seq(xgbalpha.vec[1], xgbalpha.vec[2], by=0.1),
+            k = seq(bartk.vec[1], bartk.vec[2], 1),
+            beta=seq(bartbeta.vec[1], bartbeta.vec[2], 1),
+            nu=seq(bartnu.vec[1], bartnu.vec[2], 1))
+    }
+    
+    bayes_type <- if(type=="bayesLinear"){
+        "bayesglm"
+    } else if(type=="bayesTree"){
+        "bartMachine"
+    } else if(type=="bayesNeuralNet"){
+        "brnn"
+    }
+    
+    
+    
+    #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
+    tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
+        caret::trainControl(
+        method = train,
+        number = number,
+        verboseIter = TRUE,
+        allowParallel = TRUE
+        )
+    } else if(train=="repeatedcv" && parallel_method!="linux"){
+        caret::trainControl(
+        method = train,
+        number = number,
+        repeats = cvrepeats,
+        verboseIter = TRUE,
+        allowParallel = TRUE
+        )
+    } else if(train!="repeatedcv" && parallel_method=="linux"){
+        caret::trainControl(
+        method = train,
+        number = number,
+        verboseIter = TRUE
+        )
+    } else if(train=="repeatedcv" && parallel_method=="linux"){
+        caret::trainControl(
+        method = train,
+        number = number,
+        repeats = cvrepeats,
+        verboseIter = TRUE
+        )
+    }
+    
+    
+    #Same CPU instructions as before
+        if(type=="bayesLinear"){
+            if(parallel_method!="linux"){
+                cl <- if(parallel_method=="windows"){
+                    makePSOCKcluster(as.numeric(my.cores))
+                } else if(parallel_method!="windows"){
+                    makeForkCluster(as.numeric(my.cores))
+                }
+                registerDoParallel(cl)
+                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, metric=metric, method=bayes_type, na.action=na.omit)
+                stopCluster(cl)
+            } else if(parallel_method=="linux"){
+                parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
+                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, metric=metric, method=bayes_type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
+                parallelStop()
+            } else if(parallel_method=="minimal"){
+                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, metric=metric, method = bayes_type, na.action=na.omit)
+            }
+        } else if(type=="bayesTree"){
+            if(parallel_method!="linux"){
+                #cl <- if(parallel_method=="windows"){
+                    #makePSOCKcluster(as.numeric(my.cores))
+                #} else if(parallel_method!="windows"){
+                    #makeForkCluster(as.numeric(my.cores))
+                #}
+                #registerDoParallel(cl)
+                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, na.action=na.omit, serialize=TRUE)
+                #stopCluster(cl)
+            } else if(parallel_method=="linux"){
+                #parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
+                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, na.action=na.omit, verboseIter=TRUE, serialize=TRUE, allowParallel=TRUE)
+                #parallelStop()
+            } else if(parallel_method=="minimal"){
+                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method = bayes_type, na.action=na.omit, serialize=TRUE)
+            }
+        } else if(type=="bayesNeuralNet"){
+            if(parallel_method!="linux"){
+                cl <- if(parallel_method=="windows"){
+                    makePSOCKcluster(as.numeric(my.cores))
+                } else if(parallel_method!="windows"){
+                    makeForkCluster(as.numeric(my.cores))
+                }
+                registerDoParallel(cl)
+                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, na.action=na.omit)
+                stopCluster(cl)
+            } else if(parallel_method=="linux"){
+                parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
+                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
+                parallelStop()
+            } else if(parallel_method=="minimal"){
+                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method = bayes_type, na.action=na.omit)
+            }
+        }
+    
+    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
+    y_predict_train <- predict(object=bayes_model, newdata=x_train, na.action = na.pass)
+    results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Dependent, Predicted=y_predict_train)
+    accuracy.rate_train <- lm(Known~Predicted, data=results.frame_train)
+    
+    #If you chose a random split, we will generate the same accuracy metrics
+    if(!is.null(split)){
+        y_predict <- predict(object=bayes_model, newdata=x_test, na.action = na.pass)
+        results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Dependent, Predicted=y_predict)
+        accuracy.rate <- lm(Known~Predicted, data=results.frame)
+        
+        all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
+        train.frame <- all.data[!all.data$Sample %in% results.frame,]
+        train.predictions <- predict(bayes_model, train.frame, na.action = na.pass)
+        KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
+        KnownSet$Type <- rep("Train", nrow(KnownSet))
+        results.frame$Type <- rep("2. Test", nrow(results.frame))
+        All <- rbind(KnownSet, results.frame)
+        
+        ResultPlot <- ggplot(All, aes(Known, Predicted, colour=Type, shape=Type)) +
+        geom_point(alpha=0.5) +
+        stat_smooth(method="lm") +
+        theme_light()
+        
+        
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=bayes_model, ImportancePlot=importanceBar(bayes_model), ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate)
+    } else if(is.null(split)){
+        all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
+        train.frame <- all.data
+        train.predictions <- predict(bayes_model, train.frame, na.action = na.pass)
+        KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
+        KnownSet$Type <- rep("1. Train", nrow(KnownSet))
+        All <- KnownSet
+        
+        ResultPlot <- ggplot(All, aes(Known, Predicted, colour=Type, shape=Type)) +
+        geom_point(alpha=0.5) +
+        stat_smooth(method="lm") +
+        theme_light()
+        
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=bayes_model, ImportancePlot=importanceBar(bayes_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)    }
+    
+    #Model list includes the following objects in a list:
+        #Model data, a list that includes training and full data sets
+        #Model - the full model
+        #ImportancePlot, a ggplot of variables
+        #trainAccuracy - the performance of the model on its own training data
+        #testAccuracy - the performance of the model on the validation test data set - only if split is a number betweene 0 and 0.99
+    
+    return(model.list)
+}
+
+autoBayes <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", metric=NULL, train="repeatedcv", cvrepeats=5, number=30, parallelMethod=NULL){
+    
+    #Choose default metric based on whether the variable is numeric or not
+    metric <- if(!is.null(metric)){
+        metric
+    } else if(is.null(metric)){
+        if(!is.numeric(data[,variable])){
+            "Accuracy"
+        } else if(is.numeric(data[,variable])){
+            "RMSE"
+        }
+    }
+    
+    #Choose model type based on whether the variable is numeric or not
+    model <- if(!is.numeric(data[,variable])){
+        classifyBayes(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+    } else if(is.numeric(data[,variable])){
+        regressSVM(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+    }
+    
+    return(model)
+}
+
+
+autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", metric=NULL, train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
     
     
     #Choose model class
@@ -2848,6 +3305,9 @@ autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, ty
         autoForest(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, train=train, number=number, cvrepeats=cvrepeats, parallelMethod=parallelMethod)
     } else if(type=="svmLinear" | type=="svmPoly" | type=="svmRadial" | type=="svmRadialCost" | type=="svmRadialSigma" | type=="svmBoundrangeString" | type=="svmExpoString" | type=="svmSpectrumString"){
         autoSVM(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+    } else if(type=="bayesLinear" | type=="bayesTree" | type=="bayesNeuralNet"){
+        autoBayes(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+
     }
     
     return(model)
