@@ -555,7 +555,6 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
-    data.orig <- data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
         parallelMethod
@@ -583,7 +582,8 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
         data$Dependent <- as.vector(data[,dependent])
         data <- data[, !colnames(data) %in% dependent]
         data$Dependent <- as.numeric(data$Dependent)
-    
+        data.orig <- data
+
  
     #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
     if(!is.null(split)){
@@ -803,8 +803,8 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
         results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Dependent, Predicted=y_predict)
         accuracy.rate <- lm(Known~Predicted, data=results.frame)
         
-        all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
-        train.frame <- all.data[!all.data$Sample %in% results.frame,]
+        all.data <- data.orig
+        train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
         train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
         KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
         KnownSet$Type <- rep("Train", nrow(KnownSet))
@@ -819,7 +819,7 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
         
         model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate)
     } else if(is.null(split)){
-        all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
+        all.data <- data.orig
         train.frame <- all.data
         train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
         KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
@@ -1159,7 +1159,6 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
-    data.orig <- data
     
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -1182,7 +1181,8 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
         data$Dependent <- as.vector(data[,dependent])
         data <- data[, !colnames(data) %in% dependent]
         data$Dependent <- as.numeric(data$Dependent)
-    
+        data.orig <- data
+
  
     #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
     if(!is.null(split)){
@@ -1383,8 +1383,8 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
         results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Dependent, Predicted=y_predict)
         accuracy.rate <- lm(Known~Predicted, data=results.frame)
         
-        all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
-        train.frame <- all.data[!all.data$Sample %in% results.frame,]
+        all.data <- data.orig
+        train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
         train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
         KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
         KnownSet$Type <- rep("Train", nrow(KnownSet))
