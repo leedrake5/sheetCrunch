@@ -45,6 +45,44 @@ my.cores <- if(parallel::detectCores()>=3){
     "1"
 }
 
+my.max <- function(x) ifelse( !all(is.na(x)), max(x, na.rm=T), NA)
+my.min <- function(x) ifelse( !all(is.na(x)), min(x, na.rm=T), NA)
+
+strip_glm <- function(cm) {
+    cm$y = c()
+    cm$model = c()
+    
+    cm$residuals = c()
+    cm$fitted.values = c()
+    cm$effects = c()
+    cm$qr$qr = c()
+    cm$linear.predictors = c()
+    cm$weights = c()
+    cm$prior.weights = c()
+    cm$data = c()
+    
+    
+    cm$family$variance = c()
+    cm$family$dev.resids = c()
+    cm$family$aic = c()
+    cm$family$validmu = c()
+    cm$family$simulate = c()
+    attr(cm$terms,".Environment") = c()
+    attr(cm$formula,".Environment") = c()
+    
+    cm
+}
+
+
+
+summaryLMFrame <-function(lm){
+    summary.lm <- summary(lm)
+    results <- data.frame(Intercept=summary.lm$coef[1], Slope=summary.lm$coef[2], Intercept=summary.lm$coef[1], n=length(summary.lm$residuals), SlopeSE=summary.lm$coefficients[2,2], p_value=pf(summary.lm$fstatistic[1], summary.lm$fstatistic[2], summary.lm$fstatistic[3], lower.tail = FALSE),
+        r2=summary.lm$r.squared, Score=(summary.lm$r.squared^2)*(summary.lm$coef[2]^2))
+    return(results)
+}
+
+
  xgb_cv_opt_tree <- function (data, label, objectfun, evalmetric, n_folds, eta_range = c(0.1, 1L), max_depth_range = c(4L, 6L), nrounds_range = c(70, 160L), subsample_range = c(0.1, 1L), bytree_range = c(0.4, 1L), min_child_range=c(1L, 3L), gamma_range=c(0L, 1L), init_points = 4, n_iter = 10, acq = "ei", kappa = 2.576, eps = 0, optkernel = list(type = "exponential", power = 2), classes = NULL, seed = 0)
  {
      if (class(data)[1] == "dgCMatrix") {
@@ -807,7 +845,7 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
         train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
         train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
         KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
-        KnownSet$Type <- rep("Train", nrow(KnownSet))
+        KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         results.frame$Type <- rep("2. Test", nrow(results.frame))
         All <- rbind(KnownSet, results.frame)
         
@@ -1387,7 +1425,7 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
         train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
         train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
         KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
-        KnownSet$Type <- rep("Train", nrow(KnownSet))
+        KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         results.frame$Type <- rep("2. Test", nrow(results.frame))
         All <- rbind(KnownSet, results.frame)
         
@@ -2038,7 +2076,6 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
-    data.orig <- data
     
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -2051,7 +2088,7 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
             data$Dependent <- as.vector(data[,dependent])
             data <- data[, !colnames(data) %in% dependent]
             data$Dependent <- as.numeric(data$Dependent)
-    
+            data.orig <- data
  
     #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
     if(!is.null(split)){
@@ -2184,10 +2221,10 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
         accuracy.rate <- lm(Known~Predicted, data=results.frame)
         
         all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
-        train.frame <- all.data[!all.data$Sample %in% results.frame,]
+        train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
         train.predictions <- predict(svm_model, train.frame, na.action = na.pass)
         KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
-        KnownSet$Type <- rep("Train", nrow(KnownSet))
+        KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         results.frame$Type <- rep("2. Test", nrow(results.frame))
         All <- rbind(KnownSet, results.frame)
         
@@ -2463,7 +2500,6 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
-    data.orig <- data
     
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -2478,7 +2514,8 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
             data$Dependent <- as.vector(data[,dependent])
             data <- data[, !colnames(data) %in% dependent]
             data$Dependent <- as.numeric(data$Dependent)
-    
+            data.orig <- data
+
  
     #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
     if(!is.null(split)){
@@ -2620,10 +2657,10 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
         accuracy.rate <- lm(Known~Predicted, data=results.frame)
         
         all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
-        train.frame <- all.data[!all.data$Sample %in% results.frame,]
+        train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
         train.predictions <- predict(bayes_model, train.frame, na.action = na.pass)
         KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
-        KnownSet$Type <- rep("Train", nrow(KnownSet))
+        KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         results.frame$Type <- rep("2. Test", nrow(results.frame))
         All <- rbind(KnownSet, results.frame)
         
