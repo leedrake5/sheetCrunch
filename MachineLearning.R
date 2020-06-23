@@ -110,7 +110,7 @@ summaryLMFrame <-function(lm){
          xgb_cv <- function(object_fun, eval_met, num_classes, gamma_opt, minchild_opt, eta_opt, max_depth_opt, nrounds_opt, subsample_opt, bytree_opt) {
              object_fun <- objectfun
              eval_met <- evalmetric
-             cv <- xgb.cv(params = list(booster = "gbtree", nthread=as.numeric(my.cores), objective = object_fun, eval_metric = eval_met, gamma = gamma_opt, min_child_weight = minchild_opt, eta = eta_opt, max_depth = max_depth_opt, subsample = subsample_opt, colsample_bytree = bytree_opt, lambda = 1, alpha = 0), data = dtrain, folds = cv_folds, watchlist = xg_watchlist, prediction = TRUE, showsd = TRUE, early_stopping_rounds = 5, maximize = TRUE, verbose = 0, nrounds = nrounds_opt)
+             cv <- xgb.cv(params = list(booster = "gbtree", nthread=round((as.numeric(my.cores)+1)/2, 0), objective = object_fun, eval_metric = eval_met, gamma = gamma_opt, min_child_weight = minchild_opt, eta = eta_opt, max_depth = max_depth_opt, subsample = subsample_opt, colsample_bytree = bytree_opt, lambda = 1, alpha = 0), data = dtrain, folds = cv_folds, watchlist = xg_watchlist, prediction = TRUE, showsd = TRUE, early_stopping_rounds = 5, maximize = TRUE, verbose = 0, nrounds = nrounds_opt)
              if (eval_met %in% c("auc", "ndcg", "map")) {
                  s <- max(cv$evaluation_log[, 4])
              }
@@ -124,7 +124,7 @@ summaryLMFrame <-function(lm){
              object_fun <- objectfun
              eval_met <- evalmetric
              num_classes <- classes
-             cv <- xgb.cv(params = list(booster = "gbtree", nthread=as.numeric(my.cores), objective = object_fun, num_class = num_classes, eval_metric = eval_met, gamma = gamma_opt, min_child_weight = minchild_opt, eta = eta_opt, max_depth = max_depth_opt, subsample = subsample_opt, colsample_bytree = bytree_opt, lambda = 1, alpha = 0), data = dtrain, folds = cv_folds, watchlist = xg_watchlist, prediction = TRUE, showsd = TRUE, early_stopping_rounds = 50, maximize = TRUE, verbose = 0, nrounds = nrounds_opt)
+             cv <- xgb.cv(params = list(booster = "gbtree", nthread=round((as.numeric(my.cores)+1)/2, 0), objective = object_fun, num_class = num_classes, eval_metric = eval_met, gamma = gamma_opt, min_child_weight = minchild_opt, eta = eta_opt, max_depth = max_depth_opt, subsample = subsample_opt, colsample_bytree = bytree_opt, lambda = 1, alpha = 0), data = dtrain, folds = cv_folds, watchlist = xg_watchlist, prediction = TRUE, showsd = TRUE, early_stopping_rounds = 50, maximize = TRUE, verbose = 0, nrounds = nrounds_opt)
              if (eval_met %in% c("auc", "ndcg", "map")) {
                  s <- max(cv$evaluation_log[, 4])
              }
@@ -165,7 +165,7 @@ xgb_cv_opt_linear <- function (data, label, objectfun, evalmetric, n_folds, alph
         xgb_cv <- function(object_fun, eval_met, num_classes, alpha_opt, eta_opt, lambda_opt, nrounds_opt) {
             object_fun <- objectfun
             eval_met <- evalmetric
-            cv <- xgb.cv(params = list(booster = "gblinear", nthread=as.numeric(my.cores), objective = object_fun, eval_metric = eval_met, alpha = alpha_opt, eta = eta_opt, lambda = lambda_opt), data = dtrain, folds = cv_folds, watchlist = xg_watchlist, prediction = TRUE, showsd = TRUE, early_stopping_rounds = 5, maximize = TRUE, verbose = 0, nrounds = nrounds_opt)
+            cv <- xgb.cv(params = list(booster = "gblinear", nthread=round((as.numeric(my.cores)+1)/2, 0), objective = object_fun, eval_metric = eval_met, alpha = alpha_opt, eta = eta_opt, lambda = lambda_opt), data = dtrain, folds = cv_folds, watchlist = xg_watchlist, prediction = TRUE, showsd = TRUE, early_stopping_rounds = 5, maximize = TRUE, verbose = 0, nrounds = nrounds_opt)
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4])
             }
@@ -179,7 +179,7 @@ xgb_cv_opt_linear <- function (data, label, objectfun, evalmetric, n_folds, alph
             object_fun <- objectfun
             eval_met <- evalmetric
             num_classes <- classes
-            cv <- xgb.cv(params = list(booster = "gblinear", nthread=as.numeric(my.cores), objective = object_fun, num_class = num_classes, eval_metric = eval_met, alpha = alpha_opt, eta = eta_opt, lambda = lambda_opt), data = dtrain, folds = cv_folds, watchlist = xg_watchlist, prediction = TRUE, showsd = TRUE, early_stopping_rounds = 50, maximize = TRUE, verbose = 0, nrounds = nrounds_opt)
+            cv <- xgb.cv(params = list(booster = "gblinear", nthread=round((as.numeric(my.cores)+1)/2, 0), objective = object_fun, num_class = num_classes, eval_metric = eval_met, alpha = alpha_opt, eta = eta_opt, lambda = lambda_opt), data = dtrain, folds = cv_folds, watchlist = xg_watchlist, prediction = TRUE, showsd = TRUE, early_stopping_rounds = 50, maximize = TRUE, verbose = 0, nrounds = nrounds_opt)
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4])
             }
@@ -421,9 +421,9 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
             #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
         } else if(parallel_method=="linux"){
             xgb_model_pre <- if(num_classes>2){
-                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = objective.mod, num_class=num_classes, na.action=na.omit, nthread=as.numeric(my.cores))
+                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = objective.mod, num_class=num_classes, na.action=na.omit, nthread=round((as.numeric(my.cores)+1)/2, 0))
             } else if(num_classes==2){
-                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = objective.mod, na.action=na.omit, nthread=as.numeric(my.cores))
+                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = objective.mod, na.action=na.omit, nthread=round((as.numeric(my.cores)+1)/2, 0))
             }
         }
         
@@ -539,9 +539,9 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
     } else if(parallel_method=="linux"){
         data.training <- data.train[, !colnames(data.train) %in% "Sample"]
         xgb_model <- if(num_classes>2){
-            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = objective.mod, num_class=num_classes, nthread=as.numeric(my.cores), na.action=na.omit)
+            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = objective.mod, num_class=num_classes, nthread=round((as.numeric(my.cores)+1)/2, 0), na.action=na.omit)
         } else if(num_classes==2){
-            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = objective.mod, nthread=as.numeric(my.cores), na.action=na.omit)
+            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = objective.mod, nthread=round((as.numeric(my.cores)+1)/2, 0), na.action=na.omit)
         }
     }
     
@@ -697,7 +697,7 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
             stopCluster(cl)
             #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
         } else if(parallel_method=="linux"){
-            xgb_model_pre <- caret::train(Dependent~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = "reg:squarederror", na.action=na.omit, nthread=as.numeric(my.cores))
+            xgb_model_pre <- caret::train(Dependent~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = "reg:squarederror", na.action=na.omit, nthread=round((as.numeric(my.cores)+1)/2, 0))
         }
         
         #Now create a new tuning grid for the final model based on the best parameters following grid searching
@@ -719,7 +719,7 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
                 "rmse"
             }
             tree_method <- 'hist'
-            n_threads <- as.numeric(my.cores)
+            n_threads <- round((as.numeric(my.cores)+1)/2, 0)
             dependent <- "Dependent"
             x_train <- data.training[,!colnames(data.training) %in% dependent]
             x_train <- as.matrix(x_train)
@@ -826,7 +826,7 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
 
         stopCluster(cl)
     } else if(parallel_method=="linux"){
-        xgb_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = "reg:squarederror", nthread=as.numeric(my.cores), na.action=na.omit)
+        xgb_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = "reg:squarederror", nthread=round((as.numeric(my.cores)+1)/2, 0), na.action=na.omit)
     }
     
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
@@ -1039,9 +1039,9 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
             #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
         } else if(parallel_method=="linux"){
             xgb_model_pre <- if(num_classes>2){
-                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbLinear", objective = objective.mod, num_class=num_classes, na.action=na.omit, nthread=as.numeric(my.cores))
+                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbLinear", objective = objective.mod, num_class=num_classes, na.action=na.omit, nthread=round((as.numeric(my.cores)+1)/2, 0))
             } else if(num_classes==2){
-                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbLinear", objective = objective.mod, na.action=na.omit, nthread=as.numeric(my.cores))
+                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbLinear", objective = objective.mod, na.action=na.omit, nthread=round((as.numeric(my.cores)+1)/2, 0))
             }
         }
         
@@ -1144,9 +1144,9 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
     } else if(parallel_method=="linux"){
         data.training <- data.train[, !colnames(data.train) %in% "Sample"]
         xgb_model <- if(num_classes>2){
-            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbLinear", objective = objective.mod, num_class=num_classes, nthread=as.numeric(my.cores), na.action=na.omit)
+            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbLinear", objective = objective.mod, num_class=num_classes, nthread=round((as.numeric(my.cores)+1)/2, 0), na.action=na.omit)
         } else if(num_classes==2){
-            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbLinear", objective = objective.mod, nthread=as.numeric(my.cores), na.action=na.omit)
+            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbLinear", objective = objective.mod, nthread=round((as.numeric(my.cores)+1)/2, 0), na.action=na.omit)
         }
     }
     
@@ -1293,7 +1293,7 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
             stopCluster(cl)
             #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
         } else if(parallel_method=="linux"){
-            xgb_model_pre <- caret::train(Dependent~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbLinear", objective = "reg:squarederror", na.action=na.omit, nthread=as.numeric(my.cores))
+            xgb_model_pre <- caret::train(Dependent~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbLinear", objective = "reg:squarederror", na.action=na.omit, nthread=round((as.numeric(my.cores)+1)/2, 0))
         }
         
         #Now create a new tuning grid for the final model based on the best parameters following grid searching
@@ -1311,7 +1311,7 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
             } else if(metric!="RMSE" | metric!="MAE"){
                 "rmse"
             }
-            n_threads <- as.numeric(my.cores)
+            n_threads <- round((as.numeric(my.cores)+1)/2, 0)
             dependent <- "Dependent"
             x_train <- data.training[,!colnames(data.training) %in% dependent]
             x_train <- as.matrix(x_train)
@@ -1325,7 +1325,7 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
                           lambda=lambda,
                           objective = "reg:squarederror",
                           eval_metric = metric.mod)
-                          cv <- xgb.cv(params = param, data = dtrain, folds=cv_folds, nround = 100, early_stopping_rounds = 25, nthread=n_threads, maximize = TRUE, verbose = FALSE)
+                          cv <- xgb.cv(params = param, data = dtrain, folds=cv_folds, nround = 100, early_stopping_rounds = 25, nthread=n_threads, maximize = TRUE, verbose = TRUE)
                           
                           if(metric.mod=="rmse"){
                               tryCatch(list(Score = cv$evaluation_log$test_rmse_mean[cv$best_iteration]*-1, Pred=cv$best_iteration*-1), error=function(e) list(Score=0, Pred=0))
@@ -1407,7 +1407,7 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
 
         stopCluster(cl)
     } else if(parallel_method=="linux"){
-        xgb_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbLinear", objective = "reg:squarederror", nthread=as.numeric(my.cores), na.action=na.omit)
+        xgb_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbLinear", objective = "reg:squarederror", nthread=round((as.numeric(my.cores)+1)/2, 0), na.action=na.omit)
     }
     
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
@@ -2124,38 +2124,51 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
     svmsigma.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmsigma), "-"))), error=function(x) "1-2")
     svmlength.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmlength), "-"))), error=function(x) "1-2")
     
+    
     svmGrid <- if(type=="svmLinear"){
+        expand.grid(
+            C = seq(svmc.vec[1], svmc.vec[2], 1))
+    } else if(type=="svmPoly"){
+        expand.grid(
+            C = seq(svmc.vec[1], svmc.vec[2], 1),
+            scale=seq(svmscale.vec[1], svmscale.vec[2], 1),
+            degree=seq(svmdegree.vec[1], svmdegree.vec[2], 1))
+    } else if(type=="svmRadial"){
+        if(is.null(svmgammavector)){
             expand.grid(
-                C = seq(svmc.vec[1], svmc.vec[2], 1))
-        } else if(type=="svmPoly"){
+            C = seq(svmc.vec[1], svmc.vec[2], 1),
+            sigma=seq(svmsigma.vec[1], svmsigma.vec[2], 1))
+        } else if(!is.null(svmgammavector)){
             expand.grid(
-                C = seq(svmc.vec[1], svmc.vec[2], 1),
-                scale=seq(svmscale.vec[1], svmscale.vec[2], 1),
-                degree=seq(svmdegree.vec[1], svmdegree.vec[2], 1))
-        } else if(type=="svmRadial"){
-            expand.grid(
-                C = seq(svmc.vec[1], svmc.vec[2], 1),
-                sigma=seq(svmsigma.vec[1], svmsigma.vec[2], 1))
-        } else if(type=="svmRadialCost"){
-            expand.grid(
-                C = seq(svmc.vec[1], svmc.vec[2], 1))
-        } else if(type=="svmRadialSigma"){
-            expand.grid(
-                C = seq(svmc.vec[1], svmc.vec[2], 1),
-                sigma=seq(svmsigma.vec[1], svmsigma.vec[2], 1))
-        } else if(type=="svmBoundrangeString"){
-            expand.grid(
-                C = seq(svmc.vec[1], svmc.vec[2], 1),
-                length=seq(svmlength.vec[1], svmlength.vec[2], 1))
-        } else if(type=="svmExpoString"){
-            expand.grid(
-                C = seq(svmc.vec[1], svmc.vec[2], 1),
-                lambda=seq(xgblambda.vec[1], xgblambda.vec[2], 1))
-        } else if(type=="svmSpectrumString"){
-            expand.grid(
-                C = seq(svmc.vec[1], svmc.vec[2], 1),
-                lambda=seq(xgblambda.vec[1], xgblambda.vec[2], 1))
+            C = seq(svmc.vec[1], svmc.vec[2], 1),
+            sigma=svmgammavector)
         }
+    } else if(type=="svmRadialCost"){
+        expand.grid(
+            C = seq(svmc.vec[1], svmc.vec[2], 1))
+    } else if(type=="svmRadialSigma"){
+        if(is.null(svmgammavector)){
+            expand.grid(
+            C = seq(svmc.vec[1], svmc.vec[2], 1),
+            sigma=seq(svmsigma.vec[1], svmsigma.vec[2], 1))
+        } else if(!is.null(svmgammavector)){
+            expand.grid(
+            C = seq(svmc.vec[1], svmc.vec[2], 1),
+            sigma=svmgammavector)
+        }
+    } else if(type=="svmBoundrangeString"){
+        expand.grid(
+            C = seq(svmc.vec[1], svmc.vec[2], 1),
+            length=seq(svmlength.vec[1], svmlength.vec[2], 1))
+    } else if(type=="svmExpoString"){
+        expand.grid(
+            C = seq(svmc.vec[1], svmc.vec[2], 1),
+            lambda=seq(xgblambda.vec[1], xgblambda.vec[2], 1))
+    } else if(type=="svmSpectrumString"){
+        expand.grid(
+            C = seq(svmc.vec[1], svmc.vec[2], 1),
+            lambda=seq(xgblambda.vec[1], xgblambda.vec[2], 1))
+    }
     
     
     
@@ -2199,14 +2212,14 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
              makeForkCluster(as.numeric(my.cores))
          }
          registerDoParallel(cl)
-         svm_model <- caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=svm.method, na.action=na.omit)
+         svm_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit)
          stopCluster(cl)
      } else if(parallel_method=="linux"){
          parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
-         svm_model <- caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
+         svm_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
          parallelStop()
      } else if(parallel_method=="minimal"){
-         svm_model <- caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method = svm.method, na.action=na.omit)
+         svm_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method = type, na.action=na.omit)
      }
     
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
