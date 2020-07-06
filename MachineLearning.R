@@ -82,6 +82,13 @@ summaryLMFrame <-function(lm){
     return(results)
 }
 
+f1 <- function (data, lev = NULL, model = NULL) {
+  precision <- posPredValue(data$pred, data$obs, positive = "pass")
+  recall  <- sensitivity(data$pred, data$obs, postive = "pass")
+  f1_val <- (2 * precision * recall) / (precision + recall)
+  names(f1_val) <- c("F1")
+  f1_val
+}
 
  xgb_cv_opt_tree <- function (data, label, objectfun, evalmetric, n_folds, eta_range = c(0.1, 1L), max_depth_range = c(4L, 6L), nrounds_range = c(70, 160L), subsample_range = c(0.1, 1L), bytree_range = c(0.4, 1L), min_child_range=c(1L, 3L), gamma_range=c(0L, 1L), init_points = 4, n_iter = 10, acq = "ei", kappa = 2.576, eps = 0, optkernel = list(type = "exponential", power = 2), classes = NULL, seed = 0)
  {
@@ -281,7 +288,7 @@ dataPrep <- function(data, variable, predictors=NULL){
 
 
 ###XGBoost classification. This function will run a classification model, using probabilities to sort data. It will automatically search for the best paramters, and then run a full model based on those. Variables are encoded as "x-y", which will search in increments for every variable in between.
-classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric="Accuracy", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
@@ -369,11 +376,17 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
      } else  if(num_classes==2){
          "error"
      }
-     summary_function <- if(num_classes>2){
-           multiClassSummary
-       } else  if(num_classes==2){
-           twoClassSummary
-       }
+     summary_function <- if(is.null(summary_function)){
+         if(num_classes>2){
+             multiClassSummary
+         } else  if(num_classes==2){
+             twoClassSummary
+         }
+     } else if(!is.null(summary_function)){
+         if(summary_function=="f1"){
+             f1
+         }
+     }
 
     #Begin parameter searching
     if(nrow(xgbGridPre)==1){
@@ -884,7 +897,7 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
 
 
 ###This function wrapper will use the classification or regression model based on whether your choosen variable is numeric or not
-autoXGBoostTree <- function(data, variable, predictors=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric=NULL, train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+autoXGBoostTree <- function(data, variable, predictors=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -899,7 +912,7 @@ autoXGBoostTree <- function(data, variable, predictors=NULL, min.n=5, split=NULL
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifyXGBoostTree(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
+        classifyXGBoostTree(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
         regressXGBoostTree(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
     }
@@ -909,7 +922,7 @@ autoXGBoostTree <- function(data, variable, predictors=NULL, min.n=5, split=NULL
 
 
 ###XGBoost classification. This function will run a classification model, using probabilities to sort data. It will automatically search for the best paramters, and then run a full model based on those. Variables are encoded as "x-y", which will search in increments for every variable in between.
-classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=NULL, xgbalpha="0-0", xgbeta="0.1-0.1", xgblambda="0-0", nrounds=500, test_nrounds=100, metric="Accuracy", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=NULL, xgbalpha="0-0", xgbeta="0.1-0.1", xgblambda="0-0", nrounds=500, test_nrounds=100, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
@@ -987,11 +1000,17 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
      } else  if(num_classes==2){
          "error"
      }
-     summary_function <- if(num_classes>2){
-           multiClassSummary
-       } else  if(num_classes==2){
-           twoClassSummary
-       }
+     summary_function <- if(is.null(summary_function)){
+         if(num_classes>2){
+             multiClassSummary
+         } else  if(num_classes==2){
+             twoClassSummary
+         }
+     } else if(!is.null(summary_function)){
+         if(summary_function=="f1"){
+             f1
+         }
+     }
 
     #Begin parameter searching
     if(nrow(xgbGridPre)==1){
@@ -1463,7 +1482,7 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
 
 
 ###This function wrapper will use the classification or regression model based on whether your choosen variable is numeric or not
-autoXGBoostLinear <- function(data, variable, predictors=NULL, min.n=5, split=NULL,  xgbalpha="0-0", xgbeta="0.1-0.1", xgblambda="0-0", nrounds=500, test_nrounds=100, metric=NULL, train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+autoXGBoostLinear <- function(data, variable, predictors=NULL, min.n=5, split=NULL,  xgbalpha="0-0", xgbeta="0.1-0.1", xgblambda="0-0", nrounds=500, test_nrounds=100, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -1478,7 +1497,7 @@ autoXGBoostLinear <- function(data, variable, predictors=NULL, min.n=5, split=NU
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifyXGBoostLinear(data=data, class=variable, predictors=predictors, min.n=min.n, split=split,  xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
+        classifyXGBoostLinear(data=data, class=variable, predictors=predictors, min.n=min.n, split=split,  xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
         regressXGBoostLinear(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
     }
@@ -2733,14 +2752,14 @@ autoBayes <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type
 }
 
 
-autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, metric=NULL, train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
     
     
     #Choose model class
     model <- if(type=="xgbTree"){
-        autoXGBoostTree(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
+        autoXGBoostTree(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
     } else if(type=="xgbLinear"){
-        autoXGBoostLinear(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
+        autoXGBoostLinear(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
     } else if(type=="Forest"){
         autoForest(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, train=train, number=number, cvrepeats=cvrepeats, parallelMethod=parallelMethod)
     } else if(type=="svmLinear" | type=="svmPoly" | type=="svmRadial" | type=="svmRadialCost" | type=="svmRadialSigma" | type=="svmBoundrangeString" | type=="svmExpoString" | type=="svmSpectrumString"){
