@@ -9,6 +9,7 @@ library(keras)
 library(iml)
 use_python("/Users/lee/anaconda3/bin/python")
 if(get_os()=="osx"){
+    reticulate::use_python("/Users/lee/opt/anaconda3/bin/python")
     use_backend(backend = "plaidml")
 }
 
@@ -33,12 +34,346 @@ serialize_the_model <- function(model){
 store_model_hdf5 <- function (object, filepath, overwrite = TRUE, include_optimizer = TRUE){
     args <- list(model = object, filepath = filepath, overwrite = overwrite,
         include_optimizer = include_optimizer)
-        #if (tensorflow::tf_version() >= "1.14.0") {
-        #args[["save_format"]] <- "h5"
-        #}
+        if (tensorflow::tf_version() >= "1.14.0") {
+        args[["save_format"]] <- "h5"
+        }
         do.call(keras$models$save_model, args)
         invisible(TRUE)
 }
+
+kerasAUC <- function(y_true, y_pred){
+    true= k_flatten(y_true)
+    pred = k_flatten(y_pred)
+
+        #total number of elements in this batch
+    totalCount = k_shape(true)[1]
+
+
+            #sorting the prediction values in descending order
+    values = tensorflow::tf$nn$top_k(pred,k=totalCount)
+    indices<-values[[1]]
+    values<-values[[0]]
+
+        #sorting the ground truth values based on the predictions above
+    sortedTrue = k_gather(true, indices)
+
+        #getting the ground negative elements (already sorted above)
+    negatives = 1 - sortedTrue
+
+        #the true positive count per threshold
+    TPCurve = k_cumsum(sortedTrue)
+
+        #area under the curve
+    auc = k_sum(TPCurve * negatives)
+
+       #normalizing the result between 0 and 1
+    totalCount = k_cast(totalCount, k_floatx())
+    positiveCount = k_sum(true)
+    negativeCount = totalCount - positiveCount
+    totalArea = positiveCount * negativeCount
+    return  (auc / totalArea)
+}
+
+metric_keras_auc <- custom_metric("keras_auc", function(y_true, y_pred) {
+    kerasAUC(y_true=y_true, y_pred=y_pred)
+})
+
+auc_roc_noval <- R6::R6Class("ROC",
+inherit = KerasCallback,
+public = list(
+      
+      losses = NULL,
+      x = NA,
+      y = NA,
+      
+      initialize = function(training = list(), validation= list()){
+            self$x <- training[[1]]
+            self$y <- training[[2]]
+      },
+      
+      
+      on_epoch_end = function(epoch, logs = list()){
+            
+            self$losses <- c(self$losses, logs[["loss"]])
+            y_pred <- self$model$predict(self$x)
+            score = Metrics::auc(actual = self$y, predicted =  y_pred)
+            print(paste("epoch: ", epoch+1, " roc:", score))
+      }
+))
+
+auc_roc_withval <- R6::R6Class("ROC",
+inherit = KerasCallback,
+public = list(
+      
+      losses = NULL,
+      x = NA,
+      y = NA,
+      x_val = NA,
+      y_val = NA,
+      
+      initialize = function(training = list(), validation= list()){
+            self$x <- training[[1]]
+            self$y <- training[[2]]
+            self$x_val <- validation[[1]]
+            self$y_val <- validation[[2]]
+      },
+      
+      
+      on_epoch_end = function(epoch, logs = list()){
+            
+            self$losses <- c(self$losses, logs[["loss"]])
+            y_pred <- self$model$predict(self$x)
+            y_pred_val <- self$model$predict(self$x_val)
+            score = Metrics::auc(actual = self$y, predicted =  y_pred)
+            score_val = Metrics::auc(actual = self$y_val, predicted =  y_pred_val)
+            print(paste("epoch: ", epoch+1, " roc:", score, ' roc_val:', score_val))
+      }
+))
+
+precision_withval <- R6::R6Class("Precision",
+inherit = KerasCallback,
+public = list(
+      
+      losses = NULL,
+      x = NA,
+      y = NA,
+      x_val = NA,
+      y_val = NA,
+      
+      initialize = function(training = list(), validation= list()){
+            self$x <- training[[1]]
+            self$y <- training[[2]]
+            self$x_val <- validation[[1]]
+            self$y_val <- validation[[2]]
+      },
+      
+      
+      on_epoch_end = function(epoch, logs = list()){
+            
+            self$losses <- c(self$losses, logs[["loss"]])
+            y_pred <- self$model$predict(self$x)
+            y_pred_val <- self$model$predict(self$x_val)
+            score = Metrics::precision(actual = self$y, predicted =  y_pred)
+            score_val = Metrics::precision(actual = self$y_val, predicted =  y_pred_val)
+            print(paste("epoch: ", epoch+1, " precision:", score, ' precision_val:', score_val))
+      }
+))
+
+precision_noval <- R6::R6Class("Precision",
+inherit = KerasCallback,
+public = list(
+      
+      losses = NULL,
+      x = NA,
+      y = NA,
+      
+      initialize = function(training = list()){
+            self$x <- training[[1]]
+            self$y <- training[[2]]
+      },
+      
+      
+      on_epoch_end = function(epoch, logs = list()){
+            
+            self$losses <- c(self$losses, logs[["loss"]])
+            y_pred <- self$model$predict(self$x)
+            score = Metrics::recall(actual = self$y, predicted =  y_pred)
+            print(paste("epoch: ", epoch+1, " precision:", score))
+      }
+))
+
+recall_withval <- R6::R6Class("Recall",
+inherit = KerasCallback,
+public = list(
+      
+      losses = NULL,
+      x = NA,
+      y = NA,
+      x_val = NA,
+      y_val = NA,
+      
+      initialize = function(training = list(), validation= list()){
+            self$x <- training[[1]]
+            self$y <- training[[2]]
+            self$x_val <- validation[[1]]
+            self$y_val <- validation[[2]]
+      },
+      
+      
+      on_epoch_end = function(epoch, logs = list()){
+            
+            self$losses <- c(self$losses, logs[["loss"]])
+            y_pred <- self$model$predict(self$x)
+            y_pred_val <- self$model$predict(self$x_val)
+            score = Metrics::recall(actual = self$y, predicted =  y_pred)
+            score_val = Metrics::recall(actual = self$y_val, predicted =  y_pred_val)
+            print(paste("epoch: ", epoch+1, " recall:", score, ' recall_val:', score_val))
+      }
+))
+
+recall_noval <- R6::R6Class("Precision",
+inherit = KerasCallback,
+public = list(
+      
+      losses = NULL,
+      x = NA,
+      y = NA,
+      
+      initialize = function(training = list()){
+            self$x <- training[[1]]
+            self$y <- training[[2]]
+      },
+      
+      
+      on_epoch_end = function(epoch, logs = list()){
+            
+            self$losses <- c(self$losses, logs[["loss"]])
+            y_pred <- self$model$predict(self$x)
+            score = Metrics::recall(actual = self$y, predicted =  y_pred)
+            print(paste("epoch: ", epoch+1, " recall:", score))
+      }
+))
+
+f1_withval <- R6::R6Class("F1",
+inherit = KerasCallback,
+public = list(
+      
+      losses = NULL,
+      x = NA,
+      y = NA,
+      x_val = NA,
+      y_val = NA,
+      
+      initialize = function(training = list(), validation= list()){
+            self$x <- training[[1]]
+            self$y <- training[[2]]
+            self$x_val <- validation[[1]]
+            self$y_val <- validation[[2]]
+      },
+      
+      
+      on_epoch_end = function(epoch, logs = list()){
+            
+            self$losses <- c(self$losses, logs[["loss"]])
+            y_pred <- self$model$predict(self$x)
+            y_pred_val <- self$model$predict(self$x_val)
+            score = Metrics::f1(actual = self$y, predicted =  y_pred)
+            score_val = Metrics::f1(actual = self$y_val, predicted =  y_pred_val)
+            print(paste("epoch: ", epoch+1, " f1:", score, ' f1_val:', score_val))
+      }
+))
+
+f1_noval <- R6::R6Class("F1",
+inherit = KerasCallback,
+public = list(
+      
+      losses = NULL,
+      x = NA,
+      y = NA,
+      
+      initialize = function(training = list()){
+            self$x <- training[[1]]
+            self$y <- training[[2]]
+      },
+      
+      
+      on_epoch_end = function(epoch, logs = list()){
+            
+            self$losses <- c(self$losses, logs[["loss"]])
+            y_pred <- self$model$predict(self$x)
+            score = Metrics::f1(actual = self$y, predicted =  y_pred)
+            print(paste("epoch: ", epoch+1, " f1:", score))
+      }
+))
+
+f1_withval <- R6::R6Class("Percent Bias",
+inherit = KerasCallback,
+public = list(
+      
+      losses = NULL,
+      x = NA,
+      y = NA,
+      x_val = NA,
+      y_val = NA,
+      
+      initialize = function(training = list(), validation= list()){
+            self$x <- training[[1]]
+            self$y <- training[[2]]
+            self$x_val <- validation[[1]]
+            self$y_val <- validation[[2]]
+      },
+      
+      
+      on_epoch_end = function(epoch, logs = list()){
+            
+            self$losses <- c(self$losses, logs[["loss"]])
+            y_pred <- self$model$predict(self$x)
+            y_pred_val <- self$model$predict(self$x_val)
+            score = Metrics::percent_bias(actual = self$y, predicted =  y_pred)
+            score_val = Metrics::percent_bias(actual = self$y_val, predicted =  y_pred_val)
+            print(paste("epoch: ", epoch+1, " percent_bias:", score, ' percent_bias_val:', score_val))
+      }
+))
+
+percent_bias_noval <- R6::R6Class("Percent Bias",
+inherit = KerasCallback,
+public = list(
+      
+      losses = NULL,
+      x = NA,
+      y = NA,
+      
+      initialize = function(training = list()){
+            self$x <- training[[1]]
+            self$y <- training[[2]]
+      },
+      
+      
+      on_epoch_end = function(epoch, logs = list()){
+            
+            self$losses <- c(self$losses, logs[["loss"]])
+            y_pred <- self$model$predict(self$x)
+            score = Metrics::percent_bias(actual = self$y, predicted =  y_pred)
+            print(paste("epoch: ", epoch+1, " percent_bias:", score))
+      }
+))
+
+precision_auc <- R6::R6Class("Precision",
+inherit = KerasCallback,
+public = list(
+      
+      losses = NULL,
+      x = NA,
+      y = NA,
+      
+      initialize = function(training = list()){
+            self$x <- training[[1]]
+            self$y <- training[[2]]
+      },
+      
+      
+      on_epoch_end = function(epoch, logs = list()){
+            
+            self$losses <- c(self$losses, logs[["loss"]])
+            y_pred <- self$model$predict(self$x)
+            score_precision = as.numeric(Metrics::precision(actual = self$y, predicted =  y_pred))
+            if(score_precision=="NaN"){score_precision = 0.0001}
+            score_auc = as.numeric(Metrics::auc(actual = self$y, predicted =  y_pred))
+            print(paste("epoch: ", epoch+1, " auc + precision:", score_precision*score_auc))
+      }
+))
+
+reticulate::py_run_string("
+def sensitivity(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+    return true_positives / (possible_positives + K.epsilon())
+
+def specificity(y_true, y_pred):
+    true_negatives = K.sum(K.round(K.clip((1-y_true) * (1-y_pred), 0, 1)))
+    possible_negatives = K.sum(K.round(K.clip(1-y_true, 0, 1)))
+    return true_negatives / (possible_negatives + K.epsilon())
+")
 
 
 
@@ -720,7 +1055,7 @@ autoXGBoostTreeGPU <- function(data, variable, predictors=NULL, min.n=5, split=N
 
 
 ###Keras Classification
-kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, metric="sparse_categorical_accuracy", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="/Users/lee/Desktop/", save.name="Model"){
+kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="/Users/lee/Desktop/", save.name="Model"){
     
     data <- dataPrep(data=data, variable=class, predictors=predictors)
     #Boring data frame stuff
@@ -751,8 +1086,8 @@ kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, 
         x_train_pre[,colnames(x_train_pre)] <- lapply(x_train_pre[,colnames(x_train_pre),drop=FALSE],as.numeric)
     }
     
-    y_train <- as.numeric(y_train_pre)
-    if(!is.null(split)){y_test <- as.numeric(y_test_pre)}
+    y_train <- as.numeric(y_train_pre)-1
+    if(!is.null(split)){y_test <- as.numeric(y_test_pre)-1}
     
     num_classes <- if(is.null(split)){
         length(unique(y_train_pre))
@@ -825,6 +1160,17 @@ kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, 
     channels <- ncol(x_train_proto)
     #channels <- 400
     
+    final.activation <- if(num_classes > 2){
+        "softmax"
+    } else if(num_classes==2){
+        "softmax"
+    }
+    
+    final.units <- if(num_classes > 2){
+        num_classes
+    } else if(num_classes==2){
+        2
+    }
     
     model <- if(model.type=="Dense"){
         keras_model_sequential() %>%
@@ -834,7 +1180,7 @@ kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, 
         layer_dropout(0.3) %>%
         layer_dense(32, activation=activation) %>%
         layer_dense(16, activation=activation) %>%
-        layer_dense(units = num_classes, activation = 'softmax')
+        layer_dense(units = final.units, activation = final.activation)
     } else if(model.type=="SuperDense"){
         keras_model_sequential() %>%
         #layer_dropout(0.2) %>%
@@ -847,7 +1193,7 @@ kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, 
         layer_dense(128, activation=activation) %>%
         layer_dropout(dropout) %>%
         layer_dense(64, activation=activation) %>%
-        layer_dense(units = num_classes, activation = 'softmax')
+        layer_dense(units = final.units, activation = final.activation)
     } else if(model.type=="GRU"){
         keras_model_sequential() %>%
         #layer_dropout(0.5) %>%
@@ -858,7 +1204,7 @@ kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, 
         layer_dense(round(64, 0), activation=activation) %>%
         layer_dropout(dropout) %>%
         layer_dense(round(32, 0), activation=activation) %>%
-        layer_dense(units = num_classes, activation = 'softmax')
+        layer_dense(units = final.units, activation = final.activation)
     } else if(model.type=="First_CNN"){
         keras_model_sequential() %>%
         #layer_dropout(rate=0.5) %>%
@@ -871,17 +1217,17 @@ kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, 
         layer_flatten() %>%
         layer_dense(units = 128, activation = activation) %>%
         layer_dropout(rate = dropout) %>%
-        layer_dense(units = num_classes, activation = 'softmax')
+        layer_dense(units = final.units, activation = final.activation)
     } else if(model.type=="Complex_CNN"){
         keras_model_sequential() %>%
         #layer_dropout(rate=0.1) %>%
         layer_conv_1d(filters = 32, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
-        layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+        keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
         layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
         layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
-        layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+        keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
         #bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
         layer_dropout(rate = dropout) %>%
@@ -896,7 +1242,7 @@ kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, 
         layer_dropout(rate = dropout) %>%
         #layer_batch_normalization(center=TRUE, scale=TRUE) %>%
         layer_dense(64, activation=activation) %>%
-        layer_dense(units = num_classes, activation = 'softmax')
+        layer_dense(units = final.units, activation = final.activation)
     } else if(model.type=="Expiremental_CNN"){
         keras_model_sequential() %>%
         #layer_dropout(rate=0.5) %>%
@@ -916,7 +1262,7 @@ kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, 
         layer_dense(32, activation=activation) %>%
         layer_dropout(dropout) %>%
         layer_dense(16, activation=activation) %>%
-        layer_dense(units = num_classes, activation = 'softmax')
+        layer_dense(units = final.units, activation = final.activation)
     }
     
     
@@ -933,6 +1279,7 @@ kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, 
     }
     
     if(num_classes==2){
+        y_train_hold <- y_train
         y_train <- to_categorical(y_train, num_classes=3)[,2:3]
         y_test <- to_categorical(y_test, num_classes=3)[,2:3]
     }
@@ -967,17 +1314,75 @@ kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, 
     #metrics = c('accuracy')
     #)
     
-    if(num_classes > 2){
-        counter=funModeling::freq(y_train, plot=F) %>% select(var, frequency)
-        majority=max(counter$frequency)
-        counter$weight=pracma::ceil(majority/counter$frequency)
-        l_weights=setNames(as.list(counter$weight), counter$var)
+    if(is.null(weights)){
+        if(num_classes > 2){
+               counter=funModeling::freq(y_train, plot=F) %>% select(var, frequency)
+               majority=max(counter$frequency)
+               counter$weight=pracma::ceil(majority/counter$frequency)
+               l_weights=setNames(as.list(counter$weight), counter$var)
+           } else if(num_classes == 2){
+               weight_2 <- as.numeric(round(table(y_train_hold)[1]/table(y_train_hold)[2], 0))
+               weight_1 <- as.numeric(round(table(y_train_hold)[2]/table(y_train_hold)[1], 0))
+               if(weight_1==0 | weight_2==0){
+                   weight_1 <- weight_1+1
+                   weight_2 <- weight_2+1
+               }
+               l_weights=list("0"=weight_1, "1"=weight_2)
+           }
+    } else if(!is.null(weights)){
+        l_weights=weights
     }
+    
+    second_metric <- if(callback=="recall"){
+        if(model.split==0){
+            recall_noval$new(training = list(x_train, y_train))
+        } else if(model.split>0){
+            recall_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+        }
+    } else if(callback=="precision"){
+        if(model.split==0){
+            precision_noval$new(training = list(x_train, y_train))
+        } else if(model.split>0){
+            precision_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+        }
+    } else if(callback=="auc" | callback=="roc"){
+        if(model.split==0){
+            auc_roc_noval$new(training = list(x_train, y_train))
+        } else if(model.split>0){
+            auc_roc_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+        }
+    } else if(callback=="f1"){
+           if(model.split==0){
+               f1_noval$new(training = list(x_train, y_train))
+           } else if(model.split>0){
+               f1_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+           }
+    } else if(callback=="percent_bias"){
+              if(model.split==0){
+                  percent_bias_noval$new(training = list(x_train, y_train))
+              } else if(model.split>0){
+                  percent_bias_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+              }
+    }
+    
+    
     
     
     #x_train <- data.matrix(x_train)
     
-    result <- if(num_classes>2){
+    result <- if(model.split==0){
+        model %>% fit(
+        x_train, y_train,
+        batch_size = batch_size,
+        epochs = epochs,
+        verbose=verbose,
+        class_weight = l_weights,
+        #steps_per_epoch=2,
+        #validation_steps=2,
+        shuffle=TRUE,
+        callbacks = list(second_metric)
+        )
+    } else if(model.split>0){
         model %>% fit(
         x_train, y_train,
         batch_size = batch_size,
@@ -987,26 +1392,15 @@ kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, 
         class_weight = l_weights,
         #steps_per_epoch=2,
         #validation_steps=2,
-        shuffle=TRUE
-        )
-    } else if(num_classes==2){
-        model %>% fit(
-        x_train, y_train,
-        batch_size = batch_size,
-        epochs = epochs,
-        validation_split = model.split,
-        verbose=verbose,
-        #class_weight = l_weights,
-        #steps_per_epoch=2,
-        #validation_steps=2,
-        shuffle=TRUE
+        shuffle=TRUE,
+        callbacks = list(second_metric)
         )
     }
     
     save_model_weights(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
     
     
-    predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=1)+1
+    predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=1)+2
     predictions.train.pre <- predictions.train.proto
     #predictions.train.pre <- ramify::argmax(predictions.train.proto)
     predictions.train <- levels(as.factor(data$Class))[predictions.train.pre]
@@ -1021,7 +1415,7 @@ kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, 
     
     
     if(!is.null(split)){
-        predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=1)+1
+        predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=1)+2
         predictions.test.pre <- predictions.test.proto
         predictions.test <- levels(y_train_pre)[predictions.test.pre]
         
@@ -1168,6 +1562,7 @@ kerasRunRegress <- function(data, dependent, predictors=NULL, split=NULL, model.
     
     channels <- ncol(x_train_proto)
     #channels <- 400
+    
     
     
     model <- if(model.type=="Dense"){
@@ -1377,7 +1772,7 @@ kerasRunRegress <- function(data, dependent, predictors=NULL, split=NULL, model.
 
  
 ###This function wrapper will use the classification or regression model based on whether your choosen variable is numeric or not
-autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, model.split=0, epochs=10, activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="/Users/lee/Desktop", save.name="Model"){
+autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, model.split=0, epochs=10, activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="/Users/lee/Desktop", save.name="Model"){
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -1392,7 +1787,7 @@ autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, mode
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        kerasRunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name)
+        kerasRunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name)
     } else if(is.numeric(data[,variable])){
         kerasRunRegress(data=data, dependent=variable, predictors=predictors, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name)
     }
@@ -1400,7 +1795,7 @@ autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, mode
     return(model)
 }
 
-autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, metric=NULL, train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL, model.split=0, epochs=10, activation='relu', dropout=0.1, optimizer='rmsprop', start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="/Users/lee/Desktop", save.name="Model"){
+autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, metric=NULL, train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL, model.split=0, epochs=10, callback="recall", activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="/Users/lee/Desktop", save.name="Model"){
     
     
     #Choose model class
@@ -1415,7 +1810,7 @@ autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, ty
     } else if(type=="bayesLinear" | type=="bayesTree" | type=="bayesNeuralNet"){
         autoBayes(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     } else if(type=="Keras"){
-        autoKeras(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, metric=metric, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name)
+        autoKeras(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name)
     }
     
     return(model)
