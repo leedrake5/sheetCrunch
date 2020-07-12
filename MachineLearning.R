@@ -1008,7 +1008,7 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
          }
      } else if(!is.null(summary_function)){
          if(summary_function=="f1"){
-             f1
+             prSummary
          }
      }
 
