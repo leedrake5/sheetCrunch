@@ -384,7 +384,7 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
          }
      } else if(!is.null(summary_function)){
          if(summary_function=="f1"){
-             f1
+             prSummary
          }
      }
 
@@ -1507,7 +1507,7 @@ autoXGBoostLinear <- function(data, variable, predictors=NULL, min.n=5, split=NU
 
 
 ###Forest classification. Nothing special.
-classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, try, trees, metric="Accuracy", train="repeatedcv", cvrepeats=5, number=100, parallelMethod=NULL){
+classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, try, trees, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, parallelMethod=NULL){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
@@ -1554,11 +1554,17 @@ classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, tr
     
     num_classes <- as.numeric(length(unique(data.training$Class)))
 
-     summary_function <- if(num_classes>2){
-           multiClassSummary
-       } else  if(num_classes==2){
-           twoClassSummary
-       }
+     summary_function <- if(is.null(summary_function)){
+         if(num_classes>2){
+             multiClassSummary
+         } else  if(num_classes==2){
+             twoClassSummary
+         }
+     } else if(!is.null(summary_function)){
+         if(summary_function=="f1"){
+             prSummary
+         }
+     }
 
        forestGrid <-  expand.grid(.mtry=try)
 
@@ -1821,7 +1827,7 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
     return(model.list)
 }
 
-autoForest<- function(data, variable, predictors=NULL, min.n=5, split=NULL, try=10, trees=500, metric=NULL, train="repeatedcv", cvrepeats=5, number=30, parallelMethod=NULL){
+autoForest<- function(data, variable, predictors=NULL, min.n=5, split=NULL, try=10, trees=500, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, parallelMethod=NULL){
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -1836,16 +1842,16 @@ autoForest<- function(data, variable, predictors=NULL, min.n=5, split=NULL, try=
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifyForest(data=data, class=variable, predictors=predictors, min.n=min.n, split=split,  try=try, trees=trees, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        classifyForest(data=data, class=variable, predictors=predictors, min.n=min.n, split=split,  try=try, trees=trees, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
-        regressForest(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        regressForest(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     }
     
     return(model)
 }
 
 ###Support Vector Machine Classification
-classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type="Linear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric="Accuracy", train="repeatedcv", cvrepeats=5, number=100, parallelMethod=NULL){
+classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type="Linear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, parallelMethod=NULL){
     
     ###Prepare the data
     data.hold <- data
@@ -1937,11 +1943,17 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
         }
     }
 
-     summary_function <- if(num_classes>2){
-           multiClassSummary
-       } else  if(num_classes==2){
-           twoClassSummary
-       }
+     summary_function <- if(is.null(summary_function)){
+         if(num_classes>2){
+             multiClassSummary
+         } else  if(num_classes==2){
+             twoClassSummary
+         }
+     } else if(!is.null(summary_function)){
+         if(summary_function=="f1"){
+             prSummary
+         }
+     }
 
        svmGrid <- if(type=="svmLinear"){
            expand.grid(
@@ -2292,7 +2304,7 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
     return(model.list)
 }
 
-autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="svmLinear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric=NULL, train="repeatedcv", cvrepeats=5, number=30, parallelMethod=NULL){
+autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="svmLinear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, parallelMethod=NULL){
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -2307,9 +2319,9 @@ autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifySVM(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        classifySVM(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
-        regressSVM(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        regressSVM(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     }
     
     return(model)
@@ -2317,7 +2329,7 @@ autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="
 
 
 ###Bayes Classification
-classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=FALSE, metric="Accuracy", train="repeatedcv", cvrepeats=5, number=100, parallelMethod=NULL){
+classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=FALSE, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, parallelMethod=NULL){
     
     ###Prepare the data
     data.hold <- data
@@ -2375,11 +2387,17 @@ classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, typ
     
     num_classes <- as.numeric(length(unique(data.training$Class)))
     
-     summary_function <- if(num_classes>2){
-           multiClassSummary
-       } else  if(num_classes==2){
-           twoClassSummary
-       }
+     summary_function <- if(is.null(summary_function)){
+         if(num_classes>2){
+             multiClassSummary
+         } else  if(num_classes==2){
+             twoClassSummary
+         }
+     } else if(!is.null(summary_function)){
+         if(summary_function=="f1"){
+             prSummary
+         }
+     }
        
        bayesGrid <- if(type=="bayesNeuralNet"){
            expand.grid(neurons = seq(neuralhiddenunits.vec[1], neuralhiddenunits.vec[2], 1))
@@ -2743,9 +2761,9 @@ autoBayes <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifyBayes(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        classifyBayes(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
-        regressSVM(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        regressSVM(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     }
     
     return(model)
@@ -2763,9 +2781,9 @@ autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, ty
     } else if(type=="Forest"){
         autoForest(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, train=train, number=number, cvrepeats=cvrepeats, parallelMethod=parallelMethod)
     } else if(type=="svmLinear" | type=="svmPoly" | type=="svmRadial" | type=="svmRadialCost" | type=="svmRadialSigma" | type=="svmBoundrangeString" | type=="svmExpoString" | type=="svmSpectrumString"){
-        autoSVM(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        autoSVM(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     } else if(type=="bayesLinear" | type=="bayesTree" | type=="bayesNeuralNet"){
-        autoBayes(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        autoBayes(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
 
     }
     
