@@ -578,7 +578,7 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
     } else if(is.null(split)){
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
         
@@ -588,7 +588,7 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, ImportancePlot=importanceBar(xgb_model), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
     }
     
     #Model list includes the following objects in a list:
@@ -882,7 +882,7 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
         stat_smooth(method="lm") +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, ImportancePlot=importanceBar(xgb_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)
     }
     
     #Model list includes the following objects in a list:
@@ -1188,7 +1188,7 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
     } else if(is.null(split)){
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
         
@@ -1198,7 +1198,7 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, ImportancePlot=importanceBar(xgb_model), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
     }
     
     #Model list includes the following objects in a list:
@@ -1454,7 +1454,7 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
         theme_light()
         
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate)
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate)
     } else if(is.null(split)){
         all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
         train.frame <- all.data
@@ -1468,7 +1468,7 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
         stat_smooth(method="lm") +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, ImportancePlot=importanceBar(xgb_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)    }
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)    }
     
     #Model list includes the following objects in a list:
         #Model data, a list that includes training and full data sets
@@ -2779,7 +2779,7 @@ autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, ty
     } else if(type=="xgbLinear"){
         autoXGBoostLinear(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
     } else if(type=="Forest"){
-        autoForest(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, train=train, number=number, cvrepeats=cvrepeats, parallelMethod=parallelMethod)
+        autoForest(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, metric=metric, summary_function=summary_function, train=train, number=number, cvrepeats=cvrepeats, parallelMethod=parallelMethod)
     } else if(type=="svmLinear" | type=="svmPoly" | type=="svmRadial" | type=="svmRadialCost" | type=="svmRadialSigma" | type=="svmBoundrangeString" | type=="svmExpoString" | type=="svmSpectrumString"){
         autoSVM(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     } else if(type=="bayesLinear" | type=="bayesTree" | type=="bayesNeuralNet"){
