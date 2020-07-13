@@ -286,7 +286,7 @@ public = list(
       }
 ))
 
-f1_withval <- R6::R6Class("Percent Bias",
+percent_bias_withval <- R6::R6Class("Percent Bias",
 inherit = KerasCallback,
 public = list(
       
@@ -1063,6 +1063,7 @@ kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, 
         classhold <- as.vector(make.names(data[,class]))
         data <- data[, !colnames(data) %in% class]
         data$Class <- as.vector(as.character(classhold))
+        data <- data[
     
     y_full <- data$Class
     
@@ -1333,68 +1334,102 @@ kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, 
         l_weights=weights
     }
     
-    second_metric <- if(callback=="recall"){
-        if(model.split==0){
-            recall_noval$new(training = list(x_train, y_train))
-        } else if(model.split>0){
-            recall_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
-        }
-    } else if(callback=="precision"){
-        if(model.split==0){
-            precision_noval$new(training = list(x_train, y_train))
-        } else if(model.split>0){
-            precision_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
-        }
-    } else if(callback=="auc" | callback=="roc"){
-        if(model.split==0){
-            auc_roc_noval$new(training = list(x_train, y_train))
-        } else if(model.split>0){
-            auc_roc_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
-        }
-    } else if(callback=="f1"){
-           if(model.split==0){
-               f1_noval$new(training = list(x_train, y_train))
-           } else if(model.split>0){
-               f1_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+    second_metric <- if(!is.null(callback)){
+        if(callback=="recall"){
+            if(model.split==0){
+                recall_noval$new(training = list(x_train, y_train))
+            } else if(model.split>0){
+                recall_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+            }
+        } else if(callback=="precision"){
+            if(model.split==0){
+                precision_noval$new(training = list(x_train, y_train))
+            } else if(model.split>0){
+                precision_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+            }
+        } else if(callback=="auc" | callback=="roc"){
+            if(model.split==0){
+                auc_roc_noval$new(training = list(x_train, y_train))
+            } else if(model.split>0){
+                auc_roc_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+            }
+        } else if(callback=="f1"){
+               if(model.split==0){
+                   f1_noval$new(training = list(x_train, y_train))
+               } else if(model.split>0){
+                   f1_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+               }
+        } else if(callback=="percent_bias"){
+                  if(model.split==0){
+                      percent_bias_noval$new(training = list(x_train, y_train))
+                  } else if(model.split>0){
+                      percent_bias_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+                  }
+        } else {
+                   NULL
+                }
+    } else {
+               NULL
            }
-    } else if(callback=="percent_bias"){
-              if(model.split==0){
-                  percent_bias_noval$new(training = list(x_train, y_train))
-              } else if(model.split>0){
-                  percent_bias_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
-              }
-    }
+    
     
     
     
     
     #x_train <- data.matrix(x_train)
     
-    result <- if(model.split==0){
-        model %>% fit(
-        x_train, y_train,
-        batch_size = batch_size,
-        epochs = epochs,
-        verbose=verbose,
-        class_weight = l_weights,
-        #steps_per_epoch=2,
-        #validation_steps=2,
-        shuffle=TRUE,
-        callbacks = list(second_metric)
-        )
-    } else if(model.split>0){
-        model %>% fit(
-        x_train, y_train,
-        batch_size = batch_size,
-        epochs = epochs,
-        validation_split = model.split,
-        verbose=verbose,
-        class_weight = l_weights,
-        #steps_per_epoch=2,
-        #validation_steps=2,
-        shuffle=TRUE,
-        callbacks = list(second_metric)
-        )
+    result <- if(!is.null(second_metric)){
+        if(model.split==0){
+            model %>% fit(
+            x_train, y_train,
+            batch_size = batch_size,
+            epochs = epochs,
+            verbose=verbose,
+            class_weight = l_weights,
+            #steps_per_epoch=2,
+            #validation_steps=2,
+            shuffle=TRUE,
+            callbacks = list(second_metric)
+            )
+        } else if(model.split>0){
+            model %>% fit(
+            x_train, y_train,
+            batch_size = batch_size,
+            epochs = epochs,
+            validation_split = model.split,
+            verbose=verbose,
+            class_weight = l_weights,
+            #steps_per_epoch=2,
+            #validation_steps=2,
+            shuffle=TRUE,
+            callbacks = list(second_metric)
+            )
+        }
+    } else if(is.null(second_metric)){
+        if(model.split==0){
+            model %>% fit(
+            x_train, y_train,
+            batch_size = batch_size,
+            epochs = epochs,
+            verbose=verbose,
+            class_weight = l_weights,
+            #steps_per_epoch=2,
+            #validation_steps=2,
+            shuffle=TRUE
+            )
+        } else if(model.split>0){
+            model %>% fit(
+            x_train, y_train,
+            batch_size = batch_size,
+            epochs = epochs,
+            validation_split = model.split,
+            verbose=verbose,
+            class_weight = l_weights,
+            #steps_per_epoch=2,
+            #validation_steps=2,
+            shuffle=TRUE
+            )
+        }
     }
     
     save_model_weights(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
