@@ -1063,7 +1063,6 @@ kerasRunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, 
         classhold <- as.vector(make.names(data[,class]))
         data <- data[, !colnames(data) %in% class]
         data$Class <- as.vector(as.character(classhold))
-        data <- data[
     
     y_full <- data$Class
     
