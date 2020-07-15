@@ -2746,7 +2746,7 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
     return(model.list)
 }
 
-autoBayes <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=FALSE, metric=NULL, train="repeatedcv", cvrepeats=5, number=30, parallelMethod=NULL){
+autoBayes <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=FALSE, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, parallelMethod=NULL){
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -2763,7 +2763,7 @@ autoBayes <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type
     model <- if(!is.numeric(data[,variable])){
         classifyBayes(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
-        regressSVM(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        regressBayes(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     }
     
     return(model)
