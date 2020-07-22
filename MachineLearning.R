@@ -2761,7 +2761,7 @@ autoBayes <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifyBayes(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        classifyBayes(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
         regressBayes(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     }
