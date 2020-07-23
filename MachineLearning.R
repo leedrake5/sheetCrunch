@@ -672,7 +672,8 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
     
     #Take out the Sample #, this could really cause problems with the machine learning process
     data.training <- data.train[, !colnames(data.train) %in% "Sample"]
-    
+    dependent <- "Dependent"
+
     
     #Begin parameter searching
     if(nrow(xgbGridPre)==1){
@@ -1274,7 +1275,7 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
     
     #Take out the Sample #, this could really cause problems with the machine learning process
     data.training <- data.train[, !colnames(data.train) %in% "Sample"]
-    
+    dependent <- "Dependent"
     
     #Begin parameter searching
     if(nrow(xgbGridPre)==1){
@@ -1724,7 +1725,8 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
     data.training <- data.train[, !colnames(data.train) %in% "Sample"]
     
     forestGrid <-  expand.grid(.mtry=try)
-    
+    dependent <- "Dependent"
+
     
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
@@ -2201,7 +2203,8 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
             lambda=seq(xgblambda.vec[1], xgblambda.vec[2], 1))
     }
     
-    
+    dependent <- "Dependent"
+
     
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
@@ -2592,7 +2595,8 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
     
     #Take out the Sample #, this could really cause problems with the machine learning process
     data.training <- data.train[, !colnames(data.train) %in% "Sample"]
-    
+    dependent <- "Dependent"
+
     neuralhiddenunits.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(neuralhiddenunits), "-"))), error=function(x) "1-10")
     xgbalpha.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(xgbalpha), "-"))), error=function(x) "2-2")
     bartk.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(bartk), "-"))), error=function(x) "2-2")
