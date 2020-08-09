@@ -482,6 +482,8 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
             colsample_bytree = OPT_Res$Best_Par["bytree_opt"],
             min_child_weight = OPT_Res$Best_Par["minchild_opt"])
         
+        xgb_model_pre <- OPT_Res
+
         xgbGrid <- expand.grid(
             nrounds = best_param$nrounds,
             max_depth = best_param$max_depth,
@@ -558,6 +560,8 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
         }
     }
     
+    xgb_model_serialized <- tryCatch(xgb.serialize(xgb_model$finalModel), error=function(e) NULL)
+    
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train, na.action = na.pass)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
@@ -578,7 +582,7 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, serializedModel=xgb_model_serialized, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
     } else if(is.null(split)){
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
         
@@ -588,7 +592,7 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, serializedModel=xgb_model_serialized, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
     }
     
     #Model list includes the following objects in a list:
@@ -785,6 +789,8 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
                 colsample_bytree = OPT_Res$Best_Par["colsample_bytree"],
                 min_child_weight = OPT_Res$Best_Par["min_child_weight"])
             
+            xgb_model_pre <- OPT_Res
+
             xgbGrid <- expand.grid(
                 nrounds = nrounds,
                 max_depth = best_param$max_depth,
@@ -843,6 +849,8 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
         xgb_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = "reg:squarederror", nthread=round((as.numeric(my.cores)+1)/2, 0), na.action=na.omit)
     }
     
+    xgb_model_serialized <- tryCatch(xgb.serialize(xgb_model$finalModel), error=function(e) NULL)
+    
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Dependent, Predicted=y_predict_train)
@@ -869,7 +877,7 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
         theme_light()
         
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate)
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, serializedModel=xgb_model_serialized, ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate)
     } else if(is.null(split)){
         all.data <- data.orig
         train.frame <- all.data
@@ -883,7 +891,7 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
         stat_smooth(method="lm") +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, serializedModel=xgb_model_serialized, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)
     }
     
     #Model list includes the following objects in a list:
@@ -1097,6 +1105,8 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
             alpha = OPT_Res$Best_Par["alpha_opt"],
             eta = OPT_Res$Best_Par["eta_opt"],
             lambda = OPT_Res$Best_Par["lambda_opt"])
+            
+        xgb_model_pre <- OPT_Res
         
         xgbGrid <- expand.grid(
             nrounds = best_param$nrounds,
@@ -1170,6 +1180,8 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
         }
     }
     
+    xgb_model_serialized <- tryCatch(xgb.serialize(xgb_model$finalModel), error=function(e) NULL)
+    
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train, na.action = na.pass)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
@@ -1189,7 +1201,7 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, serializedModel=xgb_model_serialized, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
     } else if(is.null(split)){
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
         
@@ -1199,7 +1211,7 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, serializedModel=xgb_model_serialized, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
     }
     
     #Model list includes the following objects in a list:
@@ -1374,6 +1386,8 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
                 alpha = OPT_Res$Best_Par["alpha"],
                 eta = OPT_Res$Best_Par["eta"],
                 lambda = OPT_Res$Best_Par["lambda"])
+                
+            xgb_model_pre <- OPT_Res
             
             xgbGrid <- expand.grid(
                 nrounds = nrounds,
@@ -1430,6 +1444,8 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
         xgb_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbLinear", objective = "reg:squarederror", nthread=round((as.numeric(my.cores)+1)/2, 0), na.action=na.omit)
     }
     
+    xgb_model_serialized <- tryCatch(xgb.serialize(xgb_model$finalModel), error=function(e) NULL)
+    
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Dependent, Predicted=y_predict_train)
@@ -1455,7 +1471,7 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
         theme_light()
         
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate)
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, serializedModel=xgb_model_serialized, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate)
     } else if(is.null(split)){
         all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
         train.frame <- all.data
@@ -1469,7 +1485,7 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
         stat_smooth(method="lm") +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)    }
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, serializedModel=xgb_model_serialized,, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)    }
     
     #Model list includes the following objects in a list:
         #Model data, a list that includes training and full data sets

@@ -24,7 +24,7 @@ new.bioconductor <- list.of.bioconductor[!(list.of.bioconductor %in% installed.p
 if(length(new.bioconductor)) BiocManager::install(new.bioconductor)
 
 
-list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggtern", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "gghighlight", "scales", "openxlsx", "devtools", "digest", "tibble", "purrr")
+list.of.packages <- c("pbapply", "reshape2", "TTR", "dplyr", "ggplot2", "shiny", "rhandsontable", "random", "data.table", "DT", "shinythemes", "Cairo", "gghighlight", "scales", "openxlsx", "devtools", "digest", "tibble", "purrr")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
