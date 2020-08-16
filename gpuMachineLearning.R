@@ -1,11 +1,12 @@
 tryCatch(source("MachineLearning.R"), error=function(e) NULL)
 
-list.of.packages <- c("keras", "iml", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm")
+list.of.packages <- c("keras", "iml", "lime", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm")
 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) lapply(new.packages, function(x) install.packages(x, repos="http://cran.rstudio.com/", dep = TRUE))
 
 library(keras)
+library(iml)
 library(iml)
 #use_python("/Users/bly/anaconda3/bin/python")
 if(get_os()=="osx"){
@@ -375,7 +376,14 @@ def specificity(y_true, y_pred):
     return true_negatives / (possible_negatives + K.epsilon())
 ")
 
-
+plot_importance <- function(model){
+  tmp <- mod$variable.importance
+  dat <- data.frame(variable=names(tmp),importance=tmp)
+  ggplot(dat, aes(x=reorder(variable,importance), y=importance))+
+    geom_bar(stat="identity", position="dodge")+ coord_flip()+
+    ylab("Variable Importance")+
+    xlab("")
+}
 
 xgb_cv_opt_tree_gpu <- function (data, label, objectfun, evalmetric, n_folds, eta_range = c(0.1, 1L), max_depth_range = c(4L, 6L), nrounds_range = c(70, 160L), subsample_range = c(0.1, 1L), bytree_range = c(0.4, 1L), min_child_range=c(1L, 3L), gamma_range=c(0L, 1L), init_points = 4, n_iter = 10, acq = "ei", kappa = 2.576, eps = 0, optkernel = list(type = "exponential", power = 2), classes = NULL, seed = 0)
 {
@@ -1469,10 +1477,23 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     train.results.frame <- data.frame(Sample=data.train$Sample, Known=as.vector(data.train$Class), Predicted=predictions.train)
     train.accuracy.rate <- rfUtilities::accuracy(x=train.results.frame$Known, y=train.results.frame$Predicted)
     
-    predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, type = "prob"), error=function(e) NULL)
     #predictor$data$X <- x_train
-    imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
-    imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+    if(model.type=="Dense" | model.type=="SuperDense" | model.type=="EvenDense"){
+        predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, type = "prob"), error=function(e) NULL)
+        imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
+        imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+    }
+    
+    if(model.type=="First_CNN" | model.type=="Complexe_CNN" | model.type=="Expiremental_CNN"){
+        predict_CNN <- function(model, data, batch_size, verbose=1){
+            data_wrap <- listarrays::expand_dims(data, 3)
+            keras::predict_classes(model=model, data_wrap, batch_size=batch_size, verbose=verbose)
+        }
+        predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_proto), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
+        imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
+        imp_plot <- tryCatch(plot_importance(model), error=function(e) NULL)
+    }
+    
     
     
     if(!is.null(split)){

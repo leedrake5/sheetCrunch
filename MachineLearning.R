@@ -493,6 +493,7 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
             min_child_weight = best_param$min_child_weight,
             subsample = best_param$subsample
         )
+        xgbGridPre <- NULL
     }
     
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
@@ -551,6 +552,7 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
         }
 
         stopCluster(cl)
+        xgbGridPre <- NULL
     } else if(parallel_method=="linux"){
         data.training <- data.train[, !colnames(data.train) %in% "Sample"]
         xgb_model <- if(num_classes>2){
@@ -728,6 +730,7 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
             min_child_weight = xgb_model_pre$bestTune$min_child_weight,
             subsample = xgb_model_pre$bestTune$subsample
         )
+        xgbGridPre <- NULL
         } else if(nrow(xgbGridPre)>1 && Bayes==TRUE){
             metric.mod <- if(metric=="RMSE"){
                 "rmse"
@@ -800,6 +803,7 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
                 min_child_weight = best_param$min_child_weight,
                 subsample = best_param$subsample
             )
+            xgbGridPre <- NULL
         }
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
@@ -1080,6 +1084,7 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
             eta = xgb_model_pre$bestTune$eta,
             lambda = xgb_model_pre$bestTune$lambda
         )
+        xgbGridPre <- NULL
     } else if(nrow(xgbGridPre)>1 && Bayes==TRUE){
         #data.training.temp <- data.training
         #data.training.temp$Class <- as.integer(data.training.temp$Class)
@@ -1114,6 +1119,7 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
             eta = best_param$eta,
             lambda = best_param$lambda
         )
+        xgbGridPre <- NULL
     }
     
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
@@ -1335,6 +1341,7 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
             eta = xgb_model_pre$bestTune$eta,
             lambda = xgb_model_pre$bestTune$lambda
         )
+        xgbGridPre <- NULL
         } else if(nrow(xgbGridPre)>1 && Bayes==TRUE){
             metric.mod <- if(metric=="RMSE"){
                 "rmse"
@@ -1395,6 +1402,7 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
                 eta = best_param$eta,
                 lambda = best_param$lambda
             )
+            xgbGridPre <- NULL
         }
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
@@ -2116,7 +2124,7 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
         #ImportancePlot, a ggplot of variables
         #trainAccuracy - the performance of the model on its own training data
         #testAccuracy - the performance of the model on the validation test data set - only if split is a number betweene 0 and 0.99
-        
+    svmGrid <- NULL
     return(model.list)
 }
 
@@ -2319,7 +2327,7 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
         #ImportancePlot, a ggplot of variables
         #trainAccuracy - the performance of the model on its own training data
         #testAccuracy - the performance of the model on the validation test data set - only if split is a number betweene 0 and 0.99
-    
+    svmGrid <- NULL
     return(model.list)
 }
 
@@ -2560,7 +2568,7 @@ classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, typ
         #ImportancePlot, a ggplot of variables
         #trainAccuracy - the performance of the model on its own training data
         #testAccuracy - the performance of the model on the validation test data set - only if split is a number betweene 0 and 0.99
-        
+        bayesGrid <- NULL
     return(model.list)
 }
 
@@ -2762,7 +2770,7 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
         #ImportancePlot, a ggplot of variables
         #trainAccuracy - the performance of the model on its own training data
         #testAccuracy - the performance of the model on the validation test data set - only if split is a number betweene 0 and 0.99
-    
+    bayesGrid <- NULL
     return(model.list)
 }
 
