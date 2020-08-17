@@ -288,7 +288,7 @@ dataPrep <- function(data, variable, predictors=NULL){
 
 
 ###XGBoost classification. This function will run a classification model, using probabilities to sort data. It will automatically search for the best paramters, and then run a full model based on those. Variables are encoded as "x-y", which will search in increments for every variable in between.
-classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name="classifyXGBModel", parallelMethod=NULL){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
@@ -564,6 +564,12 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
     
     xgb_model_serialized <- tryCatch(xgb.serialize(xgb_model$finalModel), error=function(e) NULL)
     
+    if(!is.null(save.directory)){
+        modelpack <- list(Model=xgb_model, rawModel=xgb_model_serialized)
+        saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
+    }
+    
+    
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train, na.action = na.pass)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
@@ -608,7 +614,7 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
 }
 
 ###XGBoost regression. This function will run a regression model, using rmse or mae (per your choice) to sort data. It will automatically search for the best paramters, and then run a full model based on those. Variables are encoded as "x-y", which will search in increments for every variable in between.
-regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name="regressXGBModel", parallelMethod=NULL){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
@@ -855,6 +861,11 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
     
     xgb_model_serialized <- tryCatch(xgb.serialize(xgb_model$finalModel), error=function(e) NULL)
     
+    if(!is.null(save.directory)){
+        modelpack <- list(Model=xgb_model, rawModel=xgb_model_serialized)
+        saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
+    }
+    
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Dependent, Predicted=y_predict_train)
@@ -910,7 +921,15 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
 
 
 ###This function wrapper will use the classification or regression model based on whether your choosen variable is numeric or not
-autoXGBoostTree <- function(data, variable, predictors=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+autoXGBoostTree <- function(data, variable, predictors=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+    
+    if(is.null(save.name)){
+        save.name <- if(!is.numeric(data[,variable])){
+            "classifyXGBModel"
+        } else if(is.numeric(data[,variable])){
+            "regressXGBModel"
+        }
+    }
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -925,9 +944,9 @@ autoXGBoostTree <- function(data, variable, predictors=NULL, min.n=5, split=NULL
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifyXGBoostTree(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
+        classifyXGBoostTree(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
-        regressXGBoostTree(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
+        regressXGBoostTree(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     }
     
     return(model)
@@ -935,7 +954,7 @@ autoXGBoostTree <- function(data, variable, predictors=NULL, min.n=5, split=NULL
 
 
 ###XGBoost classification. This function will run a classification model, using probabilities to sort data. It will automatically search for the best paramters, and then run a full model based on those. Variables are encoded as "x-y", which will search in increments for every variable in between.
-classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=NULL, xgbalpha="0-0", xgbeta="0.1-0.1", xgblambda="0-0", nrounds=500, test_nrounds=100, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=NULL, xgbalpha="0-0", xgbeta="0.1-0.1", xgblambda="0-0", nrounds=500, test_nrounds=100, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
@@ -1188,6 +1207,11 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
     
     xgb_model_serialized <- tryCatch(xgb.serialize(xgb_model$finalModel), error=function(e) NULL)
     
+    if(!is.null(save.directory)){
+        modelpack <- list(Model=xgb_model, rawModel=xgb_model_serialized)
+        saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
+    }
+    
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train, na.action = na.pass)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
@@ -1231,7 +1255,7 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
 }
 
 ###XGBoost regression. This function will run a regression model, using rmse or mae (per your choice) to sort data. It will automatically search for the best paramters, and then run a full model based on those. Variables are encoded as "x-y", which will search in increments for every variable in between.
-regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, xgbalpha="0-0", xgbeta="0.1-0.1", xgblambda="0-0", nrounds=500, test_nrounds=100, metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, xgbalpha="0-0", xgbeta="0.1-0.1", xgblambda="0-0", nrounds=500, test_nrounds=100, metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
@@ -1454,6 +1478,11 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
     
     xgb_model_serialized <- tryCatch(xgb.serialize(xgb_model$finalModel), error=function(e) NULL)
     
+    if(!is.null(save.directory)){
+        modelpack <- list(Model=xgb_model, rawModel=xgb_model_serialized)
+        saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
+    }
+    
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Dependent, Predicted=y_predict_train)
@@ -1507,7 +1536,15 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
 
 
 ###This function wrapper will use the classification or regression model based on whether your choosen variable is numeric or not
-autoXGBoostLinear <- function(data, variable, predictors=NULL, min.n=5, split=NULL,  xgbalpha="0-0", xgbeta="0.1-0.1", xgblambda="0-0", nrounds=500, test_nrounds=100, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+autoXGBoostLinear <- function(data, variable, predictors=NULL, min.n=5, split=NULL,  xgbalpha="0-0", xgbeta="0.1-0.1", xgblambda="0-0", nrounds=500, test_nrounds=100, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+    
+    if(is.null(save.name)){
+        save.name <- if(!is.numeric(data[,variable])){
+            "classifyXGBModel"
+        } else if(is.numeric(data[,variable])){
+            "regressXGBModel"
+        }
+    }
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -1522,9 +1559,9 @@ autoXGBoostLinear <- function(data, variable, predictors=NULL, min.n=5, split=NU
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifyXGBoostLinear(data=data, class=variable, predictors=predictors, min.n=min.n, split=split,  xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
+        classifyXGBoostLinear(data=data, class=variable, predictors=predictors, min.n=min.n, split=split,  xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
-        regressXGBoostLinear(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
+        regressXGBoostLinear(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     }
     
     return(model)
@@ -1532,7 +1569,7 @@ autoXGBoostLinear <- function(data, variable, predictors=NULL, min.n=5, split=NU
 
 
 ###Forest classification. Nothing special.
-classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, try, trees, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, parallelMethod=NULL){
+classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, try, trees, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
@@ -1660,6 +1697,11 @@ classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, tr
         parallelStop()
     }
     
+    if(!is.null(save.directory)){
+        modelpack <- forest_model
+        saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
+    }
+    
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=forest_model, newdata=x_train, na.action = na.pass)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
@@ -1703,7 +1745,7 @@ classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, tr
 }
 
 ###Forest regression. Nothing special
-regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, try, trees, metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, try, trees, metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
@@ -1802,6 +1844,11 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
         parallelStop()
     }
     
+    if(!is.null(save.directory)){
+        modelpack <- forest_model
+        saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
+    }
+    
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=forest_model, newdata=x_train, na.action = na.pass)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Dependent, Predicted=y_predict_train)
@@ -1853,7 +1900,15 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
     return(model.list)
 }
 
-autoForest<- function(data, variable, predictors=NULL, min.n=5, split=NULL, try=10, trees=500, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, parallelMethod=NULL){
+autoForest<- function(data, variable, predictors=NULL, min.n=5, split=NULL, try=10, trees=500, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+    
+    if(is.null(save.name)){
+        save.name <- if(!is.numeric(data[,variable])){
+            "classifyXGBModel"
+        } else if(is.numeric(data[,variable])){
+            "regressXGBModel"
+        }
+    }
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -1868,16 +1923,16 @@ autoForest<- function(data, variable, predictors=NULL, min.n=5, split=NULL, try=
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifyForest(data=data, class=variable, predictors=predictors, min.n=min.n, split=split,  try=try, trees=trees, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        classifyForest(data=data, class=variable, predictors=predictors, min.n=min.n, split=split,  try=try, trees=trees, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
-        regressForest(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        regressForest(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     }
     
     return(model)
 }
 
 ###Support Vector Machine Classification
-classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type="Linear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, parallelMethod=NULL){
+classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type="Linear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
     
     ###Prepare the data
     data.hold <- data
@@ -2083,7 +2138,10 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
                        svm_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method = type, na.action=na.omit)
                    }
 
-
+    if(!is.null(save.directory)){
+        modelpack <- svm_model
+        saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
+    }
 
     
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
@@ -2129,7 +2187,7 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
 }
 
 ###Support Vector Machine Regression
-regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, type="Linear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, type="Linear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
@@ -2279,6 +2337,11 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
      } else if(parallel_method=="minimal"){
          svm_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method = type, na.action=na.omit)
      }
+     
+     if(!is.null(save.directory)){
+         modelpack <- svm_model
+         saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
+     }
     
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=svm_model, newdata=x_train, na.action = na.pass)
@@ -2331,7 +2394,15 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
     return(model.list)
 }
 
-autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="svmLinear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, parallelMethod=NULL){
+autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="svmLinear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+    
+    if(is.null(save.name)){
+        save.name <- if(!is.numeric(data[,variable])){
+            "classifyXGBModel"
+        } else if(is.numeric(data[,variable])){
+            "regressXGBModel"
+        }
+    }
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -2346,9 +2417,9 @@ autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifySVM(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        classifySVM(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
-        regressSVM(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        regressSVM(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     }
     
     return(model)
@@ -2356,7 +2427,7 @@ autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="
 
 
 ###Bayes Classification
-classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=FALSE, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, parallelMethod=NULL){
+classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=FALSE, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
     
     ###Prepare the data
     data.hold <- data
@@ -2527,7 +2598,10 @@ classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, typ
        }
                   
 
-
+    if(!is.null(save.directory)){
+        modelpack <- bayes_model
+        saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
+    }
 
     
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
@@ -2573,7 +2647,7 @@ classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, typ
 }
 
 ###Bayes Regression
-regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, missing=FALSE, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, missing=FALSE, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
@@ -2722,6 +2796,11 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
                 bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method = bayes_type, na.action=na.omit)
             }
         }
+        
+        if(!is.null(save.directory)){
+            modelpack <- bayes_model
+            saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
+        }
     
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=bayes_model, newdata=x_train, na.action = na.pass)
@@ -2774,7 +2853,15 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
     return(model.list)
 }
 
-autoBayes <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=FALSE, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, parallelMethod=NULL){
+autoBayes <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=FALSE, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+    
+    if(is.null(save.name)){
+        save.name <- if(!is.numeric(data[,variable])){
+            "classifyXGBModel"
+        } else if(is.numeric(data[,variable])){
+            "regressXGBModel"
+        }
+    }
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -2789,29 +2876,29 @@ autoBayes <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifyBayes(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        classifyBayes(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
-        regressBayes(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        regressBayes(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     }
     
     return(model)
 }
 
 
-autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL){
+autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
     
     
     #Choose model class
     model <- if(type=="xgbTree"){
-        autoXGBoostTree(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
+        autoXGBoostTree(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     } else if(type=="xgbLinear"){
-        autoXGBoostLinear(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
+        autoXGBoostLinear(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     } else if(type=="Forest"){
-        autoForest(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, metric=metric, summary_function=summary_function, train=train, number=number, cvrepeats=cvrepeats, parallelMethod=parallelMethod)
+        autoForest(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, metric=metric, summary_function=summary_function, train=train, number=number, cvrepeats=cvrepeats, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     } else if(type=="svmLinear" | type=="svmPoly" | type=="svmRadial" | type=="svmRadialCost" | type=="svmRadialSigma" | type=="svmBoundrangeString" | type=="svmExpoString" | type=="svmSpectrumString"){
-        autoSVM(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        autoSVM(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     } else if(type=="bayesLinear" | type=="bayesTree" | type=="bayesNeuralNet"){
-        autoBayes(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
+        autoBayes(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
 
     }
     

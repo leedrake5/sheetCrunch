@@ -1466,8 +1466,9 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
         }
     }
     
-    keras::save_model_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
-    
+    if(!is.null(save.directory)){
+        keras::save_model_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
+    }
     
     predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=1)
     predictions.train.pre <- predictions.train.proto + 1
@@ -1780,7 +1781,9 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
     shuffle=TRUE
     )
     
-    keras::save_model_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
+    if(!is.null(save.directory)){
+        keras::save_model_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
+    }
     
     y_predict_train_proto <- predict(model, x_train, batch_size=batch_size)
     y_predict_train_pre <- if(scale==TRUE){
@@ -2330,8 +2333,9 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
         }
     }
     
-    keras::save_model_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
-    
+    if(!is.null(save.directory)){
+        keras::save_model_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
+    }
     
     predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=1)
     predictions.train.pre <- predictions.train.proto + 1
@@ -2884,8 +2888,9 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         }
     }
     
-    keras::save_model_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
-    
+    if(!is.null(save.directory)){
+        keras::save_model_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
+    }
     
     predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=1)
     predictions.train.pre <- predictions.train.proto + 1
@@ -3405,8 +3410,9 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         }
     }
     
-    keras::save_model_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
-    
+    if(!is.null(save.directory)){
+        keras::save_model_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
+    }
     
     predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=1)
     predictions.train.pre <- predictions.train.proto + 1
@@ -3714,7 +3720,10 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
     shuffle=TRUE
     )
     
-    keras::save_model_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
+    if(!is.null(save.directory)){
+        keras::save_model_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
+    }
+    
     
     y_predict_train_proto <- predict(model, x_train, batch_size=batch_size)
     y_predict_train_pre <- if(scale==TRUE){
@@ -3825,7 +3834,7 @@ autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, mode
     return(model)
 }
 
-autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL, model.split=0, epochs=10, callback="recall", activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL){
+autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL, model.split=0, epochs=10, callback="recall", activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop/", save.name="Model", previous.model=NULL){
     
     
     #Choose model class
