@@ -8,10 +8,9 @@ if(length(new.packages)) lapply(new.packages, function(x) install.packages(x, re
 library(keras)
 library(iml)
 library(iml)
-#use_python("/Users/bly/anaconda3/bin/python")
 if(get_os()=="osx"){
-    tryCatch(reticulate::use_python("~/anaconda3/bin/python", required=T), error=function(e) NULL)
-    tryCatch(use_backend(backend = "plaidml"), error=function(e) NULL)
+    tryCatch(reticulate::use_python("~/opt/anaconda3/bin/python3.6", required=T), error=function(e) NULL)
+    tryCatch(keras::use_backend(backend = "plaidml"), error=function(e) NULL)
 }
 
 # A utility function for One-hot encoding
@@ -79,6 +78,8 @@ metric_keras_auc <- custom_metric("keras_auc", function(y_true, y_pred) {
     kerasAUC(y_true=y_true, y_pred=y_pred)
 })
 
+
+
 auc_roc_noval <- R6::R6Class("ROC",
 inherit = KerasCallback,
 public = list(
@@ -131,6 +132,110 @@ public = list(
       }
 ))
 
+sensitivity_withval <- R6::R6Class("Sensitivity",
+inherit = KerasCallback,
+public = list(
+      
+      losses = NULL,
+      x = NA,
+      y = NA,
+      x_val = NA,
+      y_val = NA,
+      
+      initialize = function(training = list(), validation= list()){
+            self$x <- training[[1]]
+            self$y <- training[[2]]
+            self$x_val <- validation[[1]]
+            self$y_val <- validation[[2]]
+      },
+      
+      
+      on_epoch_end = function(epoch, logs = list()){
+            
+            self$losses <- c(self$losses, logs[["loss"]])
+            y_pred <- self$model$predict(self$x)
+            y_pred_val <- self$model$predict(self$x_val)
+            score = MLmetrics::Sensitivity(y_true = self$y, y_pred =  y_pred)
+            score_val = MLmetrics::Sensitivity(y_true = self$y_val, y_pred =  y_pred_val)
+            print(paste("epoch: ", epoch+1, " sensitivity:", score, ' sensitivity_val:', score_val))
+      }
+))
+
+sensitivity_noval <- R6::R6Class("Sensitivity",
+inherit = KerasCallback,
+public = list(
+      
+      losses = NULL,
+      x = NA,
+      y = NA,
+      
+      initialize = function(training = list()){
+            self$x <- training[[1]]
+            self$y <- training[[2]]
+      },
+      
+      
+      on_epoch_end = function(epoch, logs = list()){
+            
+            self$losses <- c(self$losses, logs[["loss"]])
+            y_pred <- self$model$predict(self$x)
+            score = MLmetrics::Sensitivity(y_true = self$y, y_pred =  y_pred)
+            print(paste("epoch: ", epoch+1, " sensitivity:", score))
+      }
+))
+
+specificity_withval <- R6::R6Class("Specificity",
+inherit = KerasCallback,
+public = list(
+      
+      losses = NULL,
+      x = NA,
+      y = NA,
+      x_val = NA,
+      y_val = NA,
+      
+      initialize = function(training = list(), validation= list()){
+            self$x <- training[[1]]
+            self$y <- training[[2]]
+            self$x_val <- validation[[1]]
+            self$y_val <- validation[[2]]
+      },
+      
+      
+      on_epoch_end = function(epoch, logs = list()){
+            
+            self$losses <- c(self$losses, logs[["loss"]])
+            y_pred <- self$model$predict(self$x)
+            y_pred_val <- self$model$predict(self$x_val)
+            score = MLmetrics::Sensitivity(y_true = self$y, y_pred =  y_pred)
+            score_val = MLmetrics::Specificity(y_true = self$y_val, y_pred =  y_pred_val)
+            print(paste("epoch: ", epoch+1, " specificity:", score, ' sensitivity_val:', score_val))
+      }
+))
+
+specificity_noval <- R6::R6Class("Specificity",
+inherit = KerasCallback,
+public = list(
+      
+      losses = NULL,
+      x = NA,
+      y = NA,
+      
+      initialize = function(training = list()){
+            self$x <- training[[1]]
+            self$y <- training[[2]]
+      },
+      
+      
+      on_epoch_end = function(epoch, logs = list()){
+            
+            self$losses <- c(self$losses, logs[["loss"]])
+            y_pred <- self$model$predict(self$x)
+            score = MLmetrics::Specificity(y_true = self$y, y_pred =  y_pred)
+            print(paste("epoch: ", epoch+1, " specificity:", score))
+      }
+))
+
 precision_withval <- R6::R6Class("Precision",
 inherit = KerasCallback,
 public = list(
@@ -154,8 +259,8 @@ public = list(
             self$losses <- c(self$losses, logs[["loss"]])
             y_pred <- self$model$predict(self$x)
             y_pred_val <- self$model$predict(self$x_val)
-            score = Metrics::precision(actual = self$y, predicted =  y_pred)
-            score_val = Metrics::precision(actual = self$y_val, predicted =  y_pred_val)
+            score = MLmetrics::Precision(y_true = self$y, y_pred =  y_pred)
+            score = MLmetrics::Precision(y_true = self$y_val, y_pred =  y_pred_val)
             print(paste("epoch: ", epoch+1, " precision:", score, ' precision_val:', score_val))
       }
 ))
@@ -178,7 +283,7 @@ public = list(
             
             self$losses <- c(self$losses, logs[["loss"]])
             y_pred <- self$model$predict(self$x)
-            score = Metrics::recall(actual = self$y, predicted =  y_pred)
+            score = MLmetrics::Precision(y_true = self$y, y_pred =  y_pred)
             print(paste("epoch: ", epoch+1, " precision:", score))
       }
 ))
@@ -258,8 +363,8 @@ public = list(
             self$losses <- c(self$losses, logs[["loss"]])
             y_pred <- self$model$predict(self$x)
             y_pred_val <- self$model$predict(self$x_val)
-            score = Metrics::f1(actual = self$y, predicted =  y_pred)
-            score_val = Metrics::f1(actual = self$y_val, predicted =  y_pred_val)
+            score = MLmetrics::F1_Score(y_true = self$y, y_pred =  y_pred)
+            score_val = MLmetrics::F1_Score(y_true = self$y_val, y_pred =  y_pred_val)
             print(paste("epoch: ", epoch+1, " f1:", score, ' f1_val:', score_val))
       }
 ))
@@ -282,7 +387,7 @@ public = list(
             
             self$losses <- c(self$losses, logs[["loss"]])
             y_pred <- self$model$predict(self$x)
-            score = Metrics::f1(actual = self$y, predicted =  y_pred)
+            score = MLmetrics::F1_Score(y_true = self$y, y_pred =  y_pred)
             print(paste("epoch: ", epoch+1, " f1:", score))
       }
 ))
@@ -1063,8 +1168,11 @@ autoXGBoostTreeGPU <- function(data, variable, predictors=NULL, min.n=5, split=N
 
 
 ###Keras Classification
-kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previous.model=NULL){
-    
+
+
+kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss=NULL, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE){
+    if(eager==TRUE){tf$executing_eagerly()}
+
     data <- dataPrep(data=data, variable=class, predictors=predictors)
     #Boring data frame stuff
         data <- data[complete.cases(data),]
@@ -1303,10 +1411,14 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     #metric_top_3_categorical_accuracy <- custom_metric("top_3_categorical_accuracy", function(y_true, y_pred) {  metric_top_k_categorical_accuracy(y_true, y_pred, k = 3) })
     #optimizer_sgd(lr=0.001, clipvalue=0.6)
     
-    loss_decision <- if(num_classes>2){
-        'sparse_categorical_crossentropy'
-    } else if(num_classes==2){
-        'binary_crossentropy'
+    loss_decision <- if(is.null(loss)){
+        if(num_classes>2){
+            'sparse_categorical_crossentropy'
+        } else if(num_classes==2){
+            'binary_crossentropy'
+        }
+    } else if(!is.null(loss)){
+        loss
     }
     
     if(num_classes==2){
@@ -1317,17 +1429,17 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     #loss_decision <- 'sparse_categorical_crossentropy'
     
     optimization <- if(optimizer=="rmsprop"){
-        optimizer_rmsprop(lr=learning.rate)
+        optimizer_rmsprop(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="adam"){
-        optimizer_adam(lr=learning.rate)
+        optimizer_adam(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="adagrad"){
-        optimizer_adagrad(lr=learning.rate)
+        optimizer_adagrad(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="adadelta"){
-        optimizer_adadelta(lr=learning.rate)
+        optimizer_adadelta(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="nadam"){
-        optimizer_nadam(lr=learning.rate)
+        optimizer_nadam(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="sgd"){
-        optimizer_sgd(lr=learning.rate)
+        optimizer_sgd(lr=learning.rate, clipvalue=0.5)
     }
         
         
@@ -1393,18 +1505,30 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
                } else if(model.split>0){
                    f1_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
                }
-        } else if(callback=="percent_bias"){
-                  if(model.split==0){
-                      percent_bias_noval$new(training = list(x_train, y_train))
-                  } else if(model.split>0){
-                      percent_bias_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
-                  }
-        } else {
-                   NULL
+        } else if(callback=="sensitivity"){
+            if(model.split==0){
+                sensitivity_noval$new(training = list(x_train, y_train))
+            } else if(model.split>0){
+                sensitivity_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+            }
+        } else if(callback=="specificity"){
+            if(model.split==0){
+                    specificity_noval$new(training = list(x_train, y_train))
+                } else if(model.split>0){
+                    specificity_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
                 }
+        } else if(callback=="percent_bias"){
+            if(model.split==0){
+                percent_bias_noval$new(training = list(x_train, y_train))
+            } else if(model.split>0){
+                percent_bias_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+            }
+        } else {
+            NULL
+    }
     } else {
-               NULL
-           }
+            NULL
+    }
     
     
     
@@ -1479,21 +1603,26 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     train.accuracy.rate <- rfUtilities::accuracy(x=train.results.frame$Known, y=train.results.frame$Predicted)
     
     #predictor$data$X <- x_train
-    if(model.type=="Dense" | model.type=="SuperDense" | model.type=="EvenDense"){
-        predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, type = "prob"), error=function(e) NULL)
-        imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
-        imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+    if(importance==TRUE){
+        if(model.type=="Dense" | model.type=="SuperDense" | model.type=="EvenDense"){
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, type = "prob"), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
+            imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+        }
+        
+        if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN"){
+            predict_CNN <- function(model, data, batch_size, verbose=1){
+                data_wrap <- listarrays::expand_dims(data, 3)
+                keras::predict_classes(model=model, data_wrap, batch_size=batch_size, verbose=verbose)
+            }
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_proto), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
+            imp_plot <- tryCatch(plot_importance(model), error=function(e) NULL)
+        }
+    } else if(importance==FALSE){
+        imp_plot <- NULL
     }
     
-    if(model.type=="First_CNN" | model.type=="Complexe_CNN" | model.type=="Expiremental_CNN"){
-        predict_CNN <- function(model, data, batch_size, verbose=1){
-            data_wrap <- listarrays::expand_dims(data, 3)
-            keras::predict_classes(model=model, data_wrap, batch_size=batch_size, verbose=verbose)
-        }
-        predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_proto), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
-        imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
-        imp_plot <- tryCatch(plot_importance(model), error=function(e) NULL)
-    }
     
     
     
@@ -1529,8 +1658,9 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     
 }
 
-kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL, model.split=0.1, scale=FALSE, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss="mae", metric=c("mae", "mse"), start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="~/Desktop/", save.name="Model", previous.model=NULL){
-    
+kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL, model.split=0.1, scale=FALSE, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss="mae", metric=c("mae", "mse"), start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE){
+    if(eager==TRUE){tf$executing_eagerly()}
+
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
     data.orig <- data
 
@@ -1602,7 +1732,7 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
     }
     
 
-    x_train <- if(model.type=="Dense" | model.type=="SuperDense"){
+    x_train <- if(model.type=="Dense" | model.type=="SuperDense" | model.type=="EvenDense"){
         x_train_proto
     } else if(model.type=="GRU"){
         array_reshape(x_train_proto, c(-1, 1, ncol(x_train_proto)))
@@ -1619,7 +1749,7 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
     }
     
     if(!is.null(split)){
-        x_test <- if(model.type=="Dense" | model.type=="SuperDense"){
+        x_test <- if(model.type=="Dense" | model.type=="SuperDense" | model.type=="EvenDense"){
             x_test_proto
         } else if(model.type=="GRU"){
             array_reshape(x_test_proto, c(-1, 1, ncol(x_test_proto)))
@@ -1670,7 +1800,30 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
            layer_dropout(dropout) %>%
            layer_dense(64, activation=activation) %>%
            layer_dense(units = 1, activation = 'linear')
-    } else if(model.type=="GRU"){
+    } else if(model.type=="EvenDense"){
+              keras_model_sequential() %>%
+              #layer_dropout(0.2) %>%
+              layer_dense(512, activation=activation, input_shape=channels,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
+              layer_dropout(dropout) %>%
+              layer_dense(256, activation=activation) %>%
+              layer_dropout(dropout) %>%
+              layer_dense(512, activation=activation) %>%
+              layer_dropout(dropout) %>%
+              layer_dense(256, activation=activation) %>%
+              layer_dropout(dropout) %>%
+              layer_dense(128, activation=activation) %>%
+              layer_dropout(dropout) %>%
+              layer_dense(256, activation=activation) %>%
+              layer_dropout(dropout) %>%
+              layer_dense(128, activation=activation) %>%
+              layer_dropout(dropout) %>%
+              layer_dense(64, activation=activation) %>%
+              layer_dropout(dropout) %>%
+              layer_dense(128, activation=activation) %>%
+              layer_dropout(dropout) %>%
+              layer_dense(64, activation=activation) %>%
+              layer_dense(1, activation='linear')
+       } else if(model.type=="GRU"){
         keras_model_sequential() %>%
         #layer_dropout(0.5) %>%
         bidirectional(layer_gru(units=channels, dropout=0.2, recurrent_dropout=0.5, activation=activation, batch_input_shape=c(batch_size, 1, channels), stateful=TRUE, return_sequences=FALSE, kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
@@ -1740,6 +1893,19 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
         layer_dense(1, activation='linear')
     }
     
+    optimization <- if(optimizer=="rmsprop"){
+        optimizer_rmsprop(lr=learning.rate, clipvalue=0.5)
+    } else if(optimizer=="adam"){
+        optimizer_adam(lr=learning.rate, clipvalue=0.5)
+    } else if(optimizer=="adagrad"){
+        optimizer_adagrad(lr=learning.rate, clipvalue=0.5)
+    } else if(optimizer=="adadelta"){
+        optimizer_adadelta(lr=learning.rate, clipvalue=0.5)
+    } else if(optimizer=="nadam"){
+        optimizer_nadam(lr=learning.rate, clipvalue=0.5)
+    } else if(optimizer=="sgd"){
+        optimizer_sgd(lr=learning.rate, clipvalue=0.5)
+    }
     
     #parallel_model <- multi_gpu_model(model, gpus=4)
     
@@ -1751,7 +1917,7 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
     model %>%
     keras::compile(
     loss = loss,
-    optimizer=optimizer,
+    optimizer=optimization,
     metrics = metric
     )
     
@@ -1804,10 +1970,25 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
     intercept <- correction.lm$coef[1]
     slope <- correction.lm$coef[2]
     
-    predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, type = "prob"), error=function(e) NULL)
-    #predictor$data$X <- x_train
-    imp = tryCatch(FeatureImp$new(predictor, loss = "mae"), error=function(e) NULL)
-    imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+    if(importance==TRUE){
+        if(model.type=="Dense" | model.type=="SuperDense" | model.type=="EvenDense"){
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, type = "prob"), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = "mae"), error=function(e) NULL)
+            imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+        }
+        
+        if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN"){
+            predict_CNN <- function(model, data, batch_size, verbose=1){
+                data_wrap <- listarrays::expand_dims(data, 3)
+                keras::predict_classes(model=model, data_wrap, batch_size=batch_size, verbose=verbose)
+            }
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_proto), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
+            imp_plot <- tryCatch(plot_importance(model), error=function(e) NULL)
+        }
+    } else if(importance==FALSE){
+        imp_plot <- NULL
+    }
     
     if(!is.null(split)){
         y_predict_test_proto <- predict(model, x_test, batch_size=batch_size)
@@ -1861,7 +2042,7 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
 
  
 ###This function wrapper will use the classification or regression model based on whether your choosen variable is numeric or not
-autoSingleGPUKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, model.split=0, epochs=10, activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop", save.name="Model", previous.model=NULL){
+autoSingleGPUKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, model.split=0, epochs=10, activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE){
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -1876,9 +2057,9 @@ autoSingleGPUKeras <- function(data, variable, predictors=NULL, min.n=5, split=N
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        kerasSingleGPURunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name, previous.model=previous.model)
+        kerasSingleGPURunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance)
     } else if(is.numeric(data[,variable])){
-        kerasSingleGPURunRegress(data=data, dependent=variable, predictors=predictors, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name, previous.model=previous.model)
+        kerasSingleGPURunRegress(data=data, dependent=variable, predictors=predictors, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance)
     }
     
     return(model)
@@ -1887,10 +2068,10 @@ autoSingleGPUKeras <- function(data, variable, predictors=NULL, min.n=5, split=N
 
 
 ###Keras Classification
-kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, min.n=5, split=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previous.model=NULL){
+kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, min.n=5, split=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss=NULL, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE){
     use_implementation("tensorflow")
     library(tensorflow)
-    tf$executing_eagerly()
+    if(eager==TRUE){tf$executing_eagerly()}
     strategy <- tf$distribute$MirroredStrategy()
     strategy$num_replicas_in_sync
     
@@ -2176,10 +2357,14 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
             optimizer_sgd(lr=learning.rate)
         }
         
-        loss_decision <- if(num_classes>2){
-            'sparse_categorical_crossentropy'
-        } else if(num_classes==2){
-            'binary_crossentropy'
+        loss_decision <- if(is.null(loss)){
+            if(num_classes>2){
+                'sparse_categorical_crossentropy'
+            } else if(num_classes==2){
+                'binary_crossentropy'
+            }
+        } else if(!is.null(loss)){
+            loss
         }
             
             
@@ -2240,41 +2425,53 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
     
     second_metric <- if(!is.null(callback)){
         if(callback=="recall"){
-            if(is.null(model.split) | model.split==0){
+            if(model.split==0){
                 recall_noval$new(training = list(x_train, y_train))
             } else if(model.split>0){
-                recall_withval$new(training = list(x_train, y_train), validation = list(x_test_second, y_test_second))
+                recall_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
             }
         } else if(callback=="precision"){
-            if(is.null(model.split) | model.split==0){
+            if(model.split==0){
                 precision_noval$new(training = list(x_train, y_train))
             } else if(model.split>0){
-                precision_withval$new(training = list(x_train, y_train), validation = list(x_test_second, y_test_second))
+                precision_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
             }
         } else if(callback=="auc" | callback=="roc"){
-            if(is.null(model.split) | model.split==0){
+            if(model.split==0){
                 auc_roc_noval$new(training = list(x_train, y_train))
             } else if(model.split>0){
-                auc_roc_withval$new(training = list(x_train, y_train), validation = list(x_test_second, y_test_second))
+                auc_roc_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
             }
         } else if(callback=="f1"){
-               if(is.null(model.split) | model.split==0){
+               if(model.split==0){
                    f1_noval$new(training = list(x_train, y_train))
                } else if(model.split>0){
-                   f1_withval$new(training = list(x_train, y_train), validation = list(x_test_second, y_test_second))
+                   f1_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
                }
-        } else if(callback=="percent_bias"){
-                  if(is.null(model.split) | model.split==0){
-                      percent_bias_noval$new(training = list(x_train, y_train))
-                  } else if(model.split>0){
-                      percent_bias_withval$new(training = list(x_train, y_train), validation = list(x_test_second, y_test_second))
-                  }
-        } else {
-                   NULL
+        } else if(callback=="sensitivity"){
+            if(model.split==0){
+                sensitivity_noval$new(training = list(x_train, y_train))
+            } else if(model.split>0){
+                sensitivity_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+            }
+        } else if(callback=="specificity"){
+            if(model.split==0){
+                    specificity_noval$new(training = list(x_train, y_train))
+                } else if(model.split>0){
+                    specificity_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
                 }
+        } else if(callback=="percent_bias"){
+            if(model.split==0){
+                percent_bias_noval$new(training = list(x_train, y_train))
+            } else if(model.split>0){
+                percent_bias_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+            }
+        } else {
+            NULL
+    }
     } else {
-               NULL
-           }
+            NULL
+    }
     
     
     #x_train <- data.matrix(x_train)
@@ -2345,10 +2542,25 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
     train.results.frame <- data.frame(Sample=data.train$Sample, Known=as.vector(data.train$Class), Predicted=predictions.train)
     train.accuracy.rate <- rfUtilities::accuracy(x=train.results.frame$Known, y=train.results.frame$Predicted)
     
-    predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, type = "prob"), error=function(e) NULL)
-    #predictor$data$X <- x_train
-    imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
-    imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+    if(importance==TRUE){
+        if(model.type=="Dense" | model.type=="SuperDense" | model.type=="EvenDense"){
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, type = "prob"), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
+            imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+        }
+        
+        if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN"){
+            predict_CNN <- function(model, data, batch_size, verbose=1){
+                data_wrap <- listarrays::expand_dims(data, 3)
+                keras::predict_classes(model=model, data_wrap, batch_size=batch_size, verbose=verbose)
+            }
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_proto), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
+            imp_plot <- tryCatch(plot_importance(model), error=function(e) NULL)
+        }
+    } else if(importance==FALSE){
+        imp_plot <- NULL
+    }
     
     
     if(is.null(model.split) | model.split==0){
@@ -2442,10 +2654,10 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
     return(results)
     
 }
-kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previou.model=NULL){
+kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss=NULL, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previou.model=NULL, eager=FALSE, importance=TRUE){
     use_implementation("tensorflow")
     library(tensorflow)
-    tf$executing_eagerly()
+    if(eager==TRUE){tf$executing_eagerly()}
     strategy <- tf$distribute$MirroredStrategy()
     strategy$num_replicas_in_sync
     
@@ -2731,10 +2943,14 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             optimizer_sgd(lr=learning.rate)
         }
         
-        loss_decision <- if(num_classes>2){
-            'sparse_categorical_crossentropy'
-        } else if(num_classes==2){
-            'binary_crossentropy'
+        loss_decision <- if(is.null(loss)){
+            if(num_classes>2){
+                'sparse_categorical_crossentropy'
+            } else if(num_classes==2){
+                'binary_crossentropy'
+            }
+        } else if(!is.null(loss)){
+            loss
         }
             
             
@@ -2900,10 +3116,25 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     train.results.frame <- data.frame(Sample=data.train$Sample, Known=as.vector(data.train$Class), Predicted=predictions.train)
     train.accuracy.rate <- rfUtilities::accuracy(x=train.results.frame$Known, y=train.results.frame$Predicted)
     
-    predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, type = "prob"), error=function(e) NULL)
-    #predictor$data$X <- x_train
-    imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
-    imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+    if(importance==TRUE){
+        if(model.type=="Dense" | model.type=="SuperDense" | model.type=="EvenDense"){
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, type = "prob"), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
+            imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+        }
+        
+        if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN"){
+            predict_CNN <- function(model, data, batch_size, verbose=1){
+                data_wrap <- listarrays::expand_dims(data, 3)
+                keras::predict_classes(model=model, data_wrap, batch_size=batch_size, verbose=verbose)
+            }
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_proto), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
+            imp_plot <- tryCatch(plot_importance(model), error=function(e) NULL)
+        }
+    } else if(importance==FALSE){
+        imp_plot <- NULL
+    }
     
     
     if(is.null(model.split) | model.split==0){
@@ -3000,10 +3231,10 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
 
 
 
-kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previous.model=NULL){
+kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE){
     use_implementation("tensorflow")
     library(tensorflow)
-    tf$executing_eagerly()
+    if(eager==TRUE){tf$executing_eagerly()}
     strategy <- tf$distribute$MirroredStrategy()
     strategy$num_replicas_in_sync
     
@@ -3253,19 +3484,32 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             optimizer_sgd(lr=learning.rate)
         }
         
-        loss_decision <- if(num_classes>2){
-            'sparse_categorical_crossentropy'
-        } else if(num_classes==2){
-            'binary_crossentropy'
+        loss_decision <- if(is.null(loss)){
+            if(num_classes>2){
+                'sparse_categorical_crossentropy'
+            } else if(num_classes==2){
+                'binary_crossentropy'
+            }
+        } else if(!is.null(loss)){
+            loss
         }
             
-            
-        model %>%
-        keras::compile(
-        loss = loss_decision,
-        optimizer=optimization,
-        metrics = metric
-        )
+            if(loss_decision!="recallspec_loss"){
+                model %>%
+                keras::compile(
+                loss = loss_decision,
+                optimizer=optimization,
+                metrics = metric
+                )
+            } else if(loss_decision=="recallspec_loss"){
+                model %>%
+                keras::compile(
+                loss = loss_decision,
+                optimizer=optimization,
+                metrics = metric
+                )
+            }
+        
         
         if(!is.null(previous.model)){
             model <- load_model_hdf5(previous.model)
@@ -3340,18 +3584,30 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
                } else if(model.split>0){
                    f1_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
                }
-        } else if(callback=="percent_bias"){
-                  if(model.split==0){
-                      percent_bias_noval$new(training = list(x_train, y_train))
-                  } else if(model.split>0){
-                      percent_bias_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
-                  }
-        } else {
-                   NULL
+        } else if(callback=="sensitivity"){
+            if(model.split==0){
+                sensitivity_noval$new(training = list(x_train, y_train))
+            } else if(model.split>0){
+                sensitivity_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+            }
+        } else if(callback=="specificity"){
+            if(model.split==0){
+                    specificity_noval$new(training = list(x_train, y_train))
+                } else if(model.split>0){
+                    specificity_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
                 }
+        } else if(callback=="percent_bias"){
+            if(model.split==0){
+                percent_bias_noval$new(training = list(x_train, y_train))
+            } else if(model.split>0){
+                percent_bias_withval$new(training = list(x_train, y_train), validation = list(x_test, y_test))
+            }
+        } else {
+            NULL
+    }
     } else {
-               NULL
-           }
+            NULL
+    }
     
     
     #x_train <- data.matrix(x_train)
@@ -3422,10 +3678,25 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     train.results.frame <- data.frame(Sample=data.train$Sample, Known=as.vector(data.train$Class), Predicted=predictions.train)
     train.accuracy.rate <- rfUtilities::accuracy(x=train.results.frame$Known, y=train.results.frame$Predicted)
     
-    predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, type = "prob"), error=function(e) NULL)
-    #predictor$data$X <- x_train
-    imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
-    imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+    if(importance==TRUE){
+        if(model.type=="Dense" | model.type=="SuperDense" | model.type=="EvenDense"){
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, type = "prob"), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
+            imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+        }
+        
+        if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN"){
+            predict_CNN <- function(model, data, batch_size, verbose=1){
+                data_wrap <- listarrays::expand_dims(data, 3)
+                keras::predict_classes(model=model, data_wrap, batch_size=batch_size, verbose=verbose)
+            }
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_proto), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
+            imp_plot <- tryCatch(plot_importance(model), error=function(e) NULL)
+        }
+    } else if(importance==FALSE){
+        imp_plot <- NULL
+    }
     
     
     if(!is.null(split)){
@@ -3460,10 +3731,10 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     
 }
 
-kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL, model.split=0.1, scale=FALSE, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss="mae", metric=c("mae", "mse"), start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="~/Desktop/", save.name="Model"){
+kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL, model.split=0.1, scale=FALSE, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss="mae", metric=c("mae", "mse"), start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="~/Desktop/", save.name="Model", eager=FALSE, importance=TRUE){
     use_implementation("tensorflow")
     library(tensorflow)
-    tf$executing_eagerly()
+    if(eager==TRUE){tf$executing_eagerly()}
     strategy <- tf$distribute$MirroredStrategy()
     strategy$num_replicas_in_sync
     
@@ -3744,10 +4015,25 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
     intercept <- correction.lm$coef[1]
     slope <- correction.lm$coef[2]
     
-    predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, type = "prob"), error=function(e) NULL)
-    #predictor$data$X <- x_train
-    imp = tryCatch(FeatureImp$new(predictor, loss = "mae"), error=function(e) NULL)
-    imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+    if(importance==TRUE){
+        if(model.type=="Dense" | model.type=="SuperDense" | model.type=="EvenDense"){
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, type = "prob"), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
+            imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+        }
+        
+        if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN"){
+            predict_CNN <- function(model, data, batch_size, verbose=1){
+                data_wrap <- listarrays::expand_dims(data, 3)
+                keras::predict_classes(model=model, data_wrap, batch_size=batch_size, verbose=verbose)
+            }
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_proto), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
+            imp_plot <- tryCatch(plot_importance(model), error=function(e) NULL)
+        }
+    } else if(importance==FALSE){
+        imp_plot <- NULL
+    }
     
     if(!is.null(split)){
         y_predict_test_proto <- predict(model, x_test, batch_size=batch_size)
@@ -3803,7 +4089,7 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
 
 
 ###This function wrapper will use the classification or regression model based on whether your choosen variable is numeric or not
-autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, model.split=0, epochs=10, activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL){
+autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE){
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -3816,25 +4102,35 @@ autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, mode
         }
     }
     
+    loss <- if(!is.null(loss)){
+        loss
+    } else if(is.null(loss)){
+        if(!is.numeric(data[,variable])){
+            NULL
+        } else if(is.numeric(data[,variable])){
+            "mae"
+        }
+    }
+    
     #Choose model type based on whether the variable is numeric or not
     model <- if(n_gpus==1){
         if(!is.numeric(data[,variable])){
-            kerasSingleGPURunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name, previous.model=previous.model)
+            kerasSingleGPURunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance)
         } else if(is.numeric(data[,variable])){
-            kerasSingleGPURunRegress(data=data, dependent=variable, predictors=predictors, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name, previous.model=previous.model)
+            kerasSingleGPURunRegress(data=data, dependent=variable, predictors=predictors, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance)
         }
     } else if(n_gpus>1){
         if(!is.numeric(data[,variable])){
-            kerasMultiGPURunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name, previous.model=previous.model)
+            kerasMultiGPURunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance)
         } else if(is.numeric(data[,variable])){
-            kerasMultiGPURunRegress(data=data, dependent=variable, predictors=predictors, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name, previous.model=previous.model)
+            kerasMultiGPURunRegress(data=data, dependent=variable, predictors=predictors, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance)
         }
     }
     
     return(model)
 }
 
-autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL, model.split=0, epochs=10, callback="recall", activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop/", save.name="Model", previous.model=NULL){
+autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, loss=NULL, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL, model.split=0, epochs=10, callback="recall", activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE){
     
     
     #Choose model class
@@ -3849,7 +4145,7 @@ autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, ty
     } else if(type=="bayesLinear" | type=="bayesTree" | type=="bayesNeuralNet"){
         autoBayes(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod)
     } else if(type=="Keras"){
-        autoKeras(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model)
+        autoKeras(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance)
     }
     
     return(model)

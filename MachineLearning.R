@@ -283,6 +283,7 @@ dataPrep <- function(data, variable, predictors=NULL){
     }
     results.final <- merge(sample.frame, results, by="Sample")
     results.final[,variable] <- as.vector(results.final[,variable])
+    results.final <- results.final[!duplicated(results.final),]
     return(results.final)
 }
 
@@ -418,9 +419,9 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
          if(parallel_method!="linux"){
              #cl will be the CPU sockets. This will be serialized for Windows because Windows is bad, and forked for Mac because Macs are good
             cl <- if(parallel_method=="windows"){
-                makePSOCKcluster(as.numeric(my.cores))
+                makePSOCKcluster(as.numeric(my.cores)/2)
             } else if(parallel_method!="windows"){
-                makeForkCluster(as.numeric(my.cores))
+                makeForkCluster(as.numeric(my.cores)/2)
             }
             registerDoParallel(cl)
             #Run the model
@@ -539,9 +540,9 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
     #Same CPU instructions as before
     if(parallel_method!="linux"){
         cl <- if(parallel_method=="windows"){
-            parallel::makePSOCKcluster(as.numeric(my.cores))
+            parallel::makePSOCKcluster(as.numeric(my.cores)/2)
         } else if(parallel_method!="windows"){
-            parallel::makeForkCluster(as.numeric(my.cores))
+            parallel::makeForkCluster(as.numeric(my.cores)/2)
         }
         registerDoParallel(cl)
         
@@ -712,9 +713,9 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
          if(parallel_method!="linux"){
              #cl will be the CPU sockets. This will be serialized for Windows because Windows is bad, and forked for Mac because Macs are good
             cl <- if(parallel_method=="windows"){
-                makePSOCKcluster(as.numeric(my.cores))
+                makePSOCKcluster(as.numeric(my.cores)/2)
             } else if(parallel_method!="windows"){
-                makeForkCluster(as.numeric(my.cores))
+                makeForkCluster(as.numeric(my.cores)/2)
             }
             registerDoParallel(cl)
             #Run the model
@@ -846,9 +847,9 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
     #Same CPU instructions as before
     if(parallel_method!="linux"){
         cl <- if(parallel_method=="windows"){
-            parallel::makePSOCKcluster(as.numeric(my.cores))
+            parallel::makePSOCKcluster(as.numeric(my.cores)/2)
         } else if(parallel_method!="windows"){
-            parallel::makeForkCluster(as.numeric(my.cores))
+            parallel::makeForkCluster(as.numeric(my.cores)/2)
         }
         registerDoParallel(cl)
         
@@ -1074,9 +1075,9 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
          if(parallel_method!="linux"){
              #cl will be the CPU sockets. This will be serialized for Windows because Windows is bad, and forked for Mac because Macs are good
             cl <- if(parallel_method=="windows"){
-                makePSOCKcluster(as.numeric(my.cores))
+                makePSOCKcluster(as.numeric(my.cores)/2)
             } else if(parallel_method!="windows"){
-                makeForkCluster(as.numeric(my.cores))
+                makeForkCluster(as.numeric(my.cores)/2)
             }
             registerDoParallel(cl)
             #Run the model
@@ -1184,9 +1185,9 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
     #Same CPU instructions as before
     if(parallel_method!="linux"){
         cl <- if(parallel_method=="windows"){
-            parallel::makePSOCKcluster(as.numeric(my.cores))
+            parallel::makePSOCKcluster(as.numeric(my.cores)/2)
         } else if(parallel_method!="windows"){
-            parallel::makeForkCluster(as.numeric(my.cores))
+            parallel::makeForkCluster(as.numeric(my.cores)/2)
         }
         registerDoParallel(cl)
         
@@ -1344,9 +1345,9 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
          if(parallel_method!="linux"){
              #cl will be the CPU sockets. This will be serialized for Windows because Windows is bad, and forked for Mac because Macs are good
             cl <- if(parallel_method=="windows"){
-                makePSOCKcluster(as.numeric(my.cores))
+                makePSOCKcluster(as.numeric(my.cores)/2)
             } else if(parallel_method!="windows"){
-                makeForkCluster(as.numeric(my.cores))
+                makeForkCluster(as.numeric(my.cores)/2)
             }
             registerDoParallel(cl)
             #Run the model
@@ -1463,9 +1464,9 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
     #Same CPU instructions as before
     if(parallel_method!="linux"){
         cl <- if(parallel_method=="windows"){
-            parallel::makePSOCKcluster(as.numeric(my.cores))
+            parallel::makePSOCKcluster(as.numeric(my.cores)/2)
         } else if(parallel_method!="windows"){
-            parallel::makeForkCluster(as.numeric(my.cores))
+            parallel::makeForkCluster(as.numeric(my.cores)/2)
         }
         registerDoParallel(cl)
         
@@ -1674,9 +1675,9 @@ classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, tr
     #Same CPU instructions as before
     if(parallel_method!="linux"){
         cl <- if(parallel_method=="windows"){
-            parallel::makePSOCKcluster(as.numeric(my.cores))
+            parallel::makePSOCKcluster(as.numeric(my.cores)/2)
         } else if(parallel_method!="windows"){
-            parallel::makeForkCluster(as.numeric(my.cores))
+            parallel::makeForkCluster(as.numeric(my.cores)/2)
         }
         registerDoParallel(cl)
         
@@ -1829,9 +1830,9 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
     #Same CPU instructions as before
     if(parallel_method!="linux"){
         cl <- if(parallel_method=="windows"){
-            parallel::makePSOCKcluster(as.numeric(my.cores))
+            parallel::makePSOCKcluster(as.numeric(my.cores)/2)
         } else if(parallel_method!="windows"){
-            parallel::makeForkCluster(as.numeric(my.cores))
+            parallel::makeForkCluster(as.numeric(my.cores)/2)
         }
         registerDoParallel(cl)
         
@@ -1925,7 +1926,7 @@ autoForest<- function(data, variable, predictors=NULL, min.n=5, split=NULL, try=
     model <- if(!is.numeric(data[,variable])){
         classifyForest(data=data, class=variable, predictors=predictors, min.n=min.n, split=split,  try=try, trees=trees, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
-        regressForest(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        regressForest(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, metric=metric, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     }
     
     return(model)
@@ -2123,9 +2124,9 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
 
                   if(parallel_method!="linux"){
                        cl <- if(parallel_method=="windows"){
-                           makePSOCKcluster(as.numeric(my.cores))
+                           makePSOCKcluster(as.numeric(my.cores)/2)
                        } else if(parallel_method!="windows"){
-                           makeForkCluster(as.numeric(my.cores))
+                           makeForkCluster(as.numeric(my.cores)/2)
                        }
                        registerDoParallel(cl)
                        svm_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit)
@@ -2323,9 +2324,9 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
     #Same CPU instructions as before
     if(parallel_method!="linux"){
          cl <- if(parallel_method=="windows"){
-             makePSOCKcluster(as.numeric(my.cores))
+             makePSOCKcluster(as.numeric(my.cores)/2)
          } else if(parallel_method!="windows"){
-             makeForkCluster(as.numeric(my.cores))
+             makeForkCluster(as.numeric(my.cores)/2)
          }
          registerDoParallel(cl)
          svm_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit)
@@ -2419,7 +2420,7 @@ autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="
     model <- if(!is.numeric(data[,variable])){
         classifySVM(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
-        regressSVM(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        regressSVM(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     }
     
     return(model)
@@ -2558,9 +2559,9 @@ classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, typ
        if(type=="bayesLinear"){
            if(parallel_method!="linux"){
                cl <- if(parallel_method=="windows"){
-                   makePSOCKcluster(as.numeric(my.cores))
+                   makePSOCKcluster(as.numeric(my.cores)/2)
                } else if(parallel_method!="windows"){
-                   makeForkCluster(as.numeric(my.cores))
+                   makeForkCluster(as.numeric(my.cores)/2)
                }
                registerDoParallel(cl)
                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, metric=metric, method=bayes_type, na.action=na.omit)
@@ -2581,9 +2582,9 @@ classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, typ
        } else if(type=="bayesNeuralNet"){
            if(parallel_method!="linux"){
                cl <- if(parallel_method=="windows"){
-                   makePSOCKcluster(as.numeric(my.cores))
+                   makePSOCKcluster(as.numeric(my.cores)/2)
                } else if(parallel_method!="windows"){
-                   makeForkCluster(as.numeric(my.cores))
+                   makeForkCluster(as.numeric(my.cores)/2)
                }
                registerDoParallel(cl)
                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, na.action=na.omit)
@@ -2758,9 +2759,9 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
         if(type=="bayesLinear"){
             if(parallel_method!="linux"){
                 cl <- if(parallel_method=="windows"){
-                    makePSOCKcluster(as.numeric(my.cores))
+                    makePSOCKcluster(as.numeric(my.cores)/2)
                 } else if(parallel_method!="windows"){
-                    makeForkCluster(as.numeric(my.cores))
+                    makeForkCluster(as.numeric(my.cores)/2)
                 }
                 registerDoParallel(cl)
                 bayes_model <- caret::train(x_train, y_train, trControl = tune_control, metric=metric, method=bayes_type, na.action=na.omit)
@@ -2781,9 +2782,9 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
         } else if(type=="bayesNeuralNet"){
             if(parallel_method!="linux"){
                 cl <- if(parallel_method=="windows"){
-                    makePSOCKcluster(as.numeric(my.cores))
+                    makePSOCKcluster(as.numeric(my.cores)/2)
                 } else if(parallel_method!="windows"){
-                    makeForkCluster(as.numeric(my.cores))
+                    makeForkCluster(as.numeric(my.cores)/2)
                 }
                 registerDoParallel(cl)
                 bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, na.action=na.omit)
@@ -2878,9 +2879,9 @@ autoBayes <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type
     model <- if(!is.numeric(data[,variable])){
         classifyBayes(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     } else if(is.numeric(data[,variable])){
-        regressBayes(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        regressBayes(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
     }
-    
+
     return(model)
 }
 
