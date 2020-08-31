@@ -1775,8 +1775,8 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
         #Set y_train and x_train for later
         y_train <- data.train$Dependent
         y_test <- data.test$Dependent
-        x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
-        x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
+        x_train <- data.train[, !colnames(data.train) %in% c("Sample", "Dependent")]
+        x_test <- data.test[, !colnames(data.test) %in% c("Sample", "Dependent")]
     } else if(is.null(split)){
         #This just puts placeholders for the whole data set
         data.train <- data
@@ -1834,12 +1834,12 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
         }
         registerDoParallel(cl)
         
-        forest_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = forestGrid, metric=metric, method="rf", type="Regression", importance=TRUE, prox=TRUE, ntrees=trees, na.action=na.omit)
+        forest_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = forestGrid, metric=metric, method="rf", type="Regression", importance=TRUE, prox=TRUE, ntrees=trees, na.action=na.omit)
 
         stopCluster(cl)
     } else if(parallel_method=="linux"){
         parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
-        forest_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = forestGrid, metric=metric, method="rf", type="Regression", importance=TRUE, prox=TRUE, ntrees=trees, na.action=na.omit, allowParallel=TRUE)
+        forest_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = forestGrid, metric=metric, method="rf", type="Regression", importance=TRUE, prox=TRUE, ntrees=trees, na.action=na.omit, allowParallel=TRUE)
         parallelStop()
     }
     
