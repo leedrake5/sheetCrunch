@@ -1861,11 +1861,11 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
         results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Dependent, Predicted=y_predict)
         accuracy.rate <- lm(Known~Predicted, data=results.frame)
         
-        all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
+        all.data <- data.orig
         train.frame <- all.data[!all.data$Sample %in% results.frame,]
         train.predictions <- predict(forest_model, train.frame, na.action = na.pass)
         KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
-        KnownSet$Type <- rep("Train", nrow(KnownSet))
+        KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         results.frame$Type <- rep("2. Test", nrow(results.frame))
         All <- rbind(KnownSet, results.frame)
         
