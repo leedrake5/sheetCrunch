@@ -1784,13 +1784,11 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
         x_train <- data[, !colnames(data) %in% c("Sample", "Dependent")]
     }
         
-    #Boring x_train stuff for later
-    x_train <- as.matrix(data.frame(x_train))
-    mode(x_train)="numeric"
     
     #Take out the Sample #, this could really cause problems with the machine learning process
     data.training <- data.train[, !colnames(data.train) %in% "Sample"]
-    
+    data.testing <- data.test[, !colnames(data.test) %in% "Sample"]
+
     forestGrid <-  expand.grid(.mtry=try)
     dependent <- "Dependent"
 
