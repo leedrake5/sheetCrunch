@@ -1611,13 +1611,14 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
         }
         
         if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN"){
-            predict_CNN <- function(model, data, batch_size, verbose=1){
-                data_wrap <- listarrays::expand_dims(data, 3)
-                keras::predict_classes(model=model, data_wrap, batch_size=batch_size, verbose=verbose)
+            batch.size <- batch_size
+            predict_CNN <- function(model, newdata, batch_size=batch.size, verbose=1){
+                data_wrap <- listarrays::expand_dims(as.matrix(newdata), 3)
+                predict_classes(object=model, x=data_wrap, batch_size=batch_size, verbose=verbose)
             }
-            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_proto), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_pre), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
             imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
-            imp_plot <- tryCatch(plot_importance(model), error=function(e) NULL)
+            imp_plot <- tryCatch(plot_importance(imp), error=function(e) NULL)
         }
     } else if(importance==FALSE){
         imp_plot <- NULL
@@ -1978,13 +1979,14 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
         }
         
         if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN"){
-            predict_CNN <- function(model, data, batch_size, verbose=1){
-                data_wrap <- listarrays::expand_dims(data, 3)
-                keras::predict_classes(model=model, data_wrap, batch_size=batch_size, verbose=verbose)
+            batch.size <- batch_size
+            predict_CNN <- function(model, newdata, batch_size=batch.size, verbose=1){
+                data_wrap <- listarrays::expand_dims(as.matrix(newdata), 3)
+                predict(object=model, x=data_wrap, batch_size=batch_size, verbose=verbose)
             }
-            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_proto), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
-            imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
-            imp_plot <- tryCatch(plot_importance(model), error=function(e) NULL)
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_pre), y = y_train, predict.function=predict_CNN), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = loss), error=function(e) NULL)
+            imp_plot <- tryCatch(plot_importance(imp), error=function(e) NULL)
         }
     } else if(importance==FALSE){
         imp_plot <- NULL
@@ -3124,13 +3126,14 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         }
         
         if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN"){
-            predict_CNN <- function(model, data, batch_size, verbose=1){
-                data_wrap <- listarrays::expand_dims(data, 3)
-                keras::predict_classes(model=model, data_wrap, batch_size=batch_size, verbose=verbose)
+            batch.size <- batch_size
+            predict_CNN <- function(model, newdata, batch_size=batch.size, verbose=1){
+                data_wrap <- listarrays::expand_dims(as.matrix(newdata), 3)
+                predict_classes(object=model, x=data_wrap, batch_size=batch_size, verbose=verbose)
             }
-            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_proto), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_pre), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
             imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
-            imp_plot <- tryCatch(plot_importance(model), error=function(e) NULL)
+            imp_plot <- tryCatch(plot_importance(imp), error=function(e) NULL)
         }
     } else if(importance==FALSE){
         imp_plot <- NULL
@@ -3686,13 +3689,14 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         }
         
         if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN"){
-            predict_CNN <- function(model, data, batch_size, verbose=1){
-                data_wrap <- listarrays::expand_dims(data, 3)
-                keras::predict_classes(model=model, data_wrap, batch_size=batch_size, verbose=verbose)
+            batch.size <- batch_size
+            predict_CNN <- function(model, newdata, batch_size=batch.size, verbose=1){
+                data_wrap <- listarrays::expand_dims(as.matrix(newdata), 3)
+                predict_classes(object=model, x=data_wrap, batch_size=batch_size, verbose=verbose)
             }
-            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_proto), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_pre), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
             imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
-            imp_plot <- tryCatch(plot_importance(model), error=function(e) NULL)
+            imp_plot <- tryCatch(plot_importance(imp), error=function(e) NULL)
         }
     } else if(importance==FALSE){
         imp_plot <- NULL
@@ -4023,13 +4027,14 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
         }
         
         if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN"){
-            predict_CNN <- function(model, data, batch_size, verbose=1){
-                data_wrap <- listarrays::expand_dims(data, 3)
-                keras::predict_classes(model=model, data_wrap, batch_size=batch_size, verbose=verbose)
+            batch.size <- batch_size
+            predict_CNN <- function(model, newdata, batch_size=batch.size, verbose=1){
+                data_wrap <- listarrays::expand_dims(as.matrix(newdata), 3)
+                predict(object=model, x=data_wrap, batch_size=batch_size, verbose=verbose)
             }
-            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_proto), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
-            imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
-            imp_plot <- tryCatch(plot_importance(model), error=function(e) NULL)
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_pre), y = y_train, predict.function=predict_CNN), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = loss), error=function(e) NULL)
+            imp_plot <- tryCatch(plot_importance(imp), error=function(e) NULL)
         }
     } else if(importance==FALSE){
         imp_plot <- NULL
