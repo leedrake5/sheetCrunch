@@ -2353,7 +2353,7 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
         
         all.data <- data.orig
         train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
-        train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
+        train.predictions <- predict(svm_model, train.frame, na.action = na.pass)
         KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
         KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         results.frame$Type <- rep("2. Test", nrow(results.frame))
@@ -2812,7 +2812,7 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
         
         all.data <- data.orig
         train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
-        train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
+        train.predictions <- predict(bayes_model, train.frame, na.action = na.pass)
         KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
         KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         results.frame$Type <- rep("2. Test", nrow(results.frame))
