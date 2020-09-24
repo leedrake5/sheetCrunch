@@ -6,7 +6,9 @@ new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"
 if(length(new.packages)) lapply(new.packages, function(x) install.packages(x, repos="http://cran.rstudio.com/", dep = TRUE))
 
 library(keras)
-library(iml)
+if(get_os()=="linux"){
+    use_implementation("tensorflow")
+}
 library(iml)
 if(get_os()=="osx"){
     tryCatch(reticulate::use_python("~/opt/anaconda3/bin/python3.6", required=T), error=function(e) NULL)
@@ -1336,7 +1338,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     } else if(model.type=="GRU"){
         keras_model_sequential() %>%
         #layer_dropout(0.5) %>%
-        bidirectional(layer_gru(units=channels, dropout=0.2, recurrent_dropout=0.5, activation=activation, batch_input_shape=c(batch_size, 1, channels), stateful=TRUE, return_sequences=FALSE, kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
+        bidirectional(layer_gru(units=channels, dropout=0.2, recurrent_dropout=0, activation=activation, batch_input_shape=c(batch_size, 1, channels), stateful=TRUE, return_sequences=FALSE, kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
         layer_dropout(dropout) %>%
         layer_dense(round(128, 0), activation=activation) %>%
         layer_dropout(dropout) %>%
@@ -1390,7 +1392,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
         input_shape = c(channels, 1), kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
         layer_conv_1d(filters = channels, kernel_size = c(3), activation = activation) %>%
         layer_conv_1d(filters = 128, kernel_size = c(3), activation = activation) %>%
-        bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
+        bidirectional(layer_gru(units=128, activation="tanh", recurrent_activation="sigmoid", recurrent_dropout=0, use_bias=TRUE, reset_after=FALSE, return_sequences=TRUE, kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
         layer_max_pooling_1d(pool_size = c(2)) %>%
         #layer_dropout(rate = 0.25) %>%
         layer_flatten() %>%
@@ -1660,7 +1662,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
 }
 
 kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL, model.split=0.1, scale=FALSE, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss="mae", metric=c("mae", "mse"), start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE){
-    if(eager==TRUE){tf$executing_eagerly()}
+    if(eager==TRUE){tensorflow::tfe_enable_eager_execution(device_policy = "silent")}
 
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
     data.orig <- data
@@ -1852,52 +1854,59 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
         keras_model_sequential() %>%
         #layer_dropout(rate=0.1) %>%
         layer_conv_1d(filters = 32, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
+        keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
         layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
         layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
-        #layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+        keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
         #bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
         layer_dropout(rate = dropout) %>%
         layer_flatten() %>%
         #layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+        layer_dense(512, activation=activation) %>%
+        layer_dropout(rate = dropout) %>%
+        #layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+        layer_dense(256, activation=activation) %>%
+        layer_dropout(rate = dropout) %>%
+        layer_dense(128, activation=activation) %>%
+        layer_dropout(rate = dropout) %>%
+        #layer_batch_normalization(center=TRUE, scale=TRUE) %>%
         layer_dense(64, activation=activation) %>%
-        layer_dropout(rate = dropout) %>%
-        #layer_batch_normalization(center=TRUE, scale=TRUE) %>%
-        layer_dense(32, activation=activation) %>%
-        layer_dropout(rate = dropout) %>%
-        layer_dense(16, activation=activation) %>%
-        layer_dropout(rate = dropout) %>%
-        #layer_batch_normalization(center=TRUE, scale=TRUE) %>%
-        layer_dense(12, activation=activation) %>%
         layer_dense(1, activation='linear')
     } else if(model.type=="Expiremental_CNN"){
         keras_model_sequential() %>%
-        #layer_dropout(rate=0.5) %>%
-        #layer_dropout(0.2) %>%
-        layer_conv_1d(filters = channels, kernel_size = c(3), activation = activation,
-        input_shape = c(channels, 1), kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
-        layer_conv_1d(filters = channels, kernel_size = c(3), activation = activation) %>%
-        layer_conv_1d(filters = 128, kernel_size = c(3), activation = activation) %>%
-        bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
-        layer_max_pooling_1d(pool_size = c(2)) %>%
-        #layer_dropout(rate = 0.25) %>%
+        #layer_dropout(rate=0.1) %>%
+        layer_conv_1d(filters = 32, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
+        keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+        layer_max_pooling_1d(pool_size = pool_size) %>%
+        layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
+        layer_max_pooling_1d(pool_size = pool_size) %>%
+        layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
+        keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+        layer_max_pooling_1d(pool_size = pool_size) %>%
+        bidirectional(layer_gru(units=128, activation="tanh", recurrent_activation="sigmoid", recurrent_dropout=0, use_bias=TRUE, reset_after=TRUE, return_sequences=TRUE, unroll=FALSE)) %>%
+        bidirectional(layer_gru(units=64, activation="tanh", recurrent_activation="sigmoid", recurrent_dropout=0, use_bias=TRUE, reset_after=TRUE, return_sequences=TRUE, unroll=FALSE)) %>%
+        layer_dropout(rate = dropout) %>%
         layer_flatten() %>%
+        layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+        layer_dense(512, activation=activation) %>%
+        layer_dropout(rate = dropout) %>%
+        layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+        layer_dense(256, activation=activation) %>%
+        layer_dropout(rate = dropout) %>%
         layer_dense(128, activation=activation) %>%
-        layer_dropout(dropout) %>%
+        layer_dropout(rate = dropout) %>%
+        layer_batch_normalization(center=TRUE, scale=TRUE) %>%
         layer_dense(64, activation=activation) %>%
-        layer_dropout(dropout) %>%
-        layer_dense(32, activation=activation) %>%
-        layer_dropout(dropout) %>%
-        layer_dense(16, activation=activation) %>%
         layer_dense(1, activation='linear')
     }
     
     optimization <- if(optimizer=="rmsprop"){
         optimizer_rmsprop(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="adam"){
-        optimizer_adam(lr=learning.rate, clipvalue=0.5)
+        optimizer_adam(lr=learning.rate, clipvalue=0.5, decay=0.01)
     } else if(optimizer=="adagrad"){
         optimizer_adagrad(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="adadelta"){
@@ -1915,16 +1924,18 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
     #optimizer_sgd(lr=0.001, clipvalue=0.6)
     
     
+
+    
+    if(!is.null(previous.model)){
+         model <- load_model_hdf5(previous.model)
+     }
+    
     model %>%
     keras::compile(
     loss = loss,
     optimizer=optimization,
     metrics = metric
     )
-    
-    if(!is.null(previous.model)){
-         model <- load_model_hdf5(previous.model)
-     }
     
     #model %>%
     #keras::compile(
@@ -3453,23 +3464,29 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             layer_dense(units = final.units, activation = final.activation)
         } else if(model.type=="Expiremental_CNN"){
             keras_model_sequential() %>%
-            #layer_dropout(rate=0.5) %>%
-            #layer_dropout(0.2) %>%
-            layer_conv_1d(filters = channels, kernel_size = c(3), activation = activation,
-            input_shape = c(channels, 1), kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
-            layer_conv_1d(filters = channels, kernel_size = c(3), activation = activation) %>%
-            layer_conv_1d(filters = 128, kernel_size = c(3), activation = activation) %>%
-            bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
-            layer_max_pooling_1d(pool_size = c(2)) %>%
-            #layer_dropout(rate = 0.25) %>%
+            #layer_dropout(rate=0.1) %>%
+            layer_conv_1d(filters = 32, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
+            keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+            layer_max_pooling_1d(pool_size = pool_size) %>%
+            layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
+            layer_max_pooling_1d(pool_size = pool_size) %>%
+            layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
+            keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+            layer_max_pooling_1d(pool_size = pool_size) %>%
+            layer_gru(units=128, activation="tanh", recurrent_activation="sigmoid", recurrent_dropout=0, use_bias=TRUE, reset_after=TRUE, return_sequences=TRUE, unroll=FALSE) %>%
+            layer_gru(units=64, activation="tanh", recurrent_activation="sigmoid", recurrent_dropout=0, use_bias=TRUE, reset_after=TRUE, return_sequences=TRUE, unroll=FALSE) %>%
+            layer_dropout(rate = dropout) %>%
             layer_flatten() %>%
+            layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+            layer_dense(512, activation=activation) %>%
+            layer_dropout(rate = dropout) %>%
+            layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+            layer_dense(256, activation=activation) %>%
+            layer_dropout(rate = dropout) %>%
             layer_dense(128, activation=activation) %>%
-            layer_dropout(dropout) %>%
+            layer_dropout(rate = dropout) %>%
+            layer_batch_normalization(center=TRUE, scale=TRUE) %>%
             layer_dense(64, activation=activation) %>%
-            layer_dropout(dropout) %>%
-            layer_dense(32, activation=activation) %>%
-            layer_dropout(dropout) %>%
-            layer_dense(16, activation=activation) %>%
             layer_dense(units = final.units, activation = final.activation)
         }
         
@@ -3735,12 +3752,12 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     
 }
 
-kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL, model.split=0.1, scale=FALSE, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss="mae", metric=c("mae", "mse"), start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="~/Desktop/", save.name="Model", eager=FALSE, importance=TRUE){
+kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL, model.split=0.1, scale=FALSE, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss="mae", metric=c("mae", "mse"), start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE){
     use_implementation("tensorflow")
     library(tensorflow)
     if(eager==TRUE){tf$executing_eagerly()}
-    strategy <- tf$distribute$MirroredStrategy()
-    strategy$num_replicas_in_sync
+    #strategy <- tf$distribute$MirroredStrategy()
+    #strategy$num_replicas_in_sync
     
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
     data.orig <- data
@@ -3857,7 +3874,7 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
     channels <- ncol(x_train_proto)
     #channels <- 400
     
-    
+    strategy = tensorflow::tf$distribute$MirroredStrategy()
     with (strategy$scope(), {
         model <- if(model.type=="Dense"){
             keras_model_sequential() %>%
@@ -3931,25 +3948,35 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
             layer_dense(1, activation='linear')
         } else if(model.type=="Expiremental_CNN"){
             keras_model_sequential() %>%
-            #layer_dropout(rate=0.5) %>%
-            #layer_dropout(0.2) %>%
-            layer_conv_1d(filters = channels, kernel_size = c(3), activation = activation,
-            input_shape = c(channels, 1), kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
-            layer_conv_1d(filters = channels, kernel_size = c(3), activation = activation) %>%
-            layer_conv_1d(filters = 128, kernel_size = c(3), activation = activation) %>%
-            bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
-            layer_max_pooling_1d(pool_size = c(2)) %>%
-            #layer_dropout(rate = 0.25) %>%
+            #layer_dropout(rate=0.1) %>%
+            layer_conv_1d(filters = 32, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
+            keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+            layer_max_pooling_1d(pool_size = pool_size) %>%
+            layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
+            layer_max_pooling_1d(pool_size = pool_size) %>%
+            layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
+            keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+            layer_max_pooling_1d(pool_size = pool_size) %>%
+            bidirectional(layer_gru(units=128, activation="tanh", recurrent_activation="sigmoid", recurrent_dropout=0, use_bias=TRUE, reset_after=TRUE, return_sequences=TRUE, unroll=FALSE)) %>%
+            bidirectional(layer_gru(units=64, activation="tanh", recurrent_activation="sigmoid", recurrent_dropout=0, use_bias=TRUE, reset_after=TRUE, return_sequences=TRUE, unroll=FALSE)) %>%
+            layer_dropout(rate = dropout) %>%
             layer_flatten() %>%
+            layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+            layer_dense(512, activation=activation) %>%
+            layer_dropout(rate = dropout) %>%
+            layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+            layer_dense(256, activation=activation) %>%
+            layer_dropout(rate = dropout) %>%
             layer_dense(128, activation=activation) %>%
-            layer_dropout(dropout) %>%
+            layer_dropout(rate = dropout) %>%
+            layer_batch_normalization(center=TRUE, scale=TRUE) %>%
             layer_dense(64, activation=activation) %>%
-            layer_dropout(dropout) %>%
-            layer_dense(32, activation=activation) %>%
-            layer_dropout(dropout) %>%
-            layer_dense(16, activation=activation) %>%
             layer_dense(1, activation='linear')
         }
+        
+        if(!is.null(previous.model)){
+             model <- load_model_hdf5(previous.model)
+         }
         
         model %>%
         keras::compile(
@@ -3958,9 +3985,6 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
         metrics = metric
         )
         
-        if(!is.null(previous.model)){
-             model <- load_model_hdf5(previous.model)
-         }
     })
     
     
