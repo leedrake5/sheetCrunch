@@ -92,6 +92,7 @@ f1 <- function (data, lev = NULL, model = NULL) {
 
  xgb_cv_opt_tree <- function (data, label, objectfun, evalmetric, n_folds, eta_range = c(0.1, 1L), max_depth_range = c(4L, 6L), nrounds_range = c(70, 160L), subsample_range = c(0.1, 1L), bytree_range = c(0.4, 1L), min_child_range=c(1L, 3L), gamma_range=c(0L, 1L), init_points = 4, n_iter = 10, acq = "ei", kappa = 2.576, eps = 0, optkernel = list(type = "exponential", power = 2), classes = NULL, seed = 0)
  {
+     
      if (class(data)[1] == "dgCMatrix") {
          dtrain <- xgb.DMatrix(data, label = label)
          xg_watchlist <- list(msr = dtrain)
@@ -131,7 +132,7 @@ f1 <- function (data, lev = NULL, model = NULL) {
              object_fun <- objectfun
              eval_met <- evalmetric
              num_classes <- classes
-             cv <- xgb.cv(params = list(booster = "gbtree", nthread=round((as.numeric(my.cores)+1)/2, 0), objective = object_fun, num_class = num_classes, eval_metric = eval_met, gamma = gamma_opt, min_child_weight = minchild_opt, eta = eta_opt, max_depth = max_depth_opt, subsample = subsample_opt, colsample_bytree = bytree_opt, lambda = 1, alpha = 0), data = dtrain, folds = cv_folds, watchlist = xg_watchlist, prediction = TRUE, showsd = TRUE, early_stopping_rounds = 50, maximize = TRUE, verbose = 0, nrounds = nrounds_opt)
+             cv <- xgb.cv(params = list(booster = "gbtree", nthread=round((as.numeric(my.cores)+1)/2, 0), objective = object_fun, num_class = num_classes, eval_metric = eval_met, gamma = gamma_opt, min_child_weight = minchild_opt, eta = eta_opt, max_depth = max_depth_opt, subsample = subsample_opt, colsample_bytree = bytree_opt, lambda = 1, alpha = 0), data = dtrain, folds = cv_folds, watchlist = xg_watchlist, prediction = TRUE, showsd = TRUE, early_stopping_rounds = 50, maximize = FALSE, verbose = 0, nrounds = nrounds_opt)
              if (eval_met %in% c("auc", "ndcg", "map")) {
                  s <- max(cv$evaluation_log[, 4])
              }
@@ -764,7 +765,7 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
                           colsample_bytree = colsample_bytree,
                           objective = "reg:squarederror",
                           eval_metric = metric.mod)
-                          cv <- xgb.cv(params = param, data = dtrain, folds=cv_folds, nround = 100, early_stopping_rounds = 25, tree_method = tree_method, nthread=n_threads, maximize = TRUE, verbose = FALSE)
+                          cv <- xgb.cv(params = param, data = dtrain, folds=cv_folds, nround = 100, early_stopping_rounds = 50, tree_method = tree_method, nthread=n_threads, maximize = FALSE, verbose = FALSE)
                           
                           if(metric.mod=="rmse"){
                               tryCatch(list(Score = cv$evaluation_log$test_rmse_mean[cv$best_iteration]*-1, Pred=cv$best_iteration*-1), error=function(e) list(Score=0, Pred=0))
@@ -1389,7 +1390,7 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
                           lambda=lambda,
                           objective = "reg:squarederror",
                           eval_metric = metric.mod)
-                          cv <- xgb.cv(params = param, data = dtrain, folds=cv_folds, nround = 100, early_stopping_rounds = 25, nthread=n_threads, maximize = TRUE, verbose = TRUE)
+                          cv <- xgb.cv(params = param, data = dtrain, folds=cv_folds, nround = 100, early_stopping_rounds = 50, nthread=n_threads, maximize = FALSE, verbose = TRUE)
                           
                           if(metric.mod=="rmse"){
                               tryCatch(list(Score = cv$evaluation_log$test_rmse_mean[cv$best_iteration]*-1, Pred=cv$best_iteration*-1), error=function(e) list(Score=0, Pred=0))
