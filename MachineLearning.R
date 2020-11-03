@@ -1,22 +1,11 @@
-#Automatically detect the computer's operating system
-get_os <- function(){
-    sysinf <- Sys.info()
-    if (!is.null(sysinf)){
-        os <- sysinf['sysname']
-        if (os == 'Darwin')
-        os <- "osx"
-    } else { ## mystery machine
-        os <- .Platform$OS.type
-        if (grepl("^darwin", R.version$os))
-        os <- "osx"
-        if (grepl("linux-gnu", R.version$os))
-        os <- "linux"
-    }
-    tolower(os)
-}
+# UPDATE Log
+# 11/2/2020 - Went through and reformated many of the data.frame, model, and function inputs. Aside from formatting no code was changed. 
+#             This was to improve readability and to allow for easier commenting once fixes are commpleted. 
+# 11/3/2020 - Used commenting strings to seperate functions for ease of use
 
-tryCatch(options(java.parameters = c("-XX:+UseConcMarkSweepGC", "-Xmx80g")), error=function(e) NULL)
-
+##########################################################################################################################################
+## MISC CODE FOR MODELING
+#########################################################################################################################################
 #Check to see if needed packages exist, and automatically install them if needed
 list.of.packages <- c("caret", "xgboost", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm")
 
@@ -38,12 +27,39 @@ library(rBayesianOptimization)
 library(tidyverse)
 library(mlr)
 library(parallelMap)
+
+
+#################################################################
+# MISC Functions
+#################################################################
+#Automatically detect the computer's operating system
+get_os <- function(){
+    sysinf <- Sys.info()
+    if (!is.null(sysinf)){
+        os <- sysinf['sysname']
+        if (os == 'Darwin')
+        os <- "osx"
+    } else { ## mystery machine
+        os <- .Platform$OS.type
+        if (grepl("^darwin", R.version$os))
+        os <- "osx"
+        if (grepl("linux-gnu", R.version$os))
+        os <- "linux"
+    }
+    tolower(os)
+}
+
+
+tryCatch(options(java.parameters = c("-XX:+UseConcMarkSweepGC", "-Xmx80g")), error=function(e) NULL)
+
+
 #Detect the available computer cores. One is reserved for the operating system
 my.cores <- if(parallel::detectCores()>=3){
     paste0(parallel::detectCores()-1)
 } else if(parallel::detectCores()<=2){
     "1"
 }
+
 
 my.max <- function(x) ifelse( !all(is.na(x)), max(x, na.rm=T), NA)
 my.min <- function(x) ifelse( !all(is.na(x)), min(x, na.rm=T), NA)
@@ -75,14 +91,33 @@ strip_glm <- function(cm) {
 
 
 
+########################################################
+## Summary Functions
+########################################################
 summaryLMFrame <-function(lm){
     summary.lm <- summary(lm)
-    results <- data.frame(Intercept=summary.lm$coef[1], Slope=summary.lm$coef[2], Intercept=summary.lm$coef[1], n=length(summary.lm$residuals), SlopeSE=summary.lm$coefficients[2,2], p_value=pf(summary.lm$fstatistic[1], summary.lm$fstatistic[2], summary.lm$fstatistic[3], lower.tail = FALSE),
-        r2=summary.lm$r.squared, Score=(summary.lm$r.squared^2)*(summary.lm$coef[2]^2))
+    results <- data.frame(Intercept=summary.lm$coef[1]
+                          , Slope=summary.lm$coef[2]
+                          , Intercept=summary.lm$coef[1]
+                          , n=length(summary.lm$residuals)
+                          , SlopeSE=summary.lm$coefficients[2,2]
+                          , p_value=pf(summary.lm$fstatistic[1]
+                                       , summary.lm$fstatistic[2]
+                                       , summary.lm$fstatistic[3]
+                                       , lower.tail = FALSE)
+                          , r2=summary.lm$r.squared
+                          , Score=(summary.lm$r.squared^2)*(summary.lm$coef[2]^2)
+                          )
     return(results)
 }
 
-f1 <- function (data, lev = NULL, model = NULL) {
+
+##### F1 summary calculation function
+
+f1 <- function (data
+                , lev = NULL
+                , model = NULL
+                ) {
   precision <- posPredValue(data$pred, data$obs, positive = "pass")
   recall  <- sensitivity(data$pred, data$obs, postive = "pass")
   f1_val <- (2 * precision * recall) / (precision + recall)
@@ -90,7 +125,32 @@ f1 <- function (data, lev = NULL, model = NULL) {
   f1_val
 }
 
- xgb_cv_opt_tree <- function (data, label, objectfun, evalmetric, n_folds, eta_range = c(0.1, 1L), max_depth_range = c(4L, 6L), nrounds_range = c(70, 160L), subsample_range = c(0.1, 1L), bytree_range = c(0.4, 1L), min_child_range=c(1L, 3L), gamma_range=c(0L, 1L), init_points = 4, n_iter = 10, acq = "ei", kappa = 2.576, eps = 0, optkernel = list(type = "exponential", power = 2), classes = NULL, seed = 0)
+#######################################
+## XGboost optimization functions
+######################################
+# What does this fuction optimize?
+
+ xgb_cv_opt_tree <- function (data
+                              , label
+                              , objectfun
+                              , evalmetric
+                              , n_folds
+                              , eta_range = c(0.1, 1L)
+                              , max_depth_range = c(4L, 6L)
+                              , nrounds_range = c(70, 160L)
+                              , subsample_range = c(0.1, 1L)
+                              , bytree_range = c(0.4, 1L)
+                              , min_child_range=c(1L, 3L)
+                              , gamma_range=c(0L, 1L)
+                              , init_points = 4
+                              , n_iter = 10
+                              , acq = "ei"
+                              , kappa = 2.576
+                              , eps = 0
+                              , optkernel = list(type = "exponential", power = 2)
+                              , classes = NULL
+                              , seed = 0
+                              )
  {
      
      if (class(data)[1] == "dgCMatrix") {
@@ -115,10 +175,41 @@ f1 <- function (data, lev = NULL, model = NULL) {
              seed = seed)
      }
      if (grepl("logi", objectfun) == TRUE) {
-         xgb_cv <- function(object_fun, eval_met, num_classes, gamma_opt, minchild_opt, eta_opt, max_depth_opt, nrounds_opt, subsample_opt, bytree_opt) {
+         xgb_cv <- function(object_fun
+                            , eval_met
+                            , num_classes
+                            , gamma_opt
+                            , minchild_opt
+                            , eta_opt
+                            , max_depth_opt
+                            , nrounds_opt
+                            , subsample_opt
+                            , bytree_opt
+                            ) {
              object_fun <- objectfun
              eval_met <- evalmetric
-             cv <- xgb.cv(params = list(booster = "gbtree", nthread=round((as.numeric(my.cores)+1)/2, 0), objective = object_fun, eval_metric = eval_met, gamma = gamma_opt, min_child_weight = minchild_opt, eta = eta_opt, max_depth = max_depth_opt, subsample = subsample_opt, colsample_bytree = bytree_opt, lambda = 1, alpha = 0), data = dtrain, folds = cv_folds, watchlist = xg_watchlist, prediction = TRUE, showsd = TRUE, early_stopping_rounds = 5, maximize = TRUE, verbose = 0, nrounds = nrounds_opt)
+             cv <- xgb.cv(params = list(booster = "gbtree"
+                                        , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                        , objective = object_fun
+                                        , eval_metric = eval_met
+                                        , gamma = gamma_opt
+                                        , min_child_weight = minchild_opt
+                                        , eta = eta_opt
+                                        , max_depth = max_depth_opt
+                                        , subsample = subsample_opt
+                                        , colsample_bytree = bytree_opt
+                                        , lambda = 1
+                                        , alpha = 0)
+                          , data = dtrain
+                          , folds = cv_folds
+                          , watchlist = xg_watchlist
+                          , prediction = TRUE
+                          , showsd = TRUE
+                          , early_stopping_rounds = 5
+                          , maximize = TRUE
+                          , verbose = 0
+                          , nrounds = nrounds_opt
+                          )
              if (eval_met %in% c("auc", "ndcg", "map")) {
                  s <- max(cv$evaluation_log[, 4])
              }
@@ -128,11 +219,43 @@ f1 <- function (data, lev = NULL, model = NULL) {
              list(Score = s, Pred = cv$pred)
          }
      } else {
-         xgb_cv <- function(object_fun, eval_met, num_classes, gamma_opt, minchild_opt, eta_opt, max_depth_opt, nrounds_opt, subsample_opt, bytree_opt) {
+         xgb_cv <- function(object_fun
+                            , eval_met
+                            , num_classes
+                            , gamma_opt
+                            , minchild_opt
+                            , eta_opt
+                            , max_depth_opt
+                            , nrounds_opt
+                            , subsample_opt
+                            , bytree_opt
+                            ) {
              object_fun <- objectfun
              eval_met <- evalmetric
              num_classes <- classes
-             cv <- xgb.cv(params = list(booster = "gbtree", nthread=round((as.numeric(my.cores)+1)/2, 0), objective = object_fun, num_class = num_classes, eval_metric = eval_met, gamma = gamma_opt, min_child_weight = minchild_opt, eta = eta_opt, max_depth = max_depth_opt, subsample = subsample_opt, colsample_bytree = bytree_opt, lambda = 1, alpha = 0), data = dtrain, folds = cv_folds, watchlist = xg_watchlist, prediction = TRUE, showsd = TRUE, early_stopping_rounds = 50, maximize = FALSE, verbose = 0, nrounds = nrounds_opt)
+             cv <- xgb.cv(params = list(booster = "gbtree"
+                                        , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                        , objective = object_fun
+                                        , num_class = num_classes
+                                        , eval_metric = eval_met
+                                        , gamma = gamma_opt
+                                        , min_child_weight = minchild_opt
+                                        , eta = eta_opt
+                                        , max_depth = max_depth_opt
+                                        , subsample = subsample_opt
+                                        , colsample_bytree = bytree_opt
+                                        , lambda = 1
+                                        , alpha = 0)
+                          , data = dtrain
+                          , folds = cv_folds
+                          , watchlist = xg_watchlist
+                          , prediction = TRUE
+                          , showsd = TRUE
+                          , early_stopping_rounds = 50
+                          , maximize = FALSE
+                          , verbose = 0
+                          , nrounds = nrounds_opt
+                          )
              if (eval_met %in% c("auc", "ndcg", "map")) {
                  s <- max(cv$evaluation_log[, 4])
              }
@@ -142,11 +265,48 @@ f1 <- function (data, lev = NULL, model = NULL) {
              list(Score = s, Pred = cv$pred)
          }
      }
-     opt_res <- BayesianOptimization(xgb_cv, bounds = list(gamma_opt = gamma_range, minchild_opt = min_child_range, eta_opt = eta_range, max_depth_opt = max_depth_range, nrounds_opt = nrounds_range, subsample_opt = subsample_range, bytree_opt = bytree_range), init_points, init_grid_dt = NULL, n_iter, acq, kappa, eps, optkernel, verbose = TRUE)
+     opt_res <- BayesianOptimization(xgb_cv
+                                     , bounds = list(gamma_opt = gamma_range
+                                                     , minchild_opt = min_child_range
+                                                     , eta_opt = eta_range
+                                                     , max_depth_opt = max_depth_range
+                                                     , nrounds_opt = nrounds_range
+                                                     , subsample_opt = subsample_range
+                                                     , bytree_opt = bytree_range
+                                                     )
+                                     , init_points
+                                     , init_grid_dt = NULL
+                                     , n_iter
+                                     , acq
+                                     , kappa
+                                     , eps
+                                     , optkernel
+                                     , verbose = TRUE
+                                     )
      return(opt_res)
  }
 
-xgb_cv_opt_linear <- function (data, label, objectfun, evalmetric, n_folds, alpha_range=c(0L, 10L), eta_range = c(0.1, 1L), lambda_range = c(0L, 10L), nrounds_range = c(70, 160L), init_points = 4, n_iter = 10, acq = "ei", kappa = 2.576, eps = 0, optkernel = list(type = "exponential", power = 2), classes = NULL, seed = 0)
+
+
+## What does this function do? 
+
+
+xgb_cv_opt_linear <- function (data
+                               , label
+                               , objectfun
+                               , evalmetric
+                               , n_folds
+                               , alpha_range=c(0L, 10L)
+                               , eta_range = c(0.1, 1L)
+                               , lambda_range = c(0L, 10L)
+                               , nrounds_range = c(70, 160L)
+                               , init_points = 4, n_iter = 10
+                               , acq = "ei", kappa = 2.576
+                               , eps = 0
+                               , optkernel = list(type = "exponential", power = 2)
+                               , classes = NULL
+                               , seed = 0
+                               )
 {
     if (class(data)[1] == "dgCMatrix") {
         dtrain <- xgb.DMatrix(data, label = label)
@@ -170,10 +330,34 @@ xgb_cv_opt_linear <- function (data, label, objectfun, evalmetric, n_folds, alph
             seed = seed)
     }
     if (grepl("logi", objectfun) == TRUE) {
-        xgb_cv <- function(object_fun, eval_met, num_classes, alpha_opt, eta_opt, lambda_opt, nrounds_opt) {
+        xgb_cv <- function(object_fun
+                           , eval_met
+                           , num_classes
+                           , alpha_opt
+                           , eta_opt
+                           , lambda_opt
+                           , nrounds_opt
+                           ) {
             object_fun <- objectfun
             eval_met <- evalmetric
-            cv <- xgb.cv(params = list(booster = "gblinear", nthread=round((as.numeric(my.cores)+1)/2, 0), objective = object_fun, eval_metric = eval_met, alpha = alpha_opt, eta = eta_opt, lambda = lambda_opt), data = dtrain, folds = cv_folds, watchlist = xg_watchlist, prediction = TRUE, showsd = TRUE, early_stopping_rounds = 5, maximize = TRUE, verbose = 0, nrounds = nrounds_opt)
+            cv <- xgb.cv(params = list(booster = "gblinear"
+                                       , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                       , objective = object_fun
+                                       , eval_metric = eval_met
+                                       , alpha = alpha_opt
+                                       , eta = eta_opt
+                                       , lambda = lambda_opt
+                                       )
+                         , data = dtrain
+                         , folds = cv_folds
+                         , watchlist = xg_watchlist
+                         , prediction = TRUE
+                         , showsd = TRUE
+                         , early_stopping_rounds = 5
+                         , maximize = TRUE
+                         , verbose = 0
+                         , nrounds = nrounds_opt
+                         )
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4])
             }
@@ -183,11 +367,36 @@ xgb_cv_opt_linear <- function (data, label, objectfun, evalmetric, n_folds, alph
             list(Score = s, Pred = cv$pred)
         }
     } else {
-        xgb_cv <- function(object_fun, eval_met, num_classes, alpha_opt, eta_opt, lambda_opt, nrounds_opt) {
+        xgb_cv <- function(object_fun
+                           , eval_met
+                           , num_classes
+                           , alpha_opt
+                           , eta_opt
+                           , lambda_opt
+                           , nrounds_opt
+                           ) {
             object_fun <- objectfun
             eval_met <- evalmetric
             num_classes <- classes
-            cv <- xgb.cv(params = list(booster = "gblinear", nthread=round((as.numeric(my.cores)+1)/2, 0), objective = object_fun, num_class = num_classes, eval_metric = eval_met, alpha = alpha_opt, eta = eta_opt, lambda = lambda_opt), data = dtrain, folds = cv_folds, watchlist = xg_watchlist, prediction = TRUE, showsd = TRUE, early_stopping_rounds = 50, maximize = TRUE, verbose = 0, nrounds = nrounds_opt)
+            cv <- xgb.cv(params = list(booster = "gblinear"
+                                       , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                       , objective = object_fun
+                                       , num_class = num_classes
+                                       , eval_metric = eval_met
+                                       , alpha = alpha_opt
+                                       , eta = eta_opt
+                                       , lambda = lambda_opt
+                                       )
+                         , data = dtrain
+                         , folds = cv_folds
+                         , watchlist = xg_watchlist
+                         , prediction = TRUE
+                         , showsd = TRUE
+                         , early_stopping_rounds = 50
+                         , maximize = TRUE
+                         , verbose = 0
+                         , nrounds = nrounds_opt
+                         )
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4])
             }
@@ -197,12 +406,27 @@ xgb_cv_opt_linear <- function (data, label, objectfun, evalmetric, n_folds, alph
             list(Score = s, Pred = cv$pred)
         }
     }
-    opt_res <- BayesianOptimization(xgb_cv, bounds = list(alpha_opt = alpha_range, eta_opt = eta_range, lambda_opt = lambda_range, nrounds_opt = nrounds_range), init_points, init_grid_dt = NULL, n_iter, acq, kappa, eps, optkernel, verbose = TRUE)
+    opt_res <- BayesianOptimization(xgb_cv
+                                    , bounds = list(alpha_opt = alpha_range
+                                                    , eta_opt = eta_range
+                                                    , lambda_opt = lambda_range
+                                                    , nrounds_opt = nrounds_range
+                                                    )
+                                    , init_points
+                                    , init_grid_dt = NULL
+                                    , n_iter
+                                    , acq
+                                    , kappa
+                                    , eps
+                                    , optkernel
+                                    , verbose = TRUE
+                                    )
     return(opt_res)
 }
 
-
-
+#################################################################################
+# VIMP Functions
+#################################################################################
 #Create a dataframe from the model to identify variable importance
 importanceBarFrame <- function(model){
     forest.imp <- as.data.frame(varImp(model, scale=FALSE)$importance)
@@ -214,6 +438,8 @@ importanceBarFrame <- function(model){
     return(importance.frame)
 }
 
+
+
 #Create a bar plot of variable importance
 importanceBar <- function(model){
     ggplot(importanceBarFrame(model), aes(reorder(Variable, Importance), Importance)) +
@@ -223,7 +449,8 @@ importanceBar <- function(model){
     scale_x_discrete("Variable")
 }
 
-#Prepare the data for machine learning. Data is the imported data, variable is the name of the variable you want to analyize. This function will automatically prepare qualitative data for analysis if needed.
+# Prepare the data for machine learning. Data is the imported data, variable is the name of the variable you want to analyize. 
+# This function will automatically prepare qualitative data for analysis if needed.
 dataPrep <- function(data, variable, predictors=NULL){
     
     ###Remove any columns that don't have more than one value
@@ -260,7 +487,8 @@ dataPrep <- function(data, variable, predictors=NULL){
         colnames(qual.fish) <- colnames(just.fish)[!sapply(just.fish, is.numeric)]
 
     
-    #Thing is, we can't use qualitative data as predictors. But we can create new columns of 0 or 1 based on the row of the origional value. This way, qualitative data can be used as a predictor.
+    #Thing is, we can't use qualitative data as predictors. But we can create new columns of 0 or 1 based on the row of the origional value. 
+    # This way, qualitative data can be used as a predictor.
     if(length(qual.fish)>1){
         qual.fish.dmy <- dummyVars(" ~ .", data = qual.fish)
         qual.fish.trsf <- data.frame(predict(qual.fish.dmy , newdata = qual.fish))
@@ -288,9 +516,37 @@ dataPrep <- function(data, variable, predictors=NULL){
     return(results.final)
 }
 
-
-###XGBoost classification. This function will run a classification model, using probabilities to sort data. It will automatically search for the best paramters, and then run a full model based on those. Variables are encoded as "x-y", which will search in increments for every variable in between.
-classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name="classifyXGBModel", parallelMethod=NULL){
+############################################################################################################
+### XGBoost classification (Trees?) 
+###########################################################################################################
+### This function will run a classification model, using probabilities to sort data. 
+### It will automatically search for the best paramters, and then run a full model based on those. 
+### Variables are encoded as "x-y", which will search in increments for every variable in between.
+classifyXGBoostTree <- function(data
+                                , class
+                                , predictors=NULL
+                                , min.n=5, split=NULL
+                                , treedepth="5-5"
+                                , xgbgamma="0-0"
+                                , xgbeta="0.1-0.1"
+                                , xgbcolsample="0.7-0.7"
+                                , xgbsubsample="0.7-0.7"
+                                , xgbminchild="1-3"
+                                , nrounds=500
+                                , test_nrounds=100
+                                , metric="Accuracy"
+                                , summary_function="f1"
+                                , train="repeatedcv"
+                                , cvrepeats=5
+                                , number=100
+                                , Bayes=FALSE
+                                , folds=15
+                                , init_points=100
+                                , n_iter=5
+                                , save.directory=NULL
+                                , save.name="classifyXGBModel"
+                                , parallelMethod=NULL
+                                ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
@@ -345,13 +601,13 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
     
     #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
     xgbGridPre <- expand.grid(
-        nrounds = test_nrounds,
-        max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5),
-        colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1),
-        eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1),
-        gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1),
-        min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2], 1),
-        subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1)
+        nrounds = test_nrounds
+        , max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5)
+        , colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1)
+        , eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1)
+        , gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1)
+        , min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2], 1)
+        , subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1)
     )
     
     #Boring x_train stuff for later
@@ -378,6 +634,7 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
      } else  if(num_classes==2){
          "error"
      }
+     
      summary_function <- if(is.null(summary_function)){
          if(num_classes>2){
              multiClassSummary
@@ -399,20 +656,20 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
         #Create train controls. Only one iteration with optimism bootstrapping
         tune_control_pre <- if(parallel_method!="linux"){
             caret::trainControl(
-            method = "optimism_boot",
-            classProbs = TRUE,
-            number = 1,
-            summaryFunction = summary_function,
-            verboseIter = TRUE,
-            allowParallel=TRUE
+            method = "optimism_boot"
+            , classProbs = TRUE
+            , number = 1
+            , summaryFunction = summary_function
+            , verboseIter = TRUE
+            , allowParallel=TRUE
             )
         } else if(parallel_method=="linux"){
             caret::trainControl(
-            method = "optimism_boot",
-            classProbs = TRUE,
-            number = 1,
-            summaryFunction = summary_function,
-            verboseIter = TRUE
+            method = "optimism_boot"
+            , classProbs = TRUE
+            , number = 1
+            , summaryFunction = summary_function
+            , verboseIter = TRUE
             )
         }
         
@@ -427,73 +684,110 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
             registerDoParallel(cl)
             #Run the model
             xgb_model_pre <- if(num_classes>2){
-                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = objective.mod, num_class=num_classes, na.action=na.omit)
+                caret::train(Class~.
+                             , data=data.training
+                             , trControl = tune_control_pre
+                             , tuneGrid = xgbGridPre
+                             , metric=metric
+                             , method = "xgbTree"
+                             , objective = objective.mod
+                             , num_class=num_classes
+                             , na.action=na.omit
+                             )
             } else if(num_classes==2){
-                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = objective.mod, na.action=na.omit)
+                caret::train(Class~.
+                             , data=data.training
+                             , trControl = tune_control_pre
+                             , tuneGrid = xgbGridPre
+                             , metric=metric
+                             , method = "xgbTree"
+                             , objective = objective.mod
+                             , na.action=na.omit
+                             )
             }
             #Close the CPU sockets
             stopCluster(cl)
             #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
         } else if(parallel_method=="linux"){
             xgb_model_pre <- if(num_classes>2){
-                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = objective.mod, num_class=num_classes, na.action=na.omit, nthread=round((as.numeric(my.cores)+1)/2, 0))
+                caret::train(Class~.
+                             , data=data.training
+                             , trControl = tune_control_pre
+                             , tuneGrid = xgbGridPre
+                             , metric=metric
+                             , method = "xgbTree"
+                             , objective = objective.mod
+                             , num_class=num_classes
+                             , na.action=na.omit
+                             , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                             )
             } else if(num_classes==2){
-                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = objective.mod, na.action=na.omit, nthread=round((as.numeric(my.cores)+1)/2, 0))
+                caret::train(Class~.
+                             , data=data.training
+                             , trControl = tune_control_pre
+                             , tuneGrid = xgbGridPre
+                             , metric=metric
+                             , method = "xgbTree"
+                             , objective = objective.mod
+                             , na.action=na.omit
+                             , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                             )
             }
         }
         
         #Now create a new tuning grid for the final model based on the best parameters following grid searching
         xgbGrid <- expand.grid(
-            nrounds = nrounds,
-            max_depth = xgb_model_pre$bestTune$max_depth,
-            colsample_bytree = xgb_model_pre$bestTune$colsample_bytree,
-            eta = xgb_model_pre$bestTune$eta,
-            gamma = xgb_model_pre$bestTune$gamma,
-            min_child_weight = xgb_model_pre$bestTune$min_child_weight,
-            subsample = xgb_model_pre$bestTune$subsample
+            nrounds = nrounds
+            , max_depth = xgb_model_pre$bestTune$max_depth
+            , colsample_bytree = xgb_model_pre$bestTune$colsample_bytree
+            , eta = xgb_model_pre$bestTune$eta
+            , gamma = xgb_model_pre$bestTune$gamma
+            , min_child_weight = xgb_model_pre$bestTune$min_child_weight
+            , subsample = xgb_model_pre$bestTune$subsample
         )
     } else if(nrow(xgbGridPre)>1 && Bayes==TRUE){
         #data.training.temp <- data.training
         #data.training.temp$Class <- as.integer(data.training.temp$Class)
         OPT_Res=xgb_cv_opt_tree(data = data.training,
-                   label = Class,
-                   classes=num_classes,
-                   nrounds_range=as.integer(c(100, nrounds)),
-                   eta_range=xgbeta.vec,
-                   gamma_range=xgbgamma.vec,
-                   max_depth_range=as.integer(tree.depth.vec),
-                   min_child_range=as.integer(xgbminchild.vec),
-                   subsample_range=xgbsubsample.vec,
-                   bytree_range=xgbcolsample.vec,
-                   objectfun = objective.mod,
-                   evalmetric = eval_metric,
-                   n_folds = folds,
-                   acq = "ucb",
-                   init_points = init_points,
-                   n_iter = n_iter)
+                   label = Class
+                   , classes=num_classes
+                   , nrounds_range=as.integer(c(100, nrounds))
+                   , eta_range=xgbeta.vec
+                   , gamma_range=xgbgamma.vec
+                   , max_depth_range=as.integer(tree.depth.vec)
+                   , min_child_range=as.integer(xgbminchild.vec)
+                   , subsample_range=xgbsubsample.vec
+                   , bytree_range=xgbcolsample.vec
+                   , objectfun = objective.mod
+                   , evalmetric = eval_metric
+                   , n_folds = folds
+                   , acq = "ucb"
+                   , init_points = init_points
+                   , n_iter = n_iter
+                   )
                    
         best_param <- list(
-            booster = "gbtree",
-            nrounds=OPT_Res$Best_Par["nrounds_opt"],
-            eval.metric = metric.mod,
-            objective = objective.mod,
-            max_depth = OPT_Res$Best_Par["max_depth_opt"],
-            eta = OPT_Res$Best_Par["eta_opt"],
-            gamma = OPT_Res$Best_Par["gamma_opt"],
-            subsample = OPT_Res$Best_Par["subsample_opt"],
-            colsample_bytree = OPT_Res$Best_Par["bytree_opt"],
-            min_child_weight = OPT_Res$Best_Par["minchild_opt"])
+            booster = "gbtree"
+            , nrounds=OPT_Res$Best_Par["nrounds_opt"]
+            , eval.metric = metric.mod
+            , objective = objective.mod
+            , max_depth = OPT_Res$Best_Par["max_depth_opt"]
+            , eta = OPT_Res$Best_Par["eta_opt"]
+            , gamma = OPT_Res$Best_Par["gamma_opt"]
+            , subsample = OPT_Res$Best_Par["subsample_opt"]
+            , colsample_bytree = OPT_Res$Best_Par["bytree_opt"]
+            , min_child_weight = OPT_Res$Best_Par["minchild_opt"])
         
         xgb_model_pre <- OPT_Res
 
         xgbGrid <- expand.grid(
-            nrounds = best_param$nrounds,
-            max_depth = best_param$max_depth,
-            colsample_bytree = best_param$colsample_bytree,
-            eta = best_param$eta,
-            gamma = best_param$gamma,
-            min_child_weight = best_param$min_child_weight,
-            subsample = best_param$subsample
+            nrounds = best_param$nrounds
+            , max_depth = best_param$max_depth
+            , colsample_bytree = best_param$colsample_bytree
+            , eta = best_param$eta
+            , gamma = best_param$gamma
+            , min_child_weight = best_param$min_child_weight
+            , subsample = best_param$subsample
         )
         xgbGridPre <- NULL
     }
@@ -501,39 +795,39 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        classProbs = TRUE,
-        summaryFunction = summary_function,
-        method = train,
-        number = number,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        classProbs = TRUE
+        , summaryFunction = summary_function
+        , method = train
+        , number = number
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        classProbs = TRUE,
-        summaryFunction = summary_function,
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        classProbs = TRUE
+        , summaryFunction = summary_function
+        , method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train!="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        classProbs = TRUE,
-        summaryFunction = summary_function,
-        method = train,
-        number = number,
-        verboseIter = TRUE
+        classProbs = TRUE
+        , summaryFunction = summary_function
+        , method = train
+        , number = number
+        , verboseIter = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        classProbs = TRUE,
-        summaryFunction = summary_function,
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE
+        classProbs = TRUE
+        , summaryFunction = summary_function
+        , method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
         )
     }
     
@@ -548,9 +842,26 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
         registerDoParallel(cl)
         
         xgb_model <- if(num_classes>2){
-            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = objective.mod, num_class=num_classes, na.action=na.omit)
+            caret::train(Class~.
+                         , data=data.training
+                         , trControl = tune_control
+                         , tuneGrid = xgbGrid
+                         , metric=metric
+                         , method = "xgbTree"
+                         , objective = objective.mod
+                         , num_class=num_classes
+                         , na.action=na.omit
+                         )
         } else if(num_classes==2){
-            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = objective.mod, na.action=na.omit)
+            caret::train(Class~.
+                         , data=data.training
+                         , trControl = tune_control
+                         , tuneGrid = xgbGrid
+                         , metric=metric
+                         , method = "xgbTree"
+                         , objective = objective.mod
+                         , na.action=na.omit
+                         )
         }
 
         stopCluster(cl)
@@ -558,9 +869,28 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
     } else if(parallel_method=="linux"){
         data.training <- data.train[, !colnames(data.train) %in% "Sample"]
         xgb_model <- if(num_classes>2){
-            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = objective.mod, num_class=num_classes, nthread=round((as.numeric(my.cores)+1)/2, 0), na.action=na.omit)
+            caret::train(Class~.
+                         , data=data.training
+                         , trControl = tune_control
+                         , tuneGrid = xgbGrid
+                         , metric=metric
+                         , method = "xgbTree"
+                         , objective = objective.mod
+                         , num_class=num_classes
+                         , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                         , na.action=na.omit
+                         )
         } else if(num_classes==2){
-            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = objective.mod, nthread=round((as.numeric(my.cores)+1)/2, 0), na.action=na.omit)
+            caret::train(Class~.
+                         , data=data.training
+                         , trControl = tune_control
+                         , tuneGrid = xgbGrid
+                         , metric=metric
+                         , method = "xgbTree"
+                         , objective = objective.mod
+                         , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                         , na.action=na.omit
+                         )
         }
     }
     
@@ -572,7 +902,8 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
     }
     
     
-    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
+    # Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. 
+    # This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train, na.action = na.pass)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
     accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
@@ -592,7 +923,19 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, serializedModel=xgb_model_serialized, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data
+                                          )
+                           , Model=xgb_model
+                           , serializedModel=xgb_model_serialized
+                           , preModel=tryCatch(xgb_model_pre
+                                               , error=function(e) NULL)
+                           , ImportancePlot=importanceBar(xgb_model)
+                           , ValidationSet=results.frame
+                           , trainAccuracy=accuracy.rate_train
+                           , testAccuracy=accuracy.rate
+                           , ResultPlot=ResultPlot
+                           )
     } else if(is.null(split)){
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
         
@@ -602,7 +945,15 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, serializedModel=xgb_model_serialized, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train, data=data)
+                           , Model=xgb_model
+                           , serializedModel=xgb_model_serialized
+                           , preModel=tryCatch(xgb_model_pre
+                                               , error=function(e) NULL)
+                           , ImportancePlot=importanceBar(xgb_model)
+                           , trainAccuracy=accuracy.rate_train
+                           , ResultPlot=ResultPlot
+                           )
     }
     
     #Model list includes the following objects in a list:
@@ -615,8 +966,39 @@ classifyXGBoostTree <- function(data, class, predictors=NULL, min.n=5, split=NUL
     return(model.list)
 }
 
-###XGBoost regression. This function will run a regression model, using rmse or mae (per your choice) to sort data. It will automatically search for the best paramters, and then run a full model based on those. Variables are encoded as "x-y", which will search in increments for every variable in between.
-regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name="regressXGBModel", parallelMethod=NULL){
+
+#################################################################################################
+### XGBoost regression (Trees?) 
+#################################################################################################
+### This function will run a regression model, using rmse or mae (per your choice) to sort data. 
+### It will automatically search for the best paramters, and then run a full model based on those. 
+### Variables are encoded as "x-y", which will search in increments for every variable in between.
+regressXGBoostTree <- function(data
+                               , dependent
+                               , predictors=NULL
+                               , merge.by=NULL
+                               , min.n=5
+                               , split=NULL
+                               , treedepth="5-5"
+                               , xgbgamma="0-0"
+                               , xgbeta="0.1-0.1"
+                               , xgbcolsample="0.7-0.7"
+                               , xgbsubsample="0.7-0.7"
+                               , xgbminchild="1-3"
+                               , nrounds=500
+                               , test_nrounds=100
+                               , metric="RMSE"
+                               , train="repeatedcv"
+                               , cvrepeats=5
+                               , number=100
+                               , Bayes=FALSE
+                               , folds=15
+                               , init_points=100
+                               , n_iter=5
+                               , save.directory=NULL
+                               , save.name="regressXGBModel"
+                               , parallelMethod=NULL
+                               ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
@@ -720,23 +1102,40 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
             }
             registerDoParallel(cl)
             #Run the model
-            xgb_model_pre <- caret::train(Dependent~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = "reg:squarederror", na.action=na.omit)
+            xgb_model_pre <- caret::train(Dependent~.
+                                          , data=data.training
+                                          , trControl = tune_control_pre
+                                          , tuneGrid = xgbGridPre
+                                          , metric=metric
+                                          , method = "xgbTree"
+                                          , objective = "reg:squarederror"
+                                          , na.action=na.omit
+                                          )
             #Close the CPU sockets
             stopCluster(cl)
             #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
         } else if(parallel_method=="linux"){
-            xgb_model_pre <- caret::train(Dependent~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbTree", objective = "reg:squarederror", na.action=na.omit, nthread=round((as.numeric(my.cores)+1)/2, 0))
+            xgb_model_pre <- caret::train(Dependent~.
+                                          , data=data.training
+                                          , trControl = tune_control_pre
+                                          , tuneGrid = xgbGridPre
+                                          , metric=metric
+                                          , method = "xgbTree"
+                                          , objective = "reg:squarederror"
+                                          , na.action=na.omit
+                                          , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                          )
         }
         
         #Now create a new tuning grid for the final model based on the best parameters following grid searching
         xgbGrid <- expand.grid(
-            nrounds = nrounds,
-            max_depth = xgb_model_pre$bestTune$max_depth,
-            colsample_bytree = xgb_model_pre$bestTune$colsample_bytree,
-            eta = xgb_model_pre$bestTune$eta,
-            gamma = xgb_model_pre$bestTune$gamma,
-            min_child_weight = xgb_model_pre$bestTune$min_child_weight,
-            subsample = xgb_model_pre$bestTune$subsample
+            nrounds = nrounds
+            , max_depth = xgb_model_pre$bestTune$max_depth
+            , colsample_bytree = xgb_model_pre$bestTune$colsample_bytree
+            , eta = xgb_model_pre$bestTune$eta
+            , gamma = xgb_model_pre$bestTune$gamma
+            , min_child_weight = xgb_model_pre$bestTune$min_child_weight
+            , subsample = xgb_model_pre$bestTune$subsample
         )
         xgbGridPre <- NULL
         } else if(nrow(xgbGridPre)>1 && Bayes==TRUE){
@@ -755,92 +1154,113 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
             y_train <- as.vector(data.training[,dependent])
             dtrain <- xgboost::xgb.DMatrix(x_train, label = y_train)
             cv_folds <- KFold(data.training$Dependent, nfolds = folds, stratified = TRUE)
-                      xgb_cv_bayes <- function(max_depth, min_child_weight, subsample, eta, gamma, colsample_bytree) {
-                          param <- list(booster = "gbtree",
-                          max_depth = max_depth,
-                          min_child_weight = min_child_weight,
-                          eta=eta,
-                          gamma=gamma,
-                          subsample = subsample,
-                          colsample_bytree = colsample_bytree,
-                          objective = "reg:squarederror",
-                          eval_metric = metric.mod)
-                          cv <- xgb.cv(params = param, data = dtrain, folds=cv_folds, nround = 100, early_stopping_rounds = 50, tree_method = tree_method, nthread=n_threads, maximize = FALSE, verbose = FALSE)
+                      xgb_cv_bayes <- function(max_depth
+                                               , min_child_weight
+                                               , subsample, eta
+                                               , gamma
+                                               , colsample_bytree) {
+                          param <- list(booster = "gbtree"
+                                        , max_depth = max_depth
+                                        , min_child_weight = min_child_weight
+                                        , eta=eta
+                                        , gamma=gamma
+                                        , subsample = subsample
+                                        , colsample_bytree = colsample_bytree
+                                        , objective = "reg:squarederror"
+                                        , eval_metric = metric.mod
+                                        )
+                          cv <- xgb.cv(params = param
+                                       , data = dtrain
+                                       , folds=cv_folds
+                                       , nround = 100
+                                       , early_stopping_rounds = 50
+                                       , tree_method = tree_method
+                                       , nthread=n_threads
+                                       , maximize = FALSE
+                                       , verbose = FALSE
+                                       )
                           
                           if(metric.mod=="rmse"){
-                              tryCatch(list(Score = cv$evaluation_log$test_rmse_mean[cv$best_iteration]*-1, Pred=cv$best_iteration*-1), error=function(e) list(Score=0, Pred=0))
+                              tryCatch(list(Score = cv$evaluation_log$test_rmse_mean[cv$best_iteration]*-1
+                                            , Pred=cv$best_iteration*-1)
+                                       , error=function(e) list(Score=0, Pred=0))
                           } else if(metric.mod=="mae"){
-                              tryCatch(list(Score = cv$evaluation_log$test_mae_mean[cv$best_iteration]*-1, Pred=cv$best_iteration*-1), error=function(e) list(Score=0, Pred=0))
+                              tryCatch(list(Score = cv$evaluation_log$test_mae_mean[cv$best_iteration]*-1
+                                            , Pred=cv$best_iteration*-1)
+                                       , error=function(e) list(Score=0, Pred=0))
                           }
                       }
                       
             OPT_Res <- BayesianOptimization(xgb_cv_bayes,
-            bounds = list(max_depth = as.integer(tree.depth.vec),
-                       min_child_weight = as.integer(xgbminchild.vec),
-                           subsample = xgbsubsample.vec,
-                           eta = xgbeta.vec,
-                           gamma = c(0L, xgbgamma.vec[2]),
-                           colsample_bytree=xgbcolsample.vec),
-                       init_grid_dt = NULL,
-                       init_points = init_points,
-                       n_iter = n_iter,
-                       acq = "ucb",
-                       kappa = 2.576,
-                       eps = 0.0,
-                       verbose = TRUE)
+                                            bounds = list(max_depth = as.integer(tree.depth.vec)
+                                                          , min_child_weight = as.integer(xgbminchild.vec)
+                                                          , subsample = xgbsubsample.vec
+                                                          , eta = xgbeta.vec
+                                                          , gamma = c(0L, xgbgamma.vec[2])
+                                                          , colsample_bytree=xgbcolsample.vec
+                                                          )
+                                            , init_grid_dt = NULL
+                                            , init_points = init_points
+                                            , n_iter = n_iter
+                                            , acq = "ucb"
+                                            , kappa = 2.576
+                                            , eps = 0.0
+                                            , verbose = TRUE
+                                            )
                        
             best_param <- list(
-                booster = "gbtree",
-                eval.metric = metric.mod,
-                objective = "reg:squarederror",
-                max_depth = OPT_Res$Best_Par["max_depth"],
-                eta = OPT_Res$Best_Par["eta"],
-                gamma = OPT_Res$Best_Par["gamma"],
-                subsample = OPT_Res$Best_Par["subsample"],
-                colsample_bytree = OPT_Res$Best_Par["colsample_bytree"],
-                min_child_weight = OPT_Res$Best_Par["min_child_weight"])
+                booster = "gbtree"
+                , eval.metric = metric.mod
+                , objective = "reg:squarederror"
+                , max_depth = OPT_Res$Best_Par["max_depth"]
+                , eta = OPT_Res$Best_Par["eta"]
+                , gamma = OPT_Res$Best_Par["gamma"]
+                , subsample = OPT_Res$Best_Par["subsample"]
+                , colsample_bytree = OPT_Res$Best_Par["colsample_bytree"]
+                , min_child_weight = OPT_Res$Best_Par["min_child_weight"]
+                )
             
             xgb_model_pre <- OPT_Res
 
             xgbGrid <- expand.grid(
-                nrounds = nrounds,
-                max_depth = best_param$max_depth,
-                colsample_bytree = best_param$colsample_bytree,
-                eta = best_param$eta,
-                gamma = best_param$gamma,
-                min_child_weight = best_param$min_child_weight,
-                subsample = best_param$subsample
+                nrounds = nrounds
+                , max_depth = best_param$max_depth
+                , colsample_bytree = best_param$colsample_bytree
+                , eta = best_param$eta
+                , gamma = best_param$gamma
+                , min_child_weight = best_param$min_child_weight
+                , subsample = best_param$subsample
             )
             xgbGridPre <- NULL
         }
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        method = train
+        , number = number
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train!="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        verboseIter = TRUE
+        method = train
+        , number = number
+        , verboseIter = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE
+        method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
         )
     }
     
@@ -854,11 +1274,28 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
         }
         registerDoParallel(cl)
         
-        xgb_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = "reg:squarederror", na.action=na.omit)
+        xgb_model <- caret::train(Dependent~.
+                                  , data=data.training
+                                  , trControl = tune_control
+                                  , tuneGrid = xgbGrid
+                                  , metric=metric
+                                  , method = "xgbTree"
+                                  , objective = "reg:squarederror"
+                                  , na.action=na.omit
+                                  )
 
         stopCluster(cl)
     } else if(parallel_method=="linux"){
-        xgb_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbTree", objective = "reg:squarederror", nthread=round((as.numeric(my.cores)+1)/2, 0), na.action=na.omit)
+        xgb_model <- caret::train(Dependent~.
+                                  , data=data.training
+                                  , trControl = tune_control
+                                  , tuneGrid = xgbGrid
+                                  , metric=metric
+                                  , method = "xgbTree"
+                                  , objective = "reg:squarederror"
+                                  , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                  , na.action=na.omit
+                                  )
     }
     
     xgb_model_serialized <- tryCatch(xgb.serialize(xgb_model$finalModel), error=function(e) NULL)
@@ -868,7 +1305,8 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
         saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
     }
     
-    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
+    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. 
+    # This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Dependent, Predicted=y_predict_train)
     accuracy.rate_train <- lm(Known~Predicted, data=results.frame_train)
@@ -883,7 +1321,11 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
         all.data <- data.orig
         train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
         train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
-        KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
+        KnownSet <- data.frame(Sample=train.frame$Sample
+                               , Known=train.frame[,dependent]
+                               , Predicted=train.predictions
+                               , stringsAsFactors=FALSE
+                               )
         KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         results.frame$Type <- rep("2. Test", nrow(results.frame))
         All <- rbind(KnownSet, results.frame)
@@ -894,12 +1336,28 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
         theme_light()
         
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, serializedModel=xgb_model_serialized, ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate)
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data
+                                          , predictors=predictors
+                                          )
+                           , Model=xgb_model
+                           , serializedModel=xgb_model_serialized
+                           , ImportancePlot=importanceBar(xgb_model)
+                           , ValidationSet=results.frame
+                           , AllData=All
+                           , ResultPlot=ResultPlot
+                           , trainAccuracy=accuracy.rate_train
+                           , testAccuracy=accuracy.rate
+                           )
     } else if(is.null(split)){
         all.data <- data.orig
         train.frame <- all.data
         train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
-        KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
+        KnownSet <- data.frame(Sample=train.frame$Sample
+                               , Known=train.frame[,dependent]
+                               , Predicted=train.predictions
+                               , stringsAsFactors=FALSE
+                               )
         KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         All <- KnownSet
         
@@ -908,7 +1366,19 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
         stat_smooth(method="lm") +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, serializedModel=xgb_model_serialized, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data
+                                          , predictors=predictors
+                                          )
+                           , Model=xgb_model
+                           , serializedModel=xgb_model_serialized
+                           , preModel=tryCatch(xgb_model_pre
+                                               , error=function(e) NULL)
+                           , ImportancePlot=importanceBar(xgb_model)
+                           , AllData=All
+                           , ResultPlot=ResultPlot
+                           , trainAccuracy=accuracy.rate_train
+                           )
     }
     
     #Model list includes the following objects in a list:
@@ -921,9 +1391,37 @@ regressXGBoostTree <- function(data, dependent, predictors=NULL, merge.by=NULL, 
     return(model.list)
 }
 
-
+##################################################################################################################################
+#### XGboost wrapper (Tree?) 
+##################################################################################################################################
 ###This function wrapper will use the classification or regression model based on whether your choosen variable is numeric or not
-autoXGBoostTree <- function(data, variable, predictors=NULL, min.n=5, split=NULL, treedepth="5-5", xgbgamma="0-0", xgbeta="0.1-0.1", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-3", nrounds=500, test_nrounds=100, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+
+autoXGBoostTree <- function(data
+                            , variable
+                            , predictors=NULL
+                            , min.n=5
+                            , split=NULL
+                            , treedepth="5-5"
+                            , xgbgamma="0-0"
+                            , xgbeta="0.1-0.1"
+                            , xgbcolsample="0.7-0.7"
+                            , xgbsubsample="0.7-0.7"
+                            , xgbminchild="1-3"
+                            , nrounds=500
+                            , test_nrounds=100
+                            , metric=NULL
+                            , summary_function="f1"
+                            , train="repeatedcv"
+                            , cvrepeats=5
+                            , number=30
+                            , Bayes=FALSE
+                            , folds=15
+                            , init_points=100
+                            , n_iter=5
+                            , save.directory=NULL
+                            , save.name=NULL
+                            , parallelMethod=NULL
+                            ){
     
     if(is.null(save.name)){
         save.name <- if(!is.numeric(data[,variable])){
@@ -946,17 +1444,91 @@ autoXGBoostTree <- function(data, variable, predictors=NULL, min.n=5, split=NULL
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifyXGBoostTree(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        classifyXGBoostTree(data=data
+                            , class=variable
+                            , predictors=predictors
+                            , min.n=min.n
+                            , split=split
+                            , treedepth=treedepth
+                            , xgbgamma=xgbgamma
+                            , xgbeta=xgbeta
+                            , xgbcolsample=xgbcolsample
+                            , xgbsubsample=xgbsubsample
+                            , xgbminchild=xgbminchild
+                            , nrounds=nrounds
+                            , test_nrounds=test_nrounds
+                            , metric=metric
+                            , summary_function=summary_function
+                            , train=train
+                            , cvrepeats=cvrepeats
+                            , number=number
+                            , Bayes=Bayes
+                            , folds=folds
+                            , init_points=init_points
+                            , n_iter=n_iter
+                            , save.directory=save.directory
+                            , save.name=save.name
+                            , parallelMethod=parallelMethod
+                            )
     } else if(is.numeric(data[,variable])){
-        regressXGBoostTree(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        regressXGBoostTree(data=data
+                           , dependent=variable
+                           , predictors=predictors
+                           , min.n=min.n
+                           , split=split
+                           , treedepth=treedepth
+                           , xgbgamma=xgbgamma
+                           , xgbeta=xgbeta
+                           , xgbcolsample=xgbcolsample
+                           , xgbsubsample=xgbsubsample
+                           , xgbminchild=xgbminchild
+                           , nrounds=nrounds
+                           , test_nrounds=test_nrounds
+                           , metric=metric
+                           , train=train
+                           , cvrepeats=cvrepeats
+                           , number=number
+                           , Bayes=Bayes
+                           , folds=folds
+                           , init_points=init_points
+                           , n_iter=n_iter
+                           , save.directory=save.directory
+                           , save.name=save.name
+                           , parallelMethod=parallelMethod
+                           )
     }
     
     return(model)
 }
 
-
-###XGBoost classification. This function will run a classification model, using probabilities to sort data. It will automatically search for the best paramters, and then run a full model based on those. Variables are encoded as "x-y", which will search in increments for every variable in between.
-classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=NULL, xgbalpha="0-0", xgbeta="0.1-0.1", xgblambda="0-0", nrounds=500, test_nrounds=100, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+############################################################################################################
+###XGBoost classification - Linear
+###########################################################################################################
+### This function will run a classification model, using probabilities to sort data. 
+### It will automatically search for the best paramters, and then run a full model based on those. 
+### Variables are encoded as "x-y", which will search in increments for every variable in between.
+classifyXGBoostLinear <- function(data
+                                  , class
+                                  , predictors=NULL
+                                  , min.n=5, split=NULL
+                                  , xgbalpha="0-0"
+                                  , xgbeta="0.1-0.1"
+                                  , xgblambda="0-0"
+                                  , nrounds=500
+                                  , test_nrounds=100
+                                  , metric="Accuracy"
+                                  , summary_function="f1"
+                                  , train="repeatedcv"
+                                  , cvrepeats=5
+                                  , number=100
+                                  , Bayes=FALSE
+                                  , folds=15
+                                  , init_points=100
+                                  , n_iter=5
+                                  , save.directory=NULL
+                                  , save.name=NULL
+                                  , parallelMethod=NULL
+                                  ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
@@ -1055,20 +1627,20 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
         #Create train controls. Only one iteration with optimism bootstrapping
         tune_control_pre <- if(parallel_method!="linux"){
             caret::trainControl(
-            method = "optimism_boot",
-            classProbs = TRUE,
-            number = 1,
-            summaryFunction = summary_function,
-            verboseIter = TRUE,
-            allowParallel=TRUE
+            method = "optimism_boot"
+            , classProbs = TRUE
+            , number = 1
+            , summaryFunction = summary_function
+            , verboseIter = TRUE
+            , allowParallel=TRUE
             )
         } else if(parallel_method=="linux"){
             caret::trainControl(
-            method = "optimism_boot",
-            classProbs = TRUE,
-            number = 1,
-            summaryFunction = summary_function,
-            verboseIter = TRUE
+            method = "optimism_boot"
+            , classProbs = TRUE
+            , number = 1
+            , summaryFunction = summary_function
+            , verboseIter = TRUE
             )
         }
         
@@ -1083,62 +1655,100 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
             registerDoParallel(cl)
             #Run the model
             xgb_model_pre <- if(num_classes>2){
-                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbLinear", objective = objective.mod, num_class=num_classes, na.action=na.omit)
+                caret::train(Class~.
+                             , data=data.training
+                             , trControl = tune_control_pre
+                             , tuneGrid = xgbGridPre
+                             , metric=metric
+                             , method = "xgbLinear"
+                             , objective = objective.mod
+                             , num_class=num_classes
+                             , na.action=na.omit
+                             )
             } else if(num_classes==2){
-                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbLinear", objective = objective.mod, na.action=na.omit)
+                caret::train(Class~.
+                             , data=data.training
+                             , trControl = tune_control_pre
+                             , tuneGrid = xgbGridPre
+                             , metric=metric
+                             , method = "xgbLinear"
+                             , objective = objective.mod
+                             , na.action=na.omit
+                             )
             }
             #Close the CPU sockets
             stopCluster(cl)
             #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
         } else if(parallel_method=="linux"){
             xgb_model_pre <- if(num_classes>2){
-                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbLinear", objective = objective.mod, num_class=num_classes, na.action=na.omit, nthread=round((as.numeric(my.cores)+1)/2, 0))
+                caret::train(Class~.
+                             , data=data.training
+                             , trControl = tune_control_pre
+                             , tuneGrid = xgbGridPre
+                             , metric=metric
+                             , method = "xgbLinear"
+                             , objective = objective.mod
+                             , num_class=num_classes
+                             , na.action=na.omit
+                             , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                             )
             } else if(num_classes==2){
-                caret::train(Class~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbLinear", objective = objective.mod, na.action=na.omit, nthread=round((as.numeric(my.cores)+1)/2, 0))
+                caret::train(Class~.
+                             , data=data.training
+                             , trControl = tune_control_pre
+                             , tuneGrid = xgbGridPre
+                             , metric=metric
+                             , method = "xgbLinear"
+                             , objective = objective.mod
+                             , na.action=na.omit
+                             , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                             )
             }
         }
         
         #Now create a new tuning grid for the final model based on the best parameters following grid searching
         xgbGrid <- expand.grid(
-            nrounds = nrounds,
-            alpha = xgb_model_pre$bestTune$alpha,
-            eta = xgb_model_pre$bestTune$eta,
-            lambda = xgb_model_pre$bestTune$lambda
+            nrounds = nrounds
+            , alpha = xgb_model_pre$bestTune$alpha
+            , eta = xgb_model_pre$bestTune$eta
+            , lambda = xgb_model_pre$bestTune$lambda
         )
         xgbGridPre <- NULL
     } else if(nrow(xgbGridPre)>1 && Bayes==TRUE){
         #data.training.temp <- data.training
         #data.training.temp$Class <- as.integer(data.training.temp$Class)
         OPT_Res=xgb_cv_opt_linear(data = data.training,
-                   label = Class,
-                   classes=num_classes,
-                   nrounds_range=as.integer(c(100, nrounds)),
-                   alpha_range=xgbalpha.vec,
-                   eta_range=xgbeta.vec,
-                   lambda_range=xgblambda.vec,
-                   objectfun = objective.mod,
-                   evalmetric = eval_metric,
-                   n_folds = folds,
-                   acq = "ucb",
-                   init_points = init_points,
-                   n_iter = n_iter)
+                   label = Class
+                   , classes=num_classes
+                   , nrounds_range=as.integer(c(100, nrounds))
+                   , alpha_range=xgbalpha.vec
+                   , eta_range=xgbeta.vec
+                   , lambda_range=xgblambda.vec
+                   , objectfun = objective.mod
+                   , evalmetric = eval_metric
+                   , n_folds = folds
+                   , acq = "ucb"
+                   , init_points = init_points
+                   , n_iter = n_iter
+                   )
                    
         best_param <- list(
-            booster = "gblinear",
-            nrounds=OPT_Res$Best_Par["nrounds_opt"],
-            eval.metric = metric.mod,
-            objective = objective.mod,
-            alpha = OPT_Res$Best_Par["alpha_opt"],
-            eta = OPT_Res$Best_Par["eta_opt"],
-            lambda = OPT_Res$Best_Par["lambda_opt"])
+            booster = "gblinear"
+            , nrounds=OPT_Res$Best_Par["nrounds_opt"]
+            , eval.metric = metric.mod
+            , objective = objective.mod
+            , alpha = OPT_Res$Best_Par["alpha_opt"]
+            , eta = OPT_Res$Best_Par["eta_opt"]
+            , lambda = OPT_Res$Best_Par["lambda_opt"]
+            )
             
         xgb_model_pre <- OPT_Res
         
         xgbGrid <- expand.grid(
-            nrounds = best_param$nrounds,
-            alpha = best_param$alpha,
-            eta = best_param$eta,
-            lambda = best_param$lambda
+            nrounds = best_param$nrounds
+            , alpha = best_param$alpha
+            , eta = best_param$eta
+            , lambda = best_param$lambda
         )
         xgbGridPre <- NULL
     }
@@ -1146,39 +1756,39 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        classProbs = TRUE,
-        summaryFunction = summary_function,
-        method = train,
-        number = number,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        classProbs = TRUE
+        , summaryFunction = summary_function
+        , method = train
+        , number = number
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        classProbs = TRUE,
-        summaryFunction = summary_function,
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        classProbs = TRUE
+        , summaryFunction = summary_function
+        , method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train!="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        classProbs = TRUE,
-        summaryFunction = summary_function,
-        method = train,
-        number = number,
-        verboseIter = TRUE
+        classProbs = TRUE
+        , summaryFunction = summary_function
+        , method = train
+        , number = number
+        , verboseIter = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        classProbs = TRUE,
-        summaryFunction = summary_function,
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE
+        classProbs = TRUE
+        , summaryFunction = summary_function
+        , method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
         )
     }
     
@@ -1193,17 +1803,53 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
         registerDoParallel(cl)
         
             xgb_model <- if(num_classes>2){
-                caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbLinear", objective = objective.mod, num_class=num_classes, na.action=na.omit)
+                caret::train(Class~.
+                             , data=data.training
+                             , trControl = tune_control
+                             , tuneGrid = xgbGrid
+                             , metric=metric
+                             , method = "xgbLinear"
+                             , objective = objective.mod
+                             , num_class=num_classes
+                             , na.action=na.omit
+                             )
             } else if(num_classes==2){
-                caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbLinear", objective = objective.mod, na.action=na.omit)
+                caret::train(Class~.
+                             , data=data.training
+                             , trControl = tune_control
+                             , tuneGrid = xgbGrid
+                             , metric=metric
+                             , method = "xgbLinear"
+                             , objective = objective.mod
+                             , na.action=na.omit
+                             )
             }
         stopCluster(cl)
     } else if(parallel_method=="linux"){
         data.training <- data.train[, !colnames(data.train) %in% "Sample"]
         xgb_model <- if(num_classes>2){
-            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbLinear", objective = objective.mod, num_class=num_classes, nthread=round((as.numeric(my.cores)+1)/2, 0), na.action=na.omit)
+            caret::train(Class~.
+                         , data=data.training
+                         , trControl = tune_control
+                         , tuneGrid = xgbGrid
+                         , metric=metric
+                         , method = "xgbLinear"
+                         , objective = objective.mod
+                         , num_class=num_classes
+                         , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                         , na.action=na.omit
+                         )
         } else if(num_classes==2){
-            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbLinear", objective = objective.mod, nthread=round((as.numeric(my.cores)+1)/2, 0), na.action=na.omit)
+            caret::train(Class~.
+                         , data=data.training
+                         , trControl = tune_control
+                         , tuneGrid = xgbGrid
+                         , metric=metric
+                         , method = "xgbLinear"
+                         , objective = objective.mod
+                         , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                         , na.action=na.omit
+                         )
         }
     }
     
@@ -1214,15 +1860,23 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
         saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
     }
     
-    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
+    #Now that we have a final model, we can save it's perfoormance.
+    # Here we generate predictions based on the model on the data used to train it. 
+    # This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train, na.action = na.pass)
-    results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
+    results.frame_train <- data.frame(Sample=data.train$Sample
+                                      , Known=data.train$Class
+                                      , Predicted=y_predict_train
+                                      )
     accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
         y_predict <- predict(object=xgb_model, newdata=x_test, na.action = na.pass)
-        results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Class, Predicted=y_predict)
+        results.frame <- data.frame(Sample=data.test$Sample
+                                    , Known=data.test$Class
+                                    , Predicted=y_predict
+                                    )
         accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
         
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
@@ -1233,7 +1887,18 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, serializedModel=xgb_model_serialized, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data)
+                           , Model=xgb_model
+                           , serializedModel=xgb_model_serialized
+                           , preModel=tryCatch(xgb_model_pre
+                                               , error=function(e) NULL)
+                           , ImportancePlot=importanceBar(xgb_model)
+                           , ValidationSet=results.frame
+                           , trainAccuracy=accuracy.rate_train
+                           , testAccuracy=accuracy.rate
+                           , ResultPlot=ResultPlot
+                           )
     } else if(is.null(split)){
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
         
@@ -1243,7 +1908,16 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=xgb_model, serializedModel=xgb_model_serialized, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data)
+                           , Model=xgb_model
+                           , serializedModel=xgb_model_serialized
+                           , preModel=tryCatch(xgb_model_pre
+                                               , error=function(e) NULL)
+                           , ImportancePlot=importanceBar(xgb_model)
+                           , trainAccuracy=accuracy.rate_train
+                           , ResultPlot=ResultPlot
+                           )
     }
     
     #Model list includes the following objects in a list:
@@ -1255,9 +1929,35 @@ classifyXGBoostLinear <- function(data, class, predictors=NULL, min.n=5, split=N
         
     return(model.list)
 }
-
-###XGBoost regression. This function will run a regression model, using rmse or mae (per your choice) to sort data. It will automatically search for the best paramters, and then run a full model based on those. Variables are encoded as "x-y", which will search in increments for every variable in between.
-regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, xgbalpha="0-0", xgbeta="0.1-0.1", xgblambda="0-0", nrounds=500, test_nrounds=100, metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+###################################################################################################################################
+###XGBoost regression - Linear
+#################################################################################################################################
+# This function will run a regression model, using rmse or mae (per your choice) to sort data. 
+# It will automatically search for the best paramters, and then run a full model based on those. 
+# Variables are encoded as "x-y", which will search in increments for every variable in between.
+regressXGBoostLinear <- function(data
+                                 , dependent
+                                 , predictors=NULL
+                                 , merge.by=NULL
+                                 , min.n=5
+                                 , split=NULL
+                                 , xgbalpha="0-0"
+                                 , xgbeta="0.1-0.1"
+                                 , xgblambda="0-0"
+                                 , nrounds=500
+                                 , test_nrounds=100
+                                 , metric="RMSE"
+                                 , train="repeatedcv"
+                                 , cvrepeats=5
+                                 , number=100
+                                 , Bayes=FALSE
+                                 , folds=15
+                                 , init_points=100
+                                 , n_iter=5
+                                 , save.directory=NULL
+                                 , save.name=NULL
+                                 , parallelMethod=NULL
+                                 ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
@@ -1307,10 +2007,10 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
     
     #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
     xgbGridPre <- expand.grid(
-        nrounds = test_nrounds,
-        alpha = seq(xgbalpha.vec[1], xgbalpha.vec[2], by=0.1),
-        eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1),
-        lambda=seq(xgblambda.vec[1], xgblambda.vec[2], by=0.1)
+        nrounds = test_nrounds
+        , alpha = seq(xgbalpha.vec[1], xgbalpha.vec[2], by=0.1)
+        , eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1)
+        , lambda=seq(xgblambda.vec[1], xgblambda.vec[2], by=0.1)
     )
     
     #Boring x_train stuff for later
@@ -1330,16 +2030,16 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
         #Create train controls. Only one iteration with optimism bootstrapping
         tune_control_pre <- if(parallel_method!="linux"){
             caret::trainControl(
-            method = "optimism_boot",
-            number = 1,
-            verboseIter = TRUE,
-            allowParallel=TRUE
+            method = "optimism_boot"
+            , number = 1
+            , verboseIter = TRUE
+            , allowParallel=TRUE
             )
         } else if(parallel_method=="linux"){
             caret::trainControl(
-            method = "optimism_boot",
-            number = 1,
-            verboseIter = TRUE
+            method = "optimism_boot"
+            , number = 1
+            , verboseIter = TRUE
             )
         }
         
@@ -1352,20 +2052,37 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
             }
             registerDoParallel(cl)
             #Run the model
-            xgb_model_pre <- caret::train(Dependent~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbLinear", objective = "reg:squarederror", na.action=na.omit)
+            xgb_model_pre <- caret::train(Dependent~.
+                                          , data=data.training
+                                          , trControl = tune_control_pre
+                                          , tuneGrid = xgbGridPre
+                                          , metric=metric
+                                          , method = "xgbLinear"
+                                          , objective = "reg:squarederror"
+                                          , na.action=na.omit
+                                          )
             #Close the CPU sockets
             stopCluster(cl)
             #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
         } else if(parallel_method=="linux"){
-            xgb_model_pre <- caret::train(Dependent~., data=data.training, trControl = tune_control_pre, tuneGrid = xgbGridPre, metric=metric, method = "xgbLinear", objective = "reg:squarederror", na.action=na.omit, nthread=round((as.numeric(my.cores)+1)/2, 0))
+            xgb_model_pre <- caret::train(Dependent~.
+                                          , data=data.training
+                                          , trControl = tune_control_pre
+                                          , tuneGrid = xgbGridPre
+                                          , metric=metric
+                                          , method = "xgbLinear"
+                                          , objective = "reg:squarederror"
+                                          , na.action=na.omit
+                                          , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                          )
         }
         
         #Now create a new tuning grid for the final model based on the best parameters following grid searching
         xgbGrid <- expand.grid(
-            nrounds = nrounds,
-            alpha = xgb_model_pre$bestTune$alpha,
-            eta = xgb_model_pre$bestTune$eta,
-            lambda = xgb_model_pre$bestTune$lambda
+            nrounds = nrounds
+            , alpha = xgb_model_pre$bestTune$alpha
+            , eta = xgb_model_pre$bestTune$eta
+            , lambda = xgb_model_pre$bestTune$lambda
         )
         xgbGridPre <- NULL
         } else if(nrow(xgbGridPre)>1 && Bayes==TRUE){
@@ -1384,80 +2101,96 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
             dtrain <- xgboost::xgb.DMatrix(x_train, label = y_train)
             cv_folds <- KFold(data.training$Dependent, nfolds = folds, stratified = TRUE)
                       xgb_cv_bayes <- function(alpha, eta, lambda) {
-                          param <- list(booster = "gblinear",
-                          alpha = alpha,
-                          eta=eta,
-                          lambda=lambda,
-                          objective = "reg:squarederror",
-                          eval_metric = metric.mod)
-                          cv <- xgb.cv(params = param, data = dtrain, folds=cv_folds, nround = 100, early_stopping_rounds = 50, nthread=n_threads, maximize = FALSE, verbose = TRUE)
+                          param <- list(booster = "gblinear"
+                          , alpha = alpha
+                          , eta=eta
+                          , lambda=lambda
+                          , objective = "reg:squarederror"
+                          , eval_metric = metric.mod
+                          )
+                          cv <- xgb.cv(params = param
+                                       , data = dtrain
+                                       , folds=cv_folds
+                                       , nround = 100
+                                       , early_stopping_rounds = 50
+                                       , nthread=n_threads
+                                       , maximize = FALSE
+                                       , verbose = TRUE
+                                       )
                           
                           if(metric.mod=="rmse"){
-                              tryCatch(list(Score = cv$evaluation_log$test_rmse_mean[cv$best_iteration]*-1, Pred=cv$best_iteration*-1), error=function(e) list(Score=0, Pred=0))
+                              tryCatch(list(Score = cv$evaluation_log$test_rmse_mean[cv$best_iteration]*-1
+                                            , Pred=cv$best_iteration*-1)
+                                       , error=function(e) list(Score=0, Pred=0))
                           } else if(metric.mod=="mae"){
-                              tryCatch(list(Score = cv$evaluation_log$test_mae_mean[cv$best_iteration]*-1, Pred=cv$best_iteration*-1), error=function(e) list(Score=0, Pred=0))
+                              tryCatch(list(Score = cv$evaluation_log$test_mae_mean[cv$best_iteration]*-1
+                                            , Pred=cv$best_iteration*-1)
+                                       , error=function(e) list(Score=0, Pred=0))
                           }
                       }
                       
             OPT_Res <- BayesianOptimization(xgb_cv_bayes,
-            bounds = list(
-                           alpha = xgbalpha.vec,
-                           eta = xgbeta.vec,
-                           lambda = xgblambda.vec),
-                       init_grid_dt = NULL,
-                       init_points = init_points,
-                       n_iter = n_iter,
-                       acq = "ucb",
-                       kappa = 2.576,
-                       eps = 0.0,
-                       verbose = TRUE)
+              bounds = list(
+                           alpha = xgbalpha.vec
+                           ,eta = xgbeta.vec
+                           ,lambda = xgblambda.vec
+                           )
+                       , init_grid_dt = NULL
+                       , init_points = init_points
+                       , n_iter = n_iter
+                       , acq = "ucb"
+                       , kappa = 2.576
+                       , eps = 0.0
+                       , verbose = TRUE
+              )
                        
             best_param <- list(
-                booster = "gblinear",
-                eval.metric = metric.mod,
-                objective = "reg:squarederror",
-                alpha = OPT_Res$Best_Par["alpha"],
-                eta = OPT_Res$Best_Par["eta"],
-                lambda = OPT_Res$Best_Par["lambda"])
+                booster = "gblinear"
+                , eval.metric = metric.mod
+                , objective = "reg:squarederror"
+                , alpha = OPT_Res$Best_Par["alpha"]
+                , eta = OPT_Res$Best_Par["eta"]
+                , lambda = OPT_Res$Best_Par["lambda"]
+                )
                 
             xgb_model_pre <- OPT_Res
             
             xgbGrid <- expand.grid(
-                nrounds = nrounds,
-                alpha = best_param$alpha,
-                eta = best_param$eta,
-                lambda = best_param$lambda
+                nrounds = nrounds
+                , alpha = best_param$alpha
+                , eta = best_param$eta
+                , lambda = best_param$lambda
             )
             xgbGridPre <- NULL
         }
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        method = train
+        , number = number
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train!="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        verboseIter = TRUE
+        method = train
+        , number = number
+        , verboseIter = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE
+        method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
         )
     }
     
@@ -1471,11 +2204,28 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
         }
         registerDoParallel(cl)
         
-        xgb_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbLinear", objective = "reg:squarederror", na.action=na.omit)
+        xgb_model <- caret::train(Dependent~.
+                                  , data=data.training
+                                  , trControl = tune_control
+                                  , tuneGrid = xgbGrid
+                                  , metric=metric
+                                  , method = "xgbLinear"
+                                  , objective = "reg:squarederror"
+                                  , na.action=na.omit
+                                  )
 
         stopCluster(cl)
     } else if(parallel_method=="linux"){
-        xgb_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = xgbGrid, metric=metric, method = "xgbLinear", objective = "reg:squarederror", nthread=round((as.numeric(my.cores)+1)/2, 0), na.action=na.omit)
+        xgb_model <- caret::train(Dependent~.
+                                  , data=data.training
+                                  , trControl = tune_control
+                                  , tuneGrid = xgbGrid
+                                  , metric=metric
+                                  , method = "xgbLinear"
+                                  , objective = "reg:squarederror"
+                                  , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                  , na.action=na.omit
+                                  )
     }
     
     xgb_model_serialized <- tryCatch(xgb.serialize(xgb_model$finalModel), error=function(e) NULL)
@@ -1485,21 +2235,33 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
         saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
     }
     
-    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
+    #Now that we have a final model, we can save it's perfoormance. 
+    # Here we generate predictions based on the model on the data used to train it. 
+    # This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train)
-    results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Dependent, Predicted=y_predict_train)
+    results.frame_train <- data.frame(Sample=data.train$Sample
+                                      , Known=data.train$Dependent
+                                      , Predicted=y_predict_train
+                                      )
     accuracy.rate_train <- lm(Known~Predicted, data=results.frame_train)
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
         y_predict <- predict(object=xgb_model, newdata=x_test, na.action = na.pass)
-        results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Dependent, Predicted=y_predict)
+        results.frame <- data.frame(Sample=data.test$Sample
+                                    , Known=data.test$Dependent
+                                    , Predicted=y_predict
+                                    )
         accuracy.rate <- lm(Known~Predicted, data=results.frame)
         
         all.data <- data.orig
         train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
         train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
-        KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
+        KnownSet <- data.frame(Sample=train.frame$Sample
+                               , Known=train.frame[,dependent]
+                               , Predicted=train.predictions
+                               , stringsAsFactors=FALSE
+                               )
         KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         results.frame$Type <- rep("2. Test", nrow(results.frame))
         All <- rbind(KnownSet, results.frame)
@@ -1510,12 +2272,29 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
         theme_light()
         
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, serializedModel=xgb_model_serialized, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate)
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data
+                                          , predictors=predictors
+                                          )
+                           , Model=xgb_model
+                           , serializedModel=xgb_model_serialized
+                           , preModel=tryCatch(xgb_model_pre
+                                               , error=function(e) NULL)
+                           , ImportancePlot=importanceBar(xgb_model)
+                           , ValidationSet=results.frame
+                           , AllData=All, ResultPlot=ResultPlot
+                           , trainAccuracy=accuracy.rate_train
+                           , testAccuracy=accuracy.rate
+                           )
     } else if(is.null(split)){
         all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
         train.frame <- all.data
         train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
-        KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
+        KnownSet <- data.frame(Sample=train.frame$Sample
+                               , Known=train.frame[,dependent]
+                               , Predicted=train.predictions
+                               , stringsAsFactors=FALSE
+                               )
         KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         All <- KnownSet
         
@@ -1524,7 +2303,21 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
         stat_smooth(method="lm") +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=xgb_model, serializedModel=xgb_model_serialized,, preModel=tryCatch(xgb_model_pre, error=function(e) NULL), ImportancePlot=importanceBar(xgb_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)    }
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data
+                                          , predictors=predictors
+                                          )
+                           , Model=xgb_model
+                           , serializedModel=xgb_model_serialized
+                           #,#WHAT IS THIS MODEL MISSING??? 
+                           , preModel=tryCatch(xgb_model_pre
+                                               , error=function(e) NULL)
+                           , ImportancePlot=importanceBar(xgb_model)
+                           , AllData=All
+                           , ResultPlot=ResultPlot
+                           , trainAccuracy=accuracy.rate_train
+                           )   
+        }
     
     #Model list includes the following objects in a list:
         #Model data, a list that includes training and full data sets
@@ -1535,10 +2328,33 @@ regressXGBoostLinear <- function(data, dependent, predictors=NULL, merge.by=NULL
     
     return(model.list)
 }
-
-
+#######################################################################################################################################
+### XGBoost Wrapper - Linear
+#######################################################################################################################################
 ###This function wrapper will use the classification or regression model based on whether your choosen variable is numeric or not
-autoXGBoostLinear <- function(data, variable, predictors=NULL, min.n=5, split=NULL,  xgbalpha="0-0", xgbeta="0.1-0.1", xgblambda="0-0", nrounds=500, test_nrounds=100, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+autoXGBoostLinear <- function(data
+                              , variable
+                              , predictors=NULL
+                              , min.n=5
+                              , split=NULL
+                              , xgbalpha="0-0"
+                              , xgbeta="0.1-0.1"
+                              , xgblambda="0-0"
+                              , nrounds=500
+                              , test_nrounds=100
+                              , metric=NULL
+                              , summary_function="f1"
+                              , train="repeatedcv"
+                              , cvrepeats=5
+                              , number=30
+                              , Bayes=FALSE
+                              , folds=15
+                              , init_points=100
+                              , n_iter=5
+                              , save.directory=NULL
+                              , save.name=NULL
+                              , parallelMethod=NULL
+                              ){
     
     if(is.null(save.name)){
         save.name <- if(!is.numeric(data[,variable])){
@@ -1561,17 +2377,74 @@ autoXGBoostLinear <- function(data, variable, predictors=NULL, min.n=5, split=NU
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifyXGBoostLinear(data=data, class=variable, predictors=predictors, min.n=min.n, split=split,  xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        classifyXGBoostLinear(data=data
+                              , class=variable
+                              , predictors=predictors
+                              , min.n=min.n
+                              , split=split
+                              , xgbalpha=xgbalpha
+                              , xgbeta=xgbeta
+                              , xgblambda=xgblambda
+                              , nrounds=nrounds
+                              , test_nrounds=test_nrounds
+                              , metric=metric
+                              , summary_function=summary_function
+                              , train=train
+                              , cvrepeats=cvrepeats
+                              , number=number
+                              , Bayes=Bayes
+                              , folds=folds
+                              , init_points=init_points
+                              , n_iter=n_iter
+                              , save.directory=save.directory
+                              , save.name=save.name
+                              , parallelMethod=parallelMethod
+                              )
     } else if(is.numeric(data[,variable])){
-        regressXGBoostLinear(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        regressXGBoostLinear(data=data
+                             , dependent=variable
+                             , predictors=predictors
+                             , min.n=min.n, split=split
+                             , xgbalpha=xgbalpha
+                             , xgbeta=xgbeta
+                             , xgblambda=xgblambda
+                             , nrounds=nrounds
+                             , test_nrounds=test_nrounds
+                             , metric=metric
+                             , train=train
+                             , cvrepeats=cvrepeats
+                             , number=number
+                             , Bayes=Bayes
+                             , folds=folds
+                             , init_points=init_points
+                             , n_iter=n_iter
+                             , save.directory=save.directory
+                             , save.name=save.name
+                             , parallelMethod=parallelMethod
+                             )
     }
     
     return(model)
 }
-
-
-###Forest classification. Nothing special.
-classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, try, trees, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+#################################################################################################
+###Forest classification
+#################################################################################################
+### Nothing special.
+classifyForest <- function(data
+                           , class
+                           , predictors=NULL
+                           , min.n=5
+                           , split=NULL
+                           , try, trees
+                           , metric="Accuracy"
+                           , summary_function="f1"
+                           , train="repeatedcv"
+                           , cvrepeats=5
+                           , number=100
+                           , save.directory=NULL
+                           , save.name=NULL
+                           , parallelMethod=NULL
+                           ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
@@ -1636,39 +2509,39 @@ classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, tr
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        classProbs = TRUE,
-        summaryFunction = summary_function,
-        method = train,
-        number = number,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        classProbs = TRUE
+        , summaryFunction = summary_function
+        , method = train
+        , number = number
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        classProbs = TRUE,
-        summaryFunction = summary_function,
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        classProbs = TRUE
+        , summaryFunction = summary_function
+        , method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train!="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        classProbs = TRUE,
-        summaryFunction = summary_function,
-        method = train,
-        number = number,
-        verboseIter = TRUE
+        classProbs = TRUE
+        , summaryFunction = summary_function
+        , method = train
+        , number = number
+        , verboseIter = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        classProbs = TRUE,
-        summaryFunction = summary_function,
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE
+        classProbs = TRUE
+        , summaryFunction = summary_function
+        , method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
         )
     }
     
@@ -1683,18 +2556,62 @@ classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, tr
         registerDoParallel(cl)
         
             forest_model <- if(num_classes>2){
-                caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = forestGrid, metric=metric, method = "rf", type="Classification", ntrees=trees, importance=TRUE, na.action=na.omit)
+                caret::train(Class~.
+                             , data=data.training
+                             , trControl = tune_control
+                             , tuneGrid = forestGrid
+                             , metric=metric
+                             , method = "rf"
+                             , type="Classification"
+                             , ntrees=trees
+                             , importance=TRUE
+                             , na.action=na.omit
+                             )
             } else if(num_classes==2){
-                caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = forestGrid, metric=metric, method = "rf", type="Classification", ntrees=trees, importance=TRUE,  na.action=na.omit)
+                caret::train(Class~.
+                             , data=data.training
+                             , trControl = tune_control
+                             , tuneGrid = forestGrid
+                             , metric=metric
+                             , method = "rf"
+                             , type="Classification"
+                             , ntrees=trees
+                             , importance=TRUE
+                             ,  na.action=na.omit
+                             )
             }
         stopCluster(cl)
     } else if(parallel_method=="linux"){
         parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
         data.training <- data.train[, !colnames(data.train) %in% "Sample"]
         forest_model <- if(num_classes>2){
-            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = forestGrid, metric=metric, method = "rf", type="Classification", ntrees=trees, importance=TRUE, prox=TRUE, na.action=na.omit, allowParallel=TRUE)
+            caret::train(Class~.
+                         , data=data.training
+                         , trControl = tune_control
+                         , tuneGrid = forestGrid
+                         , metric=metric
+                         , method = "rf"
+                         , type="Classification"
+                         , ntrees=trees
+                         , importance=TRUE
+                         , prox=TRUE
+                         , na.action=na.omit
+                         , allowParallel=TRUE
+                         )
         } else if(num_classes==2){
-            caret::train(Class~., data=data.training, trControl = tune_control, tuneGrid = forestGrid, metric=metric, method = "rf", type="Classification", ntrees=trees, importance=TRUE, prox=TRUE,  na.action=na.omit, allowParallel=TRUE)
+            caret::train(Class~.
+                         , data=data.training
+                         , trControl = tune_control
+                         , tuneGrid = forestGrid
+                         , metric=metric
+                         , method = "rf"
+                         , type="Classification"
+                         , ntrees=trees
+                         , importance=TRUE
+                         , prox=TRUE
+                         , na.action=na.omit
+                         , allowParallel=TRUE
+                         )
         }
         parallelStop()
     }
@@ -1704,15 +2621,23 @@ classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, tr
         saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
     }
     
-    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
+    #Now that we have a final model, we can save it's perfoormance. 
+    #Here we generate predictions based on the model on the data used to train it. 
+    # This will be used to asses trainAccuracy
     y_predict_train <- predict(object=forest_model, newdata=x_train, na.action = na.pass)
-    results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
+    results.frame_train <- data.frame(Sample=data.train$Sample
+                                      , Known=data.train$Class
+                                      , Predicted=y_predict_train
+                                      )
     accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
         y_predict <- predict(object=forest_model, newdata=x_test, na.action = na.pass)
-        results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Class, Predicted=y_predict)
+        results.frame <- data.frame(Sample=data.test$Sample
+                                    , Known=data.test$Class
+                                    , Predicted=y_predict
+                                    )
         accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
         
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
@@ -1723,7 +2648,15 @@ classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, tr
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=forest_model, ImportancePlot=importanceBar(forest_model), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data)
+                           , Model=forest_model
+                           , ImportancePlot=importanceBar(forest_model)
+                           , ValidationSet=results.frame
+                           , trainAccuracy=accuracy.rate_train
+                           , testAccuracy=accuracy.rate
+                           , ResultPlot=ResultPlot
+                           )
     } else if(is.null(split)){
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
         
@@ -1733,7 +2666,13 @@ classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, tr
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=forest_model, ImportancePlot=importanceBar(forest_model), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data)
+                           , Model=forest_model
+                           , ImportancePlot=importanceBar(forest_model)
+                           , trainAccuracy=accuracy.rate_train
+                           , ResultPlot=ResultPlot
+                           )
     }
     
     #Model list includes the following objects in a list:
@@ -1745,9 +2684,30 @@ classifyForest <- function(data, class, predictors=NULL, min.n=5, split=NULL, tr
         
     return(model.list)
 }
-
-###Forest regression. Nothing special
-regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, try, trees, metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+###################################################################################################################################
+### Forest regression 
+###################################################################################################################################
+### Nothing special
+regressForest <- function(data
+                          , dependent
+                          , predictors=NULL
+                          , merge.by=NULL
+                          , min.n=5
+                          , split=NULL
+                          , try
+                          , trees
+                          , metric="RMSE"
+                          , train="repeatedcv"
+                          , cvrepeats=5
+                          , number=100
+                          , Bayes=FALSE
+                          , folds=15
+                          , init_points=100
+                          , n_iter=5
+                          , save.directory=NULL
+                          , save.name=NULL
+                          , parallelMethod=NULL
+                          ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
@@ -1796,31 +2756,31 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        method = train
+        , number = number
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train!="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        verboseIter = TRUE
+        method = train
+        , number = number
+        , verboseIter = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE
+        method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
         )
     }
     
@@ -1834,12 +2794,35 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
         }
         registerDoParallel(cl)
         
-        forest_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = forestGrid, metric=metric, method="rf", type="Regression", importance=TRUE, prox=TRUE, ntrees=trees, na.action=na.omit)
+        forest_model <- caret::train(x_train
+                                     , y_train
+                                     , trControl = tune_control
+                                     , tuneGrid = forestGrid
+                                     , metric=metric
+                                     , method="rf"
+                                     , type="Regression"
+                                     , importance=TRUE
+                                     , prox=TRUE
+                                     , ntrees=trees
+                                     , na.action=na.omit
+                                     )
 
         stopCluster(cl)
     } else if(parallel_method=="linux"){
         parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
-        forest_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = forestGrid, metric=metric, method="rf", type="Regression", importance=TRUE, prox=TRUE, ntrees=trees, na.action=na.omit, allowParallel=TRUE)
+        forest_model <- caret::train(x_train
+                                     , y_train
+                                     , trControl = tune_control
+                                     , tuneGrid = forestGrid
+                                     , metric=metric
+                                     , method="rf"
+                                     , type="Regression"
+                                     , importance=TRUE
+                                     , prox=TRUE
+                                     , ntrees=trees
+                                     , na.action=na.omit
+                                     , allowParallel=TRUE
+                                     )
         parallelStop()
     }
     
@@ -1848,20 +2831,31 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
         saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
     }
     
-    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
+    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. 
+    # This will be used to asses trainAccuracy
     y_predict_train <- predict(object=forest_model, newdata=x_train, na.action = na.pass)
-    results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Dependent, Predicted=y_predict_train)
+    results.frame_train <- data.frame(Sample=data.train$Sample
+                                      , Known=data.train$Dependent
+                                      , Predicted=y_predict_train
+                                      )
     accuracy.rate_train <- lm(Known~Predicted, data=results.frame_train)
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
         y_predict <- predict(object=forest_model, newdata=x_test, na.action = na.pass)
-        results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Dependent, Predicted=y_predict)
+        results.frame <- data.frame(Sample=data.test$Sample
+                                    , Known=data.test$Dependent
+                                    , Predicted=y_predict
+                                    )
         accuracy.rate <- lm(Known~Predicted, data=results.frame)
         
         all.data <- data.orig
         train.frame <- all.data[!all.data$Sample %in% results.frame,]
-        KnownSet <- data.frame(Sample=train.frame$Sample, Known=data[,dependent], Predicted=y_predict_train, stringsAsFactors=FALSE)
+        KnownSet <- data.frame(Sample=train.frame$Sample
+                               , Known=data[,dependent]
+                               , Predicted=y_predict_train
+                               , stringsAsFactors=FALSE
+                               )
         KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         results.frame$Type <- rep("2. Test", nrow(results.frame))
         All <- rbind(KnownSet, results.frame)
@@ -1872,12 +2866,27 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
         theme_light()
         
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=forest_model, ImportancePlot=importanceBar(forest_model), ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate)
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data
+                                          , predictors=predictors
+                                          )
+                           , Model=forest_model
+                           , ImportancePlot=importanceBar(forest_model)
+                           , ValidationSet=results.frame
+                           , AllData=All
+                           , ResultPlot=ResultPlot
+                           , trainAccuracy=accuracy.rate_train
+                           , testAccuracy=accuracy.rate
+                           )
     } else if(is.null(split)){
         all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
         train.frame <- all.data
         train.predictions <- predict(forest_model, train.frame, na.action = na.pass)
-        KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
+        KnownSet <- data.frame(Sample=train.frame$Sample
+                               , Known=train.frame[,dependent]
+                               , Predicted=train.predictions
+                               , stringsAsFactors=FALSE
+                               )
         KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         All <- KnownSet
         
@@ -1886,7 +2895,17 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
         stat_smooth(method="lm") +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=forest_model, ImportancePlot=importanceBar(forest_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)    }
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data
+                                          , predictors=predictors
+                                          )
+                           , Model=forest_model
+                           , ImportancePlot=importanceBar(forest_model)
+                           , AllData=All
+                           , ResultPlot=ResultPlot
+                           , trainAccuracy=accuracy.rate_train
+        )    
+        }
     
     #Model list includes the following objects in a list:
         #Model data, a list that includes training and full data sets
@@ -1897,8 +2916,25 @@ regressForest <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n
     
     return(model.list)
 }
-
-autoForest<- function(data, variable, predictors=NULL, min.n=5, split=NULL, try=10, trees=500, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+##########################################################################################################################################
+### Forest Wrapper
+#########################################################################################################################################
+autoForest<- function(data
+                      , variable
+                      , predictors=NULL
+                      , min.n=5
+                      , split=NULL
+                      , try=10
+                      , trees=500
+                      , metric=NULL
+                      , summary_function="f1"
+                      , train="repeatedcv"
+                      , cvrepeats=5
+                      , number=30
+                      , save.directory=NULL
+                      , save.name=NULL
+                      , parallelMethod=NULL
+                      ){
     
     if(is.null(save.name)){
         save.name <- if(!is.numeric(data[,variable])){
@@ -1921,16 +2957,67 @@ autoForest<- function(data, variable, predictors=NULL, min.n=5, split=NULL, try=
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifyForest(data=data, class=variable, predictors=predictors, min.n=min.n, split=split,  try=try, trees=trees, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        classifyForest(data=data
+                       , class=variable
+                       , predictors=predictors
+                       , min.n=min.n
+                       , split=split
+                       ,  try=try
+                       , trees=trees
+                       , metric=metric
+                       , summary_function=summary_function
+                       , train=train
+                       , cvrepeats=cvrepeats
+                       , number=number
+                       , save.directory=save.directory
+                       , save.name=save.name
+                       , parallelMethod=parallelMethod
+                       )
     } else if(is.numeric(data[,variable])){
-        regressForest(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, metric=metric, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        regressForest(data=data
+                      , dependent=variable
+                      , predictors=predictors
+                      , min.n=min.n
+                      , split=split
+                      , try=try
+                      , trees=trees
+                      , metric=metric
+                      , train=train
+                      , cvrepeats=cvrepeats
+                      , number=number
+                      , save.directory=save.directory
+                      , save.name=save.name
+                      , parallelMethod=parallelMethod
+                      )
     }
     
     return(model)
 }
-
+###########################################################################################
 ###Support Vector Machine Classification
-classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type="Linear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+###########################################################################################
+classifySVM <- function(data
+                        , class
+                        , predictors=NULL
+                        , min.n=5
+                        , split=NULL
+                        , type="Linear"
+                        , xgblambda="1-2"
+                        , svmc="1-5"
+                        , svmdegree="1-5"
+                        , svmscale="1-5"
+                        , svmsigma="1-5"
+                        , svmlength="1-5"
+                        , svmgammavector=NULL
+                        , metric="Accuracy"
+                        , summary_function="f1"
+                        , train="repeatedcv"
+                        , cvrepeats=5
+                        , number=100
+                        , save.directory=NULL
+                        , save.name=NULL
+                        , parallelMethod=NULL
+                        ){
     
     ###Prepare the data
     data.hold <- data
@@ -2083,37 +3170,37 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
        #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
        tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
            caret::trainControl(
-           classProbs = TRUE,
-           summaryFunction = summary_function,
-           method = train,
-           number = number,
-           verboseIter = TRUE
+           classProbs = TRUE
+           , summaryFunction = summary_function
+           , method = train
+           , number = number
+           , verboseIter = TRUE
            )
        } else if(train=="repeatedcv" && parallel_method!="linux"){
            caret::trainControl(
-           classProbs = TRUE,
-           summaryFunction = summary_function,
-           method = train,
-           number = number,
-           repeats = cvrepeats,
-           verboseIter = TRUE
+           classProbs = TRUE
+           , summaryFunction = summary_function
+           , method = train
+           , number = number
+           , repeats = cvrepeats
+           , verboseIter = TRUE
            )
        } else if(train!="repeatedcv" && parallel_method=="linux"){
            caret::trainControl(
-           classProbs = TRUE,
-           summaryFunction = summary_function,
-           method = train,
-           number = number,
-           verboseIter = TRUE
+           classProbs = TRUE
+           , summaryFunction = summary_function
+           , method = train
+           , number = number
+           , verboseIter = TRUE
            )
        } else if(train=="repeatedcv" && parallel_method=="linux"){
            caret::trainControl(
-           classProbs = TRUE,
-           summaryFunction = summary_function,
-           method = train,
-           number = number,
-           repeats = cvrepeats,
-           verboseIter = TRUE
+           classProbs = TRUE
+           , summaryFunction = summary_function
+           , method = train
+           , number = number
+           , repeats = cvrepeats
+           , verboseIter = TRUE
            )
        }
        
@@ -2126,14 +3213,36 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
                            makeForkCluster(as.numeric(my.cores)/2)
                        }
                        registerDoParallel(cl)
-                       svm_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit)
+                       svm_model <- caret::train(x_train
+                                                 , y_train
+                                                 , trControl = tune_control
+                                                 , tuneGrid = svmGrid
+                                                 , metric=metric
+                                                 , method=type
+                                                 , na.action=na.omit
+                                                 )
                        stopCluster(cl)
                    } else if(parallel_method=="linux"){
                        parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
-                       svm_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
+                       svm_model <- caret::train(x_train
+                                                 , y_train
+                                                 , trControl = tune_control
+                                                 , tuneGrid = svmGrid
+                                                 , metric=metric
+                                                 , method=type
+                                                 , na.action=na.omit
+                                                 , verboseIter=TRUE
+                                                 , allowParallel=TRUE
+                                                 )
                        parallelStop()
                    } else if(parallel_method=="minimal"){
-                       svm_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method = type, na.action=na.omit)
+                       svm_model <- caret::train(x_train
+                                                 , y_train
+                                                 , trControl = tune_control
+                                                 , tuneGrid = svmGrid
+                                                 , metric=metric
+                                                 , method = type
+                                                 , na.action=na.omit)
                    }
 
     if(!is.null(save.directory)){
@@ -2144,13 +3253,19 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
     
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=svm_model, newdata=x_train, na.action = na.pass)
-    results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
+    results.frame_train <- data.frame(Sample=data.train$Sample
+                                      , Known=data.train$Class
+                                      , Predicted=y_predict_train
+                                      )
     accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
         y_predict <- predict(object=svm_model, newdata=x_test, na.action = na.pass)
-        results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Class, Predicted=y_predict)
+        results.frame <- data.frame(Sample=data.test$Sample
+                                    , Known=data.test$Class
+                                    , Predicted=y_predict
+                                    )
         accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
         
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
@@ -2161,7 +3276,15 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=svm_model, ImportancePlot=importanceBar(svm_model), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data)
+                           , Model=svm_model
+                           , ImportancePlot=importanceBar(svm_model)
+                           , ValidationSet=results.frame
+                           , trainAccuracy=accuracy.rate_train
+                           , testAccuracy=accuracy.rate
+                           , ResultPlot=ResultPlot
+                           )
     } else if(is.null(split)){
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
         
@@ -2171,7 +3294,13 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=svm_model, ImportancePlot=importanceBar(svm_model), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data)
+                           , Model=svm_model
+                           , ImportancePlot=importanceBar(svm_model)
+                           , trainAccuracy=accuracy.rate_train
+                           , ResultPlot=ResultPlot
+                           )
     }
     
     #Model list includes the following objects in a list:
@@ -2183,9 +3312,35 @@ classifySVM <- function(data, class, predictors=NULL, min.n=5, split=NULL, type=
     svmGrid <- NULL
     return(model.list)
 }
-
-###Support Vector Machine Regression
-regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, type="Linear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+#########################################################################################################################################
+### Support Vector Machine Regression
+#########################################################################################################################################
+regressSVM <- function(data
+                       , dependent
+                       , predictors=NULL
+                       , merge.by=NULL
+                       , min.n=5
+                       , split=NULL
+                       , type="Linear"
+                       , xgblambda="1-2"
+                       , svmc="1-5"
+                       , svmdegree="1-5"
+                       , svmscale="1-5"
+                       , svmsigma="1-5"
+                       , svmlength="1-5"
+                       , svmgammavector=NULL
+                       , metric="RMSE"
+                       , train="repeatedcv"
+                       , cvrepeats=5
+                       , number=100
+                       , Bayes=FALSE
+                       , folds=15
+                       , init_points=100
+                       , n_iter=5
+                       , save.directory=NULL
+                       , save.name=NULL
+                       , parallelMethod=NULL
+                       ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
@@ -2289,31 +3444,31 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        method = train
+        , number = number
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train!="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        verboseIter = TRUE
+        method = train
+        , number = number
+        , verboseIter = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE
+        method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
         )
     }
     
@@ -2326,14 +3481,37 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
              makeForkCluster(as.numeric(my.cores)/2)
          }
          registerDoParallel(cl)
-         svm_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit)
+         svm_model <- caret::train(Dependent~.
+                                   , data=data.training
+                                   , trControl = tune_control
+                                   , tuneGrid = svmGrid
+                                   , metric=metric
+                                   , method=type
+                                   , na.action=na.omit
+                                   )
          stopCluster(cl)
      } else if(parallel_method=="linux"){
          parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
-         svm_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method=type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
+         svm_model <- caret::train(Dependent~.
+                                   , data=data.training
+                                   , trControl = tune_control
+                                   , tuneGrid = svmGrid
+                                   , metric=metric
+                                   , method=type
+                                   , na.action=na.omit
+                                   , verboseIter=TRUE
+                                   , allowParallel=TRUE
+                                   )
          parallelStop()
      } else if(parallel_method=="minimal"){
-         svm_model <- caret::train(Dependent~., data=data.training, trControl = tune_control, tuneGrid = svmGrid, metric=metric, method = type, na.action=na.omit)
+         svm_model <- caret::train(Dependent~.
+                                   , data=data.training
+                                   , trControl = tune_control
+                                   , tuneGrid = svmGrid
+                                   , metric=metric
+                                   , method = type
+                                   , na.action=na.omit
+                                   )
      }
      
      if(!is.null(save.directory)){
@@ -2343,19 +3521,29 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
     
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=svm_model, newdata=x_train, na.action = na.pass)
-    results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Dependent, Predicted=y_predict_train)
+    results.frame_train <- data.frame(Sample=data.train$Sample
+                                      , Known=data.train$Dependent
+                                      , Predicted=y_predict_train
+                                      )
     accuracy.rate_train <- lm(Known~Predicted, data=results.frame_train)
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
         y_predict <- predict(object=svm_model, newdata=x_test, na.action = na.pass)
-        results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Dependent, Predicted=y_predict)
+        results.frame <- data.frame(Sample=data.test$Sample
+                                    , Known=data.test$Dependent
+                                    , Predicted=y_predict
+                                    )
         accuracy.rate <- lm(Known~Predicted, data=results.frame)
         
         all.data <- data.orig
         train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
         train.predictions <- predict(svm_model, train.frame, na.action = na.pass)
-        KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
+        KnownSet <- data.frame(Sample=train.frame$Sample
+                               , Known=train.frame[,dependent]
+                               , Predicted=train.predictions
+                               , stringsAsFactors=FALSE
+                               )
         KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         results.frame$Type <- rep("2. Test", nrow(results.frame))
         All <- rbind(KnownSet, results.frame)
@@ -2366,12 +3554,27 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
         theme_light()
         
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=svm_model, ImportancePlot=importanceBar(svm_model), ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate)
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data
+                                          , predictors=predictors
+                                          )
+                           , Model=svm_model
+                           , ImportancePlot=importanceBar(svm_model)
+                           , ValidationSet=results.frame
+                           , AllData=All
+                           , ResultPlot=ResultPlot
+                           , trainAccuracy=accuracy.rate_train
+                           , testAccuracy=accuracy.rate
+                           )
     } else if(is.null(split)){
         all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
         train.frame <- all.data
         train.predictions <- predict(svm_model, train.frame, na.action = na.pass)
-        KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
+        KnownSet <- data.frame(Sample=train.frame$Sample
+                               , Known=train.frame[,dependent]
+                               , Predicted=train.predictions
+                               , stringsAsFactors=FALSE
+                               )
         KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         All <- KnownSet
         
@@ -2380,7 +3583,17 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
         stat_smooth(method="lm") +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=svm_model, ImportancePlot=importanceBar(svm_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)    }
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data
+                                          , predictors=predictors
+                                          )
+                           , Model=svm_model
+                           , ImportancePlot=importanceBar(svm_model)
+                           , AllData=All
+                           , ResultPlot=ResultPlot
+                           , trainAccuracy=accuracy.rate_train
+        )   
+        }
     
     #Model list includes the following objects in a list:
         #Model data, a list that includes training and full data sets
@@ -2391,8 +3604,31 @@ regressSVM <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5,
     svmGrid <- NULL
     return(model.list)
 }
-
-autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="svmLinear", xgblambda="1-2", svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+######################################################################################################################################
+## Support Vector Machine Wrapper
+######################################################################################################################################
+autoSVM <- function(data
+                    , variable
+                    , predictors=NULL
+                    , min.n=5
+                    , split=NULL
+                    , type="svmLinear"
+                    , xgblambda="1-2"
+                    , svmc="1-5"
+                    , svmdegree="1-5"
+                    , svmscale="1-5"
+                    , svmsigma="1-5"
+                    , svmlength="1-5"
+                    , svmgammavector=NULL
+                    , metric=NULL
+                    , summary_function="f1"
+                    , train="repeatedcv"
+                    , cvrepeats=5
+                    , number=30
+                    , save.directory=NULL
+                    , save.name=NULL
+                    , parallelMethod=NULL
+                    ){
     
     if(is.null(save.name)){
         save.name <- if(!is.numeric(data[,variable])){
@@ -2415,17 +3651,80 @@ autoSVM <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifySVM(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        classifySVM(data=data
+                    , class=variable
+                    , predictors=predictors
+                    , min.n=min.n
+                    , split=split
+                    , type=type
+                    , xgblambda=xgblambda
+                    , svmc=svmc
+                    , svmdegree=svmdegree
+                    , svmscale=svmscale
+                    , svmsigma=svmsigma
+                    , svmlength=svmlength
+                    , svmgammavector=svmgammavector
+                    , metric=metric
+                    , summary_function=summary_function
+                    , train=train
+                    , cvrepeats=cvrepeats
+                    , number=number
+                    , save.directory=save.directory
+                    , save.name=save.name
+                    , parallelMethod=parallelMethod
+                    )
     } else if(is.numeric(data[,variable])){
-        regressSVM(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        regressSVM(data=data
+                   , dependent=variable
+                   , predictors=predictors
+                   , min.n=min.n
+                   , split=split
+                   , type=type
+                   , xgblambda=xgblambda
+                   , svmc=svmc
+                   , svmdegree=svmdegree
+                   , svmscale=svmscale
+                   , svmsigma=svmsigma
+                   , svmlength=svmlength
+                   , svmgammavector=svmgammavector
+                   , metric=metric
+                   , train=train
+                   , cvrepeats=cvrepeats
+                   , number=number
+                   , save.directory=save.directory
+                   , save.name=save.name
+                   , parallelMethod=parallelMethod
+                   )
     }
     
     return(model)
 }
 
-
-###Bayes Classification
-classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=FALSE, metric="Accuracy", summary_function="f1", train="repeatedcv", cvrepeats=5, number=100, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+#######################################################################################################
+### Bayes Classification
+#######################################################################################################
+classifyBayes <- function(data
+                          , class
+                          , predictors=NULL
+                          , min.n=5
+                          , split=NULL
+                          , type="bayesLinear"
+                          , trees=100
+                          , xgbalpha="1-2"
+                          , neuralhiddenunits="1-10"
+                          , bartk="1-2"
+                          , bartbeta="1-2"
+                          , bartnu="1-2"
+                          , missing=FALSE
+                          , metric="Accuracy"
+                          , summary_function="f1"
+                          , train="repeatedcv"
+                          , cvrepeats=5
+                          , number=100
+                          , save.directory=NULL
+                          , save.name=NULL
+                          , parallelMethod=NULL
+                          ){
     
     ###Prepare the data
     data.hold <- data
@@ -2483,15 +3782,16 @@ classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, typ
     
     num_classes <- as.numeric(length(unique(data.training$Class)))
     
-     summary_function <- if(is.null(summary_function)){
+     summary_function <- 
+       if(is.null(summary_function)){
          if(num_classes>2){
-             multiClassSummary
+             multiClassSummary # Classification of a catagorical variable with more than 2 groups
          } else  if(num_classes==2){
-             twoClassSummary
+             twoClassSummary # Binary classification summary
          }
      } else if(!is.null(summary_function)){
          if(summary_function=="f1"){
-             prSummary
+             prSummary # Precision summary
          }
      }
        
@@ -2518,37 +3818,37 @@ classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, typ
        #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
        tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
            caret::trainControl(
-           classProbs = TRUE,
-           summaryFunction = summary_function,
-           method = train,
-           number = number,
-           verboseIter = TRUE
+           classProbs = TRUE
+           , summaryFunction = summary_function
+           , method = train
+           , number = number
+           , verboseIter = TRUE
            )
        } else if(train=="repeatedcv" && parallel_method!="linux"){
            caret::trainControl(
-           classProbs = TRUE,
-           summaryFunction = summary_function,
-           method = train,
-           number = number,
-           repeats = cvrepeats,
-           verboseIter = TRUE
+           classProbs = TRUE
+           , summaryFunction = summary_function
+           , method = train
+           , number = number
+           , repeats = cvrepeats
+           , verboseIter = TRUE
            )
        } else if(train!="repeatedcv" && parallel_method=="linux"){
            caret::trainControl(
-           classProbs = TRUE,
-           summaryFunction = summary_function,
-           method = train,
-           number = number,
-           verboseIter = TRUE
+           classProbs = TRUE
+           , summaryFunction = summary_function
+           , method = train
+           , number = number
+           , verboseIter = TRUE
            )
        } else if(train=="repeatedcv" && parallel_method=="linux"){
            caret::trainControl(
-           classProbs = TRUE,
-           summaryFunction = summary_function,
-           method = train,
-           number = number,
-           repeats = cvrepeats,
-           verboseIter = TRUE
+           classProbs = TRUE
+           , summaryFunction = summary_function
+           , method = train
+           , number = number
+           , repeats = cvrepeats
+           , verboseIter = TRUE
            )
        }
        
@@ -2561,20 +3861,55 @@ classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, typ
                    makeForkCluster(as.numeric(my.cores)/2)
                }
                registerDoParallel(cl)
-               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, metric=metric, method=bayes_type, na.action=na.omit)
+               bayes_model <- caret::train(x_train
+                                           , y_train
+                                           , trControl = tune_control
+                                           , metric=metric
+                                           , method=bayes_type
+                                           , na.action=na.omit
+                                           )
                stopCluster(cl)
            } else if(parallel_method=="linux"){
                parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
-               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, metric=metric, method=bayes_type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
+               bayes_model <- caret::train(x_train
+                                           , y_train
+                                           , trControl = tune_control
+                                           , metric=metric
+                                           , method=bayes_type
+                                           , na.action=na.omit
+                                           , verboseIter=TRUE
+                                           , allowParallel=TRUE
+                                           )
                parallelStop()
            } else if(parallel_method=="minimal"){
-               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, metric=metric, method = bayes_type, na.action=na.omit)
+               bayes_model <- caret::train(x_train
+                                           , y_train
+                                           , trControl = tune_control
+                                           , metric=metric
+                                           , method = bayes_type
+                                           , na.action=na.omit
+                                           )
            }
        } else if(type=="bayesTree"){
            if(missing==TRUE){
-               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, use_missing_data=TRUE, serialize=TRUE)
+               bayes_model <- caret::train(x_train
+                                           , y_train
+                                           , trControl = tune_control
+                                           , tuneGrid = bayesGrid
+                                           , metric=metric
+                                           , method=bayes_type
+                                           , use_missing_data=TRUE
+                                           , serialize=TRUE
+                                           )
            } else if(missing==FALSE){
-               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, serialize=TRUE)
+               bayes_model <- caret::train(x_train
+                                           , y_train
+                                           , trControl = tune_control
+                                           , tuneGrid = bayesGrid
+                                           , metric=metric
+                                           , method=bayes_type
+                                           , serialize=TRUE
+                                           )
            }
        } else if(type=="bayesNeuralNet"){
            if(parallel_method!="linux"){
@@ -2584,14 +3919,36 @@ classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, typ
                    makeForkCluster(as.numeric(my.cores)/2)
                }
                registerDoParallel(cl)
-               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, na.action=na.omit)
+               bayes_model <- caret::train(x_train
+                                           , y_train
+                                           , trControl = tune_control
+                                           , tuneGrid = bayesGrid
+                                           , metric=metric
+                                           , method=bayes_type
+                                           , na.action=na.omit
+                                           )
                stopCluster(cl)
            } else if(parallel_method=="linux"){
                parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
-               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
+               bayes_model <- caret::train(x_train
+                                           , y_train
+                                           , trControl = tune_control
+                                           , tuneGrid = bayesGrid
+                                           , metric=metric
+                                           , method=bayes_type
+                                           , na.action=na.omit
+                                           , verboseIter=TRUE
+                                           , allowParallel=TRUE)
                parallelStop()
            } else if(parallel_method=="minimal"){
-               bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method = bayes_type, na.action=na.omit)
+               bayes_model <- caret::train(x_train
+                                           , y_train
+                                           , trControl = tune_control
+                                           , tuneGrid = bayesGrid
+                                           , metric=metric
+                                           , method = bayes_type
+                                           , na.action=na.omit
+                                           )
            }
        }
                   
@@ -2604,13 +3961,19 @@ classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, typ
     
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=bayes_model, newdata=x_train, na.action = na.pass)
-    results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
+    results.frame_train <- data.frame(Sample=data.train$Sample
+                                      , Known=data.train$Class
+                                      , Predicted=y_predict_train
+                                      )
     accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
         y_predict <- predict(object=bayes_model, newdata=x_test, na.action = na.pass)
-        results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Class, Predicted=y_predict)
+        results.frame <- data.frame(Sample=data.test$Sample
+                                    , Known=data.test$Class
+                                    , Predicted=y_predict
+                                    )
         accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
         
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
@@ -2621,7 +3984,16 @@ classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, typ
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=bayes_model, tryCatch(ImportancePlot=importanceBar(bayes_model), error=function(e) NULL), ValidationSet=results.frame, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data)
+                           , Model=bayes_model
+                           , tryCatch(ImportancePlot=importanceBar(bayes_model)
+                                      , error=function(e) NULL)
+                           , ValidationSet=results.frame
+                           , trainAccuracy=accuracy.rate_train
+                           , testAccuracy=accuracy.rate
+                           , ResultPlot=ResultPlot
+                           )
     } else if(is.null(split)){
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
         
@@ -2631,7 +4003,14 @@ classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, typ
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data), Model=bayes_model, tryCatch(ImportancePlot=importanceBar(bayes_model), error=function(e) NULL), trainAccuracy=accuracy.rate_train, ResultPlot=ResultPlot)
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data)
+                           , Model=bayes_model
+                           , tryCatch(ImportancePlot=importanceBar(bayes_model)
+                                      , error=function(e) NULL)
+                           , trainAccuracy=accuracy.rate_train
+                           , ResultPlot=ResultPlot
+                           )
     }
     
     #Model list includes the following objects in a list:
@@ -2643,9 +4022,35 @@ classifyBayes <- function(data, class, predictors=NULL, min.n=5, split=NULL, typ
         bayesGrid <- NULL
     return(model.list)
 }
-
-###Bayes Regression
-regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", metric="RMSE", train="repeatedcv", cvrepeats=5, number=100, missing=FALSE, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+####################################################################################################################################
+### Bayes Regression
+###################################################################################################################################
+regressBayes <- function(data
+                         , dependent
+                         , predictors=NULL
+                         , merge.by=NULL
+                         , min.n=5
+                         , split=NULL
+                         , type="bayesLinear"
+                         , trees=100
+                         , xgbalpha="1-2"
+                         , neuralhiddenunits="1-10"
+                         , bartk="1-2"
+                         , bartbeta="1-2"
+                         , bartnu="1-2"
+                         , metric="RMSE"
+                         , train="repeatedcv"
+                         , cvrepeats=5
+                         , number=100
+                         , missing=FALSE
+                         , Bayes=FALSE
+                         , folds=15
+                         , init_points=100
+                         , n_iter=5
+                         , save.directory=NULL
+                         , save.name=NULL
+                         , parallelMethod=NULL
+                         ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=dependent, predictors=predictors)
@@ -2723,31 +4128,31 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        method = train
+        , number = number
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE,
-        allowParallel = TRUE
+        method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
+        , allowParallel = TRUE
         )
     } else if(train!="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        verboseIter = TRUE
+        method = train
+        , number = number
+        , verboseIter = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
-        method = train,
-        number = number,
-        repeats = cvrepeats,
-        verboseIter = TRUE
+        method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
         )
     }
     
@@ -2761,20 +4166,55 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
                     makeForkCluster(as.numeric(my.cores)/2)
                 }
                 registerDoParallel(cl)
-                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, metric=metric, method=bayes_type, na.action=na.omit)
+                bayes_model <- caret::train(x_train
+                                            , y_train
+                                            , trControl = tune_control
+                                            , metric=metric
+                                            , method=bayes_type
+                                            , na.action=na.omit
+                                            )
                 stopCluster(cl)
             } else if(parallel_method=="linux"){
                 parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
-                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, metric=metric, method=bayes_type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
+                bayes_model <- caret::train(x_train
+                                            , y_train
+                                            , trControl = tune_control
+                                            , metric=metric
+                                            , method=bayes_type
+                                            , na.action=na.omit
+                                            , verboseIter=TRUE
+                                            , allowParallel=TRUE
+                                            )
                 parallelStop()
             } else if(parallel_method=="minimal"){
-                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, metric=metric, method = bayes_type, na.action=na.omit)
+                bayes_model <- caret::train(x_train
+                                            , y_train
+                                            , trControl = tune_control
+                                            , metric=metric
+                                            , method = bayes_type
+                                            , na.action=na.omit
+                                            )
             }
         } else if(type=="bayesTree"){
             if(missing==TRUE){
-                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, use_missing_data=TRUE, serialize=TRUE)
+                bayes_model <- caret::train(x_train
+                                            , y_train
+                                            , trControl = tune_control
+                                            , tuneGrid = bayesGrid
+                                            , metric=metric
+                                            , method=bayes_type
+                                            , use_missing_data=TRUE
+                                            , serialize=TRUE
+                                            )
             } else if(missing==FALSE){
-                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, serialize=TRUE)
+                bayes_model <- caret::train(x_train
+                                            , y_train
+                                            , trControl = tune_control
+                                            , tuneGrid = bayesGrid
+                                            , metric=metric
+                                            , method=bayes_type
+                                            , serialize=TRUE
+                                            )
             }
         } else if(type=="bayesNeuralNet"){
             if(parallel_method!="linux"){
@@ -2784,14 +4224,37 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
                     makeForkCluster(as.numeric(my.cores)/2)
                 }
                 registerDoParallel(cl)
-                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, na.action=na.omit)
+                bayes_model <- caret::train(x_train
+                                            , y_train
+                                            , trControl = tune_control
+                                            , tuneGrid = bayesGrid
+                                            , metric=metric
+                                            , method=bayes_type
+                                            , na.action=na.omit
+                                            )
                 stopCluster(cl)
             } else if(parallel_method=="linux"){
                 parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
-                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method=bayes_type, na.action=na.omit, verboseIter=TRUE, allowParallel=TRUE)
+                bayes_model <- caret::train(x_train
+                                            , y_train
+                                            , trControl = tune_control
+                                            , tuneGrid = bayesGrid
+                                            , metric=metric
+                                            , method=bayes_type
+                                            , na.action=na.omit
+                                            , verboseIter=TRUE
+                                            , allowParallel=TRUE
+                                            )
                 parallelStop()
             } else if(parallel_method=="minimal"){
-                bayes_model <- caret::train(x_train, y_train, trControl = tune_control, tuneGrid = bayesGrid, metric=metric, method = bayes_type, na.action=na.omit)
+                bayes_model <- caret::train(x_train
+                                            , y_train
+                                            , trControl = tune_control
+                                            , tuneGrid = bayesGrid
+                                            , metric=metric
+                                            , method = bayes_type
+                                            , na.action=na.omit
+                                            )
             }
         }
         
@@ -2800,7 +4263,9 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
             saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
         }
     
-    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
+    #Now that we have a final model, we can save it's perfoormance. 
+    # Here we generate predictions based on the model on the data used to train it. 
+    # This will be used to asses trainAccuracy
     y_predict_train <- predict(object=bayes_model, newdata=x_train, na.action = na.pass)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Dependent, Predicted=y_predict_train)
     accuracy.rate_train <- lm(Known~Predicted, data=results.frame_train)
@@ -2808,13 +4273,20 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
         y_predict <- predict(object=bayes_model, newdata=x_test, na.action = na.pass)
-        results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Dependent, Predicted=y_predict)
+        results.frame <- data.frame(Sample=data.test$Sample
+                                    , Known=data.test$Dependent
+                                    , Predicted=y_predict
+                                    )
         accuracy.rate <- lm(Known~Predicted, data=results.frame)
         
         all.data <- data.orig
         train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
         train.predictions <- predict(bayes_model, train.frame, na.action = na.pass)
-        KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
+        KnownSet <- data.frame(Sample=train.frame$Sample
+                               , Known=train.frame[,dependent]
+                               , Predicted=train.predictions
+                               , stringsAsFactors=FALSE
+                               )
         KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         results.frame$Type <- rep("2. Test", nrow(results.frame))
         All <- rbind(KnownSet, results.frame)
@@ -2825,12 +4297,26 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
         theme_light()
         
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=bayes_model, ImportancePlot=importanceBar(bayes_model), ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train, testAccuracy=accuracy.rate)
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data
+                                          , predictors=predictors)
+                           , Model=bayes_model
+                           , ImportancePlot=importanceBar(bayes_model)
+                           , ValidationSet=results.frame
+                           , AllData=All
+                           , ResultPlot=ResultPlot
+                           , trainAccuracy=accuracy.rate_train
+                           , testAccuracy=accuracy.rate
+                           )
     } else if(is.null(split)){
         all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
         train.frame <- all.data
         train.predictions <- predict(bayes_model, train.frame, na.action = na.pass)
-        KnownSet <- data.frame(Sample=train.frame$Sample, Known=train.frame[,dependent], Predicted=train.predictions, stringsAsFactors=FALSE)
+        KnownSet <- data.frame(Sample=train.frame$Sample
+                               , Known=train.frame[,dependent]
+                               , Predicted=train.predictions
+                               , stringsAsFactors=FALSE
+                               )
         KnownSet$Type <- rep("1. Train", nrow(KnownSet))
         All <- KnownSet
         
@@ -2839,7 +4325,16 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
         stat_smooth(method="lm") +
         theme_light()
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data, predictors=predictors), Model=bayes_model, ImportancePlot=importanceBar(bayes_model), AllData=All, ResultPlot=ResultPlot, trainAccuracy=accuracy.rate_train)    }
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , data=data
+                                          , predictors=predictors)
+                           , Model=bayes_model
+                           , ImportancePlot=importanceBar(bayes_model)
+                           , AllData=All
+                           , ResultPlot=ResultPlot
+                           , trainAccuracy=accuracy.rate_train
+        )   
+        }
     
     #Model list includes the following objects in a list:
         #Model data, a list that includes training and full data sets
@@ -2850,8 +4345,31 @@ regressBayes <- function(data, dependent, predictors=NULL, merge.by=NULL, min.n=
     bayesGrid <- NULL
     return(model.list)
 }
-
-autoBayes <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="bayesLinear", trees=100, xgbalpha="1-2", neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=FALSE, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+#####################################################################################################################################
+## Bayesian Wrapper Function
+#####################################################################################################################################
+autoBayes <- function(data
+                      , variable
+                      , predictors=NULL
+                      , min.n=5
+                      , split=NULL
+                      , type="bayesLinear"
+                      , trees=100
+                      , xgbalpha="1-2"
+                      , neuralhiddenunits="1-10"
+                      , bartk="1-2"
+                      , bartbeta="1-2"
+                      , bartnu="1-2"
+                      , missing=FALSE
+                      , metric=NULL
+                      , summary_function="f1"
+                      , train="repeatedcv"
+                      , cvrepeats=5
+                      , number=30
+                      , save.directory=NULL
+                      , save.name=NULL
+                      , parallelMethod=NULL
+                      ){
     
     if(is.null(save.name)){
         save.name <- if(!is.numeric(data[,variable])){
@@ -2874,29 +4392,217 @@ autoBayes <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifyBayes(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        classifyBayes(data=data
+                      , class=variable
+                      , predictors=predictors
+                      , min.n=min.n
+                      , split=split
+                      , type=type
+                      , trees=trees
+                      , neuralhiddenunits=neuralhiddenunits
+                      , xgbalpha=xgbalpha
+                      , bartk=bartk
+                      , bartbeta=bartbeta
+                      , bartnu=bartnu
+                      , missing=missing
+                      , metric=metric
+                      , summary_function=summary_function
+                      , train=train
+                      , cvrepeats=cvrepeats
+                      , number=number
+                      , save.directory=save.directory
+                      , save.name=save.name
+                      , parallelMethod=parallelMethod
+                      )
     } else if(is.numeric(data[,variable])){
-        regressBayes(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        regressBayes(data=data
+                     , dependent=variable
+                     , predictors=predictors
+                     , min.n=min.n
+                     , split=split
+                     , type=type
+                     , trees=trees
+                     , neuralhiddenunits=neuralhiddenunits
+                     , xgbalpha=xgbalpha
+                     , bartk=bartk
+                     , bartbeta=bartbeta
+                     , bartnu=bartnu
+                     , missing=missing
+                     , metric=metric
+                     , train=train
+                     , cvrepeats=cvrepeats
+                     , number=number
+                     , save.directory=save.directory
+                     , save.name=save.name
+                     , parallelMethod=parallelMethod
+                     )
     }
 
     return(model)
 }
+##############################################################################################################
+## Master function 
+##############################################################################################################
+# Uses previously defined functions to take any data set and preform slected machine learning structure.
 
-
-autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, type="XGBLinear", treedepth="2-2", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, metric=NULL, summary_function="f1", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, save.directory=NULL, save.name=NULL, parallelMethod=NULL){
+autoMLTable <- function(data
+                        , variable
+                        , predictors=NULL
+                        , min.n=5
+                        , split=NULL
+                        , type="XGBLinear"
+                        , treedepth="2-2"
+                        , xgbalpha="0-0"
+                        , xgbeta="0.1-0.1"
+                        , xgbgamma="0-0"
+                        , xgblambda="0-0"
+                        , xgbcolsample="0.7-0.7"
+                        , xgbsubsample="0.7-0.7"
+                        , xgbminchild="1-1"
+                        , nrounds=500
+                        , test_nrounds=100
+                        , try=10
+                        , trees=500
+                        , svmc="1-5"
+                        , svmdegree="1-5"
+                        , svmscale="1-5"
+                        , svmsigma="1-5"
+                        , svmlength="1-5"
+                        , svmgammavector=NULL
+                        , neuralhiddenunits="1-10"
+                        , bartk="1-2"
+                        , bartbeta="1-2"
+                        , bartnu="1-2"
+                        , missing=missing
+                        , metric=NULL
+                        , summary_function="f1"
+                        , train="repeatedcv"
+                        , cvrepeats=5
+                        , number=30
+                        , Bayes=FALSE
+                        , folds=15
+                        , init_points=100
+                        , n_iter=5
+                        , save.directory=NULL
+                        , save.name=NULL
+                        , parallelMethod=NULL
+                        ){
     
     
     #Choose model class
     model <- if(type=="xgbTree"){
-        autoXGBoostTree(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        autoXGBoostTree(data=data
+                        , variable=variable
+                        , predictors=predictors
+                        , min.n=min.n
+                        , split=split
+                        , treedepth=treedepth
+                        , xgbgamma=xgbgamma
+                        , xgbeta=xgbeta
+                        , xgbcolsample=xgbcolsample
+                        , xgbsubsample=xgbsubsample
+                        , xgbminchild=xgbminchild
+                        , nrounds=nrounds
+                        , test_nrounds=test_nrounds
+                        , metric=metric
+                        , summary_function=summary_function
+                        , train=train
+                        , cvrepeats=cvrepeats
+                        , number=number
+                        , Bayes=Bayes
+                        , folds=folds
+                        , init_points=init_points
+                        , n_iter=n_iter
+                        , save.directory=save.directory
+                        , save.name=save.name
+                        , parallelMethod=parallelMethod
+                        )
     } else if(type=="xgbLinear"){
-        autoXGBoostLinear(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        autoXGBoostLinear(data=data
+                          , variable=variable
+                          , predictors=predictors
+                          , min.n=min.n
+                          , split=split
+                          , xgbalpha=xgbalpha
+                          , xgbeta=xgbeta
+                          , xgblambda=xgblambda
+                          , nrounds=nrounds
+                          , test_nrounds=test_nrounds
+                          , metric=metric
+                          , summary_function=summary_function
+                          , train=train
+                          , cvrepeats=cvrepeats
+                          , number=number
+                          , Bayes=Bayes
+                          , folds=folds
+                          , init_points=init_points
+                          , n_iter=n_iter
+                          , save.directory=save.directory
+                          , save.name=save.name
+                          , parallelMethod=parallelMethod
+                          )
     } else if(type=="Forest"){
-        autoForest(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, try=try, trees=trees, metric=metric, summary_function=summary_function, train=train, number=number, cvrepeats=cvrepeats, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        autoForest(data=data
+                   , variable=variable
+                   , predictors=predictors
+                   , min.n=min.n
+                   , split=split
+                   , try=try
+                   , trees=trees
+                   , metric=metric
+                   , summary_function=summary_function
+                   , train=train
+                   , number=number
+                   , cvrepeats=cvrepeats
+                   , save.directory=save.directory
+                   , save.name=save.name
+                   , parallelMethod=parallelMethod
+                   )
     } else if(type=="svmLinear" | type=="svmPoly" | type=="svmRadial" | type=="svmRadialCost" | type=="svmRadialSigma" | type=="svmBoundrangeString" | type=="svmExpoString" | type=="svmSpectrumString"){
-        autoSVM(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, xgblambda=xgblambda, svmc=svmc, svmdegree=svmdegree, svmscale=svmscale, svmsigma=svmsigma, svmlength=svmlength, svmgammavector=svmgammavector, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        autoSVM(data=data,
+                variable=variable
+                , predictors=predictors
+                , min.n=min.n
+                , split=split
+                , type=type
+                , xgblambda=xgblambda
+                , svmc=svmc
+                , svmdegree=svmdegree
+                , svmscale=svmscale
+                , svmsigma=svmsigma
+                , svmlength=svmlength
+                , svmgammavector=svmgammavector
+                , metric=metric
+                , summary_function=summary_function
+                , train=train
+                , cvrepeats=cvrepeats
+                , number=number
+                , save.directory=save.directory
+                , save.name=save.name
+                , parallelMethod=parallelMethod
+                )
     } else if(type=="bayesLinear" | type=="bayesTree" | type=="bayesNeuralNet"){
-        autoBayes(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, summary_function=summary_function, train=train, cvrepeats=cvrepeats, number=number, save.directory=save.directory, save.name=save.name, parallelMethod=parallelMethod)
+        autoBayes(data=data
+                  , variable=variable
+                  , predictors=predictors
+                  , min.n=min.n
+                  , split=split
+                  , type=type
+                  , trees=trees
+                  , neuralhiddenunits=neuralhiddenunits
+                  , xgbalpha=xgbalpha
+                  , bartk=bartk
+                  , bartbeta=bartbeta
+                  , bartnu=bartnu
+                  , missing=missing
+                  , metric=metric
+                  , summary_function=summary_function
+                  , train=train
+                  , cvrepeats=cvrepeats
+                  , number=number
+                  , save.directory=save.directory
+                  , save.name=save.name
+                  , parallelMethod=parallelMethod)
 
     }
     
