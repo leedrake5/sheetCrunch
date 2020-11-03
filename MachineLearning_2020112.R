@@ -1,26 +1,11 @@
 # UPDATE Log
 # 11/2/2020 - Went through and reformated many of the data.frame, model, and function inputs. Aside from formatting no code was changed. 
 #             This was to improve readability and to allow for easier commenting once fixes are commpleted. 
+# 11/3/2020 - Used commenting strings to seperate functions for ease of use
 
-#Automatically detect the computer's operating system
-get_os <- function(){
-    sysinf <- Sys.info()
-    if (!is.null(sysinf)){
-        os <- sysinf['sysname']
-        if (os == 'Darwin')
-        os <- "osx"
-    } else { ## mystery machine
-        os <- .Platform$OS.type
-        if (grepl("^darwin", R.version$os))
-        os <- "osx"
-        if (grepl("linux-gnu", R.version$os))
-        os <- "linux"
-    }
-    tolower(os)
-}
-
-tryCatch(options(java.parameters = c("-XX:+UseConcMarkSweepGC", "-Xmx80g")), error=function(e) NULL)
-
+##########################################################################################################################################
+## MISC CODE FOR MODELING
+#########################################################################################################################################
 #Check to see if needed packages exist, and automatically install them if needed
 list.of.packages <- c("caret", "xgboost", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm")
 
@@ -42,12 +27,39 @@ library(rBayesianOptimization)
 library(tidyverse)
 library(mlr)
 library(parallelMap)
+
+
+#################################################################
+# MISC Functions
+#################################################################
+#Automatically detect the computer's operating system
+get_os <- function(){
+    sysinf <- Sys.info()
+    if (!is.null(sysinf)){
+        os <- sysinf['sysname']
+        if (os == 'Darwin')
+        os <- "osx"
+    } else { ## mystery machine
+        os <- .Platform$OS.type
+        if (grepl("^darwin", R.version$os))
+        os <- "osx"
+        if (grepl("linux-gnu", R.version$os))
+        os <- "linux"
+    }
+    tolower(os)
+}
+
+
+tryCatch(options(java.parameters = c("-XX:+UseConcMarkSweepGC", "-Xmx80g")), error=function(e) NULL)
+
+
 #Detect the available computer cores. One is reserved for the operating system
 my.cores <- if(parallel::detectCores()>=3){
     paste0(parallel::detectCores()-1)
 } else if(parallel::detectCores()<=2){
     "1"
 }
+
 
 my.max <- function(x) ifelse( !all(is.na(x)), max(x, na.rm=T), NA)
 my.min <- function(x) ifelse( !all(is.na(x)), min(x, na.rm=T), NA)
@@ -79,6 +91,9 @@ strip_glm <- function(cm) {
 
 
 
+########################################################
+## Summary Functions
+########################################################
 summaryLMFrame <-function(lm){
     summary.lm <- summary(lm)
     results <- data.frame(Intercept=summary.lm$coef[1]
@@ -96,6 +111,9 @@ summaryLMFrame <-function(lm){
     return(results)
 }
 
+
+##### F1 summary calculation function
+
 f1 <- function (data
                 , lev = NULL
                 , model = NULL
@@ -106,6 +124,11 @@ f1 <- function (data
   names(f1_val) <- c("F1")
   f1_val
 }
+
+#######################################
+## XGboost optimization functions
+######################################
+# What does this fuction optimize?
 
  xgb_cv_opt_tree <- function (data
                               , label
@@ -263,6 +286,11 @@ f1 <- function (data
      return(opt_res)
  }
 
+
+
+## What does this function do? 
+
+
 xgb_cv_opt_linear <- function (data
                                , label
                                , objectfun
@@ -396,8 +424,9 @@ xgb_cv_opt_linear <- function (data
     return(opt_res)
 }
 
-
-
+#################################################################################
+# VIMP Functions
+#################################################################################
 #Create a dataframe from the model to identify variable importance
 importanceBarFrame <- function(model){
     forest.imp <- as.data.frame(varImp(model, scale=FALSE)$importance)
@@ -408,6 +437,8 @@ importanceBarFrame <- function(model){
     
     return(importance.frame)
 }
+
+
 
 #Create a bar plot of variable importance
 importanceBar <- function(model){
@@ -485,8 +516,10 @@ dataPrep <- function(data, variable, predictors=NULL){
     return(results.final)
 }
 
-
-### XGBoost classification. This function will run a classification model, using probabilities to sort data. 
+############################################################################################################
+### XGBoost classification (Trees?) 
+###########################################################################################################
+### This function will run a classification model, using probabilities to sort data. 
 ### It will automatically search for the best paramters, and then run a full model based on those. 
 ### Variables are encoded as "x-y", which will search in increments for every variable in between.
 classifyXGBoostTree <- function(data
@@ -933,7 +966,11 @@ classifyXGBoostTree <- function(data
     return(model.list)
 }
 
-### XGBoost regression. This function will run a regression model, using rmse or mae (per your choice) to sort data. 
+
+#################################################################################################
+### XGBoost regression (Trees?) 
+#################################################################################################
+### This function will run a regression model, using rmse or mae (per your choice) to sort data. 
 ### It will automatically search for the best paramters, and then run a full model based on those. 
 ### Variables are encoded as "x-y", which will search in increments for every variable in between.
 regressXGBoostTree <- function(data
@@ -1354,8 +1391,11 @@ regressXGBoostTree <- function(data
     return(model.list)
 }
 
-
+##################################################################################################################################
+#### XGboost wrapper (Tree?) 
+##################################################################################################################################
 ###This function wrapper will use the classification or regression model based on whether your choosen variable is numeric or not
+
 autoXGBoostTree <- function(data
                             , variable
                             , predictors=NULL
@@ -1461,8 +1501,10 @@ autoXGBoostTree <- function(data
     return(model)
 }
 
-
-###XGBoost classification. This function will run a classification model, using probabilities to sort data. 
+############################################################################################################
+###XGBoost classification - Linear
+###########################################################################################################
+### This function will run a classification model, using probabilities to sort data. 
 ### It will automatically search for the best paramters, and then run a full model based on those. 
 ### Variables are encoded as "x-y", which will search in increments for every variable in between.
 classifyXGBoostLinear <- function(data
@@ -1887,8 +1929,10 @@ classifyXGBoostLinear <- function(data
         
     return(model.list)
 }
-
-###XGBoost regression. This function will run a regression model, using rmse or mae (per your choice) to sort data. 
+###################################################################################################################################
+###XGBoost regression - Linear
+#################################################################################################################################
+# This function will run a regression model, using rmse or mae (per your choice) to sort data. 
 # It will automatically search for the best paramters, and then run a full model based on those. 
 # Variables are encoded as "x-y", which will search in increments for every variable in between.
 regressXGBoostLinear <- function(data
@@ -2284,8 +2328,9 @@ regressXGBoostLinear <- function(data
     
     return(model.list)
 }
-
-
+#######################################################################################################################################
+### XGBoost Wrapper - Linear
+#######################################################################################################################################
 ###This function wrapper will use the classification or regression model based on whether your choosen variable is numeric or not
 autoXGBoostLinear <- function(data
                               , variable
@@ -2381,9 +2426,10 @@ autoXGBoostLinear <- function(data
     
     return(model)
 }
-
-
-###Forest classification. Nothing special.
+#################################################################################################
+###Forest classification
+#################################################################################################
+### Nothing special.
 classifyForest <- function(data
                            , class
                            , predictors=NULL
@@ -2638,8 +2684,10 @@ classifyForest <- function(data
         
     return(model.list)
 }
-
-###Forest regression. Nothing special
+###################################################################################################################################
+### Forest regression 
+###################################################################################################################################
+### Nothing special
 regressForest <- function(data
                           , dependent
                           , predictors=NULL
@@ -2868,7 +2916,9 @@ regressForest <- function(data
     
     return(model.list)
 }
-
+##########################################################################################################################################
+### Forest Wrapper
+#########################################################################################################################################
 autoForest<- function(data
                       , variable
                       , predictors=NULL
@@ -2943,8 +2993,9 @@ autoForest<- function(data
     
     return(model)
 }
-
+###########################################################################################
 ###Support Vector Machine Classification
+###########################################################################################
 classifySVM <- function(data
                         , class
                         , predictors=NULL
@@ -3261,8 +3312,9 @@ classifySVM <- function(data
     svmGrid <- NULL
     return(model.list)
 }
-
-###Support Vector Machine Regression
+#########################################################################################################################################
+### Support Vector Machine Regression
+#########################################################################################################################################
 regressSVM <- function(data
                        , dependent
                        , predictors=NULL
@@ -3552,7 +3604,9 @@ regressSVM <- function(data
     svmGrid <- NULL
     return(model.list)
 }
-
+######################################################################################################################################
+## Support Vector Machine Wrapper
+######################################################################################################################################
 autoSVM <- function(data
                     , variable
                     , predictors=NULL
@@ -3646,8 +3700,9 @@ autoSVM <- function(data
     return(model)
 }
 
-
-###Bayes Classification
+#######################################################################################################
+### Bayes Classification
+#######################################################################################################
 classifyBayes <- function(data
                           , class
                           , predictors=NULL
@@ -3967,8 +4022,9 @@ classifyBayes <- function(data
         bayesGrid <- NULL
     return(model.list)
 }
-
-###Bayes Regression
+####################################################################################################################################
+### Bayes Regression
+###################################################################################################################################
 regressBayes <- function(data
                          , dependent
                          , predictors=NULL
@@ -4289,7 +4345,9 @@ regressBayes <- function(data
     bayesGrid <- NULL
     return(model.list)
 }
-
+#####################################################################################################################################
+## Bayesian Wrapper Function
+#####################################################################################################################################
 autoBayes <- function(data
                       , variable
                       , predictors=NULL
@@ -4382,7 +4440,10 @@ autoBayes <- function(data
 
     return(model)
 }
-
+##############################################################################################################
+## Master function 
+##############################################################################################################
+# Uses previously defined functions to take any data set and preform slected machine learning structure.
 
 autoMLTable <- function(data
                         , variable
