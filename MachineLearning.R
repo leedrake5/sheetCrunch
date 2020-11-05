@@ -125,6 +125,33 @@ f1 <- function (data
   f1_val
 }
 
+##
+metric_fun <- function(data
+                       , metric){ ##
+  if(metric == "ROC" | metric == "Sens" | metric == "Spec"){
+    num_classes <- as.numeric(length(unique(data$Class)))
+    
+    if(num_classes>2){
+      summary_function <- multiClassSummary
+          }else if(num_classes==2){
+            summary_function <- twoClassSummary
+          }
+  }else if(metric == "AUC"| metric == "Precision" | metric == "Recall" | metric == "F" ){
+      
+    summary_function <- prSummary
+    
+    
+    }else if( metric == "Accuracy" | metric == "Kappa"){
+      
+      summary_function <- defaultSummary
+      
+    }
+  return(summary_function)
+}
+  
+  
+  
+
 #######################################
 ## XGboost optimization functions
 ######################################
@@ -534,8 +561,8 @@ classifyXGBoostTree <- function(data
                                 , xgbminchild="1-3"
                                 , nrounds=500
                                 , test_nrounds=100
-                                , metric="Accuracy"
-                                , summary_function="f1"
+                                , metric=metric
+                                #, summary_function="f1"
                                 , train="repeatedcv"
                                 , cvrepeats=5
                                 , number=100
@@ -546,10 +573,12 @@ classifyXGBoostTree <- function(data
                                 , save.directory=NULL
                                 , save.name="classifyXGBModel"
                                 , parallelMethod=NULL
+                                , PostiveClass = NULL
                                 ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
+    
 
     
     #Use operating system as default if not manually set
@@ -618,6 +647,7 @@ classifyXGBoostTree <- function(data
     data.training <- data.train[, !colnames(data.train) %in% "Sample"]
     data.training$Class <- as.factor(as.character(data.training$Class))
     
+    
     num_classes <- as.numeric(length(unique(data.training$Class)))
      metric.mod <- if(num_classes>2){
          "merror"
@@ -635,17 +665,20 @@ classifyXGBoostTree <- function(data
          "error"
      }
      
-     summary_function <- if(is.null(summary_function)){
-         if(num_classes>2){
-             multiClassSummary
-         } else  if(num_classes==2){
-             twoClassSummary
-         }
-     } else if(!is.null(summary_function)){
-         if(summary_function=="f1"){
-             prSummary
-         }
-     }
+     # Set up summary Function by chosen metric
+     summary_function <- metric_fun(data.training, metric)
+     
+     # summary_function <- if(is.null(summary_function)){
+     #     if(num_classes>2){
+     #         multiClassSummary
+     #     } else  if(num_classes==2){
+     #         twoClassSummary
+     #     }
+     # } else if(!is.null(summary_function)){
+     #     if(summary_function=="f1"){
+     #         prSummary
+     #     }
+     # }
 
     #Begin parameter searching
     if(nrow(xgbGridPre)==1){
@@ -1409,8 +1442,8 @@ autoXGBoostTree <- function(data
                             , xgbminchild="1-3"
                             , nrounds=500
                             , test_nrounds=100
-                            , metric=NULL
-                            , summary_function="f1"
+                            , metric=metric
+                            #, summary_function="f1"
                             , train="repeatedcv"
                             , cvrepeats=5
                             , number=30
@@ -1458,7 +1491,7 @@ autoXGBoostTree <- function(data
                             , nrounds=nrounds
                             , test_nrounds=test_nrounds
                             , metric=metric
-                            , summary_function=summary_function
+                            #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
                             , number=number
@@ -1516,8 +1549,8 @@ classifyXGBoostLinear <- function(data
                                   , xgblambda="0-0"
                                   , nrounds=500
                                   , test_nrounds=100
-                                  , metric="Accuracy"
-                                  , summary_function="f1"
+                                  , metric=metric
+                                  #, summary_function="f1"
                                   , train="repeatedcv"
                                   , cvrepeats=5
                                   , number=100
@@ -1528,10 +1561,14 @@ classifyXGBoostLinear <- function(data
                                   , save.directory=NULL
                                   , save.name=NULL
                                   , parallelMethod=NULL
+                                  , PositiveClass = NULL
                                   ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
+    
+    # # Set up summary Function by chosen metric
+    # summary_function <- metric_fun(data, metric)
     
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -1590,6 +1627,20 @@ classifyXGBoostLinear <- function(data
     data.training <- data.train[, !colnames(data.train) %in% "Sample"]
     data.training$Class <- as.factor(as.character(data.training$Class))
     
+    #Lets order our class variable by positive class, negative class
+    
+    # if(!is.null(PostiveClass)){
+    #   if(PostiveClass != "1" & PostiveClass != "0" & PostiveClass != "2"){
+    #     
+    #     data.training$Class <- fct_relevel(data.training$Class, PostiveClass)
+    #     
+    #   }else{
+    #     
+    #     data.training$Class <- fct_relevel(data.training$Class, paste0("X",PostiveClass))
+    #     
+    #   } 
+    # }
+    
     num_classes <- as.numeric(length(unique(data.training$Class)))
      metric.mod <- if(num_classes>2){
          "merror"
@@ -1606,17 +1657,21 @@ classifyXGBoostLinear <- function(data
      } else  if(num_classes==2){
          "error"
      }
-     summary_function <- if(is.null(summary_function)){
-         if(num_classes>2){
-             multiClassSummary
-         } else  if(num_classes==2){
-             twoClassSummary
-         }
-     } else if(!is.null(summary_function)){
-         if(summary_function=="f1"){
-             prSummary
-         }
-     }
+     
+     # Set up summary Function by chosen metric
+     summary_function <- metric_fun(data.training, metric)
+     
+     # summary_function <- if(is.null(summary_function)){
+     #     if(num_classes>2){
+     #         multiClassSummary
+     #     } else  if(num_classes==2){
+     #         twoClassSummary
+     #     }
+     # } else if(!is.null(summary_function)){
+     #     if(summary_function=="f1"){
+     #         prSummary
+     #     }
+     # }
 
     #Begin parameter searching
     if(nrow(xgbGridPre)==1){
@@ -1670,7 +1725,7 @@ classifyXGBoostLinear <- function(data
                              , data=data.training
                              , trControl = tune_control_pre
                              , tuneGrid = xgbGridPre
-                             , metric=metric
+                             , metric= metric 
                              , method = "xgbLinear"
                              , objective = objective.mod
                              , na.action=na.omit
@@ -2342,8 +2397,8 @@ autoXGBoostLinear <- function(data
                               , xgblambda="0-0"
                               , nrounds=500
                               , test_nrounds=100
-                              , metric=NULL
-                              , summary_function="f1"
+                              , metric=metric
+                              #, summary_function="f1"
                               , train="repeatedcv"
                               , cvrepeats=5
                               , number=30
@@ -2388,7 +2443,7 @@ autoXGBoostLinear <- function(data
                               , nrounds=nrounds
                               , test_nrounds=test_nrounds
                               , metric=metric
-                              , summary_function=summary_function
+                              #, summary_function=summary_function
                               , train=train
                               , cvrepeats=cvrepeats
                               , number=number
@@ -2436,8 +2491,8 @@ classifyForest <- function(data
                            , min.n=5
                            , split=NULL
                            , try, trees
-                           , metric="Accuracy"
-                           , summary_function="f1"
+                           , metric=metric
+                           #, summary_function="f1"
                            , train="repeatedcv"
                            , cvrepeats=5
                            , number=100
@@ -2448,6 +2503,9 @@ classifyForest <- function(data
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
+    
+    # # Set up summary Function by chosen metric
+    # summary_function <- metric_fun(data, metric)
     
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -2490,18 +2548,21 @@ classifyForest <- function(data
     data.training$Class <- as.factor(as.character(data.training$Class))
     
     num_classes <- as.numeric(length(unique(data.training$Class)))
+    
+    # Set up summary Function by chosen metric
+    summary_function <- metric_fun(data.training, metric)
 
-     summary_function <- if(is.null(summary_function)){
-         if(num_classes>2){
-             multiClassSummary
-         } else  if(num_classes==2){
-             twoClassSummary
-         }
-     } else if(!is.null(summary_function)){
-         if(summary_function=="f1"){
-             prSummary
-         }
-     }
+     # summary_function <- if(is.null(summary_function)){
+     #     if(num_classes>2){
+     #         multiClassSummary
+     #     } else  if(num_classes==2){
+     #         twoClassSummary
+     #     }
+     # } else if(!is.null(summary_function)){
+     #     if(summary_function=="f1"){
+     #         prSummary
+     #     }
+     # }
 
        forestGrid <-  expand.grid(.mtry=try)
 
@@ -2926,8 +2987,8 @@ autoForest<- function(data
                       , split=NULL
                       , try=10
                       , trees=500
-                      , metric=NULL
-                      , summary_function="f1"
+                      , metric=metric
+                      #, summary_function="f1"
                       , train="repeatedcv"
                       , cvrepeats=5
                       , number=30
@@ -2965,7 +3026,7 @@ autoForest<- function(data
                        ,  try=try
                        , trees=trees
                        , metric=metric
-                       , summary_function=summary_function
+                       #, summary_function=summary_function
                        , train=train
                        , cvrepeats=cvrepeats
                        , number=number
@@ -3009,8 +3070,8 @@ classifySVM <- function(data
                         , svmsigma="1-5"
                         , svmlength="1-5"
                         , svmgammavector=NULL
-                        , metric="Accuracy"
-                        , summary_function="f1"
+                        , metric=metric
+                        #, summary_function="f1"
                         , train="repeatedcv"
                         , cvrepeats=5
                         , number=100
@@ -3022,6 +3083,10 @@ classifySVM <- function(data
     ###Prepare the data
     data.hold <- data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
+    
+    # # Set up summary Function by chosen metric
+    # summary_function <- metric_fun(data,
+    #                                metric)
     
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -3108,18 +3173,20 @@ classifySVM <- function(data
                    colnames(x_train) <- x_names
         }
     }
+    # Set up summary Function by chosen metric
+    summary_function <- metric_fun(data.training, metric)
 
-     summary_function <- if(is.null(summary_function)){
-         if(num_classes>2){
-             multiClassSummary
-         } else  if(num_classes==2){
-             twoClassSummary
-         }
-     } else if(!is.null(summary_function)){
-         if(summary_function=="f1"){
-             prSummary
-         }
-     }
+     # summary_function <- if(is.null(summary_function)){
+     #     if(num_classes>2){
+     #         multiClassSummary
+     #     } else  if(num_classes==2){
+     #         twoClassSummary
+     #     }
+     # } else if(!is.null(summary_function)){
+     #     if(summary_function=="f1"){
+     #         prSummary
+     #     }
+     # }
 
        svmGrid <- if(type=="svmLinear"){
            expand.grid(
@@ -3620,8 +3687,8 @@ autoSVM <- function(data
                     , svmsigma="1-5"
                     , svmlength="1-5"
                     , svmgammavector=NULL
-                    , metric=NULL
-                    , summary_function="f1"
+                    , metric=metric
+                    #, summary_function="f1"
                     , train="repeatedcv"
                     , cvrepeats=5
                     , number=30
@@ -3665,7 +3732,7 @@ autoSVM <- function(data
                     , svmlength=svmlength
                     , svmgammavector=svmgammavector
                     , metric=metric
-                    , summary_function=summary_function
+                    #, summary_function=summary_function
                     , train=train
                     , cvrepeats=cvrepeats
                     , number=number
@@ -3716,8 +3783,8 @@ classifyBayes <- function(data
                           , bartbeta="1-2"
                           , bartnu="1-2"
                           , missing=FALSE
-                          , metric="Accuracy"
-                          , summary_function="f1"
+                          , metric=metric
+                          #, summary_function="f1"
                           , train="repeatedcv"
                           , cvrepeats=5
                           , number=100
@@ -3729,6 +3796,9 @@ classifyBayes <- function(data
     ###Prepare the data
     data.hold <- data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
+    
+    # # Set up summary Function by chosen metric
+    # summary_function <- metric_fun(data, metric)
     
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -3782,18 +3852,21 @@ classifyBayes <- function(data
     
     num_classes <- as.numeric(length(unique(data.training$Class)))
     
-     summary_function <- 
-       if(is.null(summary_function)){
-         if(num_classes>2){
-             multiClassSummary # Classification of a catagorical variable with more than 2 groups
-         } else  if(num_classes==2){
-             twoClassSummary # Binary classification summary
-         }
-     } else if(!is.null(summary_function)){
-         if(summary_function=="f1"){
-             prSummary # Precision summary
-         }
-     }
+    # Set up summary Function by chosen metric
+    summary_function <- metric_fun(data.training, metric)
+    
+     # summary_function <- 
+     #   if(is.null(summary_function)){
+     #     if(num_classes>2){
+     #         multiClassSummary # Classification of a catagorical variable with more than 2 groups
+     #     } else  if(num_classes==2){
+     #         twoClassSummary # Binary classification summary
+     #     }
+     # } else if(!is.null(summary_function)){
+     #     if(summary_function=="f1"){
+     #         prSummary # Precision summary
+     #     }
+     # }
        
        bayesGrid <- if(type=="bayesNeuralNet"){
            expand.grid(neurons = seq(neuralhiddenunits.vec[1], neuralhiddenunits.vec[2], 1))
@@ -4361,8 +4434,8 @@ autoBayes <- function(data
                       , bartbeta="1-2"
                       , bartnu="1-2"
                       , missing=FALSE
-                      , metric=NULL
-                      , summary_function="f1"
+                      , metric=metric
+                      #, summary_function="f1"
                       , train="repeatedcv"
                       , cvrepeats=5
                       , number=30
@@ -4406,7 +4479,7 @@ autoBayes <- function(data
                       , bartnu=bartnu
                       , missing=missing
                       , metric=metric
-                      , summary_function=summary_function
+                      #, summary_function=summary_function
                       , train=train
                       , cvrepeats=cvrepeats
                       , number=number
@@ -4444,7 +4517,6 @@ autoBayes <- function(data
 ## Master function 
 ##############################################################################################################
 # Uses previously defined functions to take any data set and preform slected machine learning structure.
-
 autoMLTable <- function(data
                         , variable
                         , predictors=NULL
@@ -4474,8 +4546,9 @@ autoMLTable <- function(data
                         , bartbeta="1-2"
                         , bartnu="1-2"
                         , missing=missing
-                        , metric=NULL
-                        , summary_function="f1"
+                        , metric=metric # Metric Options for regressions: "RMSE" "Rsquared"
+                                        # Metric Options for Classifiers: "ROC" "Sens" "Spec" "AUC" "Precision" "Recall" "F" "Accuracy" "Kappa"
+                        #, summary_function="f1"
                         , train="repeatedcv"
                         , cvrepeats=5
                         , number=30
@@ -4486,6 +4559,7 @@ autoMLTable <- function(data
                         , save.directory=NULL
                         , save.name=NULL
                         , parallelMethod=NULL
+                        ,PositiveClass= NULL
                         ){
     
     
@@ -4505,7 +4579,7 @@ autoMLTable <- function(data
                         , nrounds=nrounds
                         , test_nrounds=test_nrounds
                         , metric=metric
-                        , summary_function=summary_function
+                        #, summary_function=summary_function
                         , train=train
                         , cvrepeats=cvrepeats
                         , number=number
@@ -4529,7 +4603,7 @@ autoMLTable <- function(data
                           , nrounds=nrounds
                           , test_nrounds=test_nrounds
                           , metric=metric
-                          , summary_function=summary_function
+                          #, summary_function=summary_function
                           , train=train
                           , cvrepeats=cvrepeats
                           , number=number
@@ -4550,7 +4624,7 @@ autoMLTable <- function(data
                    , try=try
                    , trees=trees
                    , metric=metric
-                   , summary_function=summary_function
+                   #, summary_function=summary_function
                    , train=train
                    , number=number
                    , cvrepeats=cvrepeats
@@ -4573,7 +4647,7 @@ autoMLTable <- function(data
                 , svmlength=svmlength
                 , svmgammavector=svmgammavector
                 , metric=metric
-                , summary_function=summary_function
+                #, summary_function=summary_function
                 , train=train
                 , cvrepeats=cvrepeats
                 , number=number
@@ -4596,7 +4670,7 @@ autoMLTable <- function(data
                   , bartnu=bartnu
                   , missing=missing
                   , metric=metric
-                  , summary_function=summary_function
+                  #, summary_function=summary_function
                   , train=train
                   , cvrepeats=cvrepeats
                   , number=number
