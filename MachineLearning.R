@@ -126,16 +126,23 @@ f1 <- function (data
 }
 
 ##
-metric_fun <- function(data
+metric_fun <- function(num_classes
                        , metric){ ##
-  if(metric == "ROC" | metric == "Sens" | metric == "Spec"){
-    num_classes <- as.numeric(length(unique(data$Class)))
+  if((metric == "ROC" || metric == "Sens" || metric == "Spec") && num_classes == 2 ){
+  
+    summary_function <- twoClassSummary
+ 
     
-    if(num_classes>2){
-      summary_function <- multiClassSummary
-          }else if(num_classes==2){
-            summary_function <- twoClassSummary
-          }
+  }else if(num_classes > 2 &&
+            (metric == "Accuracy"| metric == "Kappa" | metric == "Mean_F1"| metric == "Mean_Sensitivity"|
+            metric == "Mean_Specificity"| metric == "Mean_Pos_Pred_Value" | metric == "Mean_Neg_Pred_Value"|
+            metric == "Mean_Precision"| metric == "Mean_Recall"| metric == "Mean_Detection_Rate"|
+            metric =="Mean_Balanced_Accuracy")
+           ){
+    
+    summary_function <- multiClassSummary
+    
+    
   }else if(metric == "AUC"| metric == "Precision" | metric == "Recall" | metric == "F" ){
       
     summary_function <- prSummary
@@ -666,7 +673,7 @@ classifyXGBoostTree <- function(data
      }
      
      # Set up summary Function by chosen metric
-     summary_function <- metric_fun(data.training, metric)
+     summary_function <- metric_fun(num_classes, metric)
      
      # summary_function <- if(is.null(summary_function)){
      #     if(num_classes>2){
@@ -1568,7 +1575,7 @@ classifyXGBoostLinear <- function(data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
     
     # # Set up summary Function by chosen metric
-    # summary_function <- metric_fun(data, metric)
+    # summary_function <- metric_fun(num_classes, metric)
     
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -1659,7 +1666,7 @@ classifyXGBoostLinear <- function(data
      }
      
      # Set up summary Function by chosen metric
-     summary_function <- metric_fun(data.training, metric)
+     summary_function <- metric_fun(num_classes, metric)
      
      # summary_function <- if(is.null(summary_function)){
      #     if(num_classes>2){
@@ -2505,7 +2512,7 @@ classifyForest <- function(data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
     
     # # Set up summary Function by chosen metric
-    # summary_function <- metric_fun(data, metric)
+    # summary_function <- metric_fun(num_classes, metric)
     
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -2550,7 +2557,7 @@ classifyForest <- function(data
     num_classes <- as.numeric(length(unique(data.training$Class)))
     
     # Set up summary Function by chosen metric
-    summary_function <- metric_fun(data.training, metric)
+    summary_function <- metric_fun(num_classes = , metric)
 
      # summary_function <- if(is.null(summary_function)){
      #     if(num_classes>2){
@@ -3174,7 +3181,7 @@ classifySVM <- function(data
         }
     }
     # Set up summary Function by chosen metric
-    summary_function <- metric_fun(data.training, metric)
+    summary_function <- metric_fun(num_classes , metric)
 
      # summary_function <- if(is.null(summary_function)){
      #     if(num_classes>2){
@@ -3798,7 +3805,7 @@ classifyBayes <- function(data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
     
     # # Set up summary Function by chosen metric
-    # summary_function <- metric_fun(data, metric)
+    # summary_function <- metric_fun(num_classes, metric)
     
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -3853,7 +3860,7 @@ classifyBayes <- function(data
     num_classes <- as.numeric(length(unique(data.training$Class)))
     
     # Set up summary Function by chosen metric
-    summary_function <- metric_fun(data.training, metric)
+    summary_function <- metric_fun(num_classes, metric)
     
      # summary_function <- 
      #   if(is.null(summary_function)){
@@ -4548,6 +4555,7 @@ autoMLTable <- function(data
                         , missing=missing
                         , metric=metric # Metric Options for regressions: "RMSE" "Rsquared"
                                         # Metric Options for Classifiers: "ROC" "Sens" "Spec" "AUC" "Precision" "Recall" "F" "Accuracy" "Kappa"
+                                        # Metric Options specificaly for Multi_class classifiers: "ROC", "Sensitivity", "Specificity" "logLoss","Pos_Pred_Value", "Neg_Pred_Value", "Detection_Rate","Balanced_Accuracy"
                         #, summary_function="f1"
                         , train="repeatedcv"
                         , cvrepeats=5
