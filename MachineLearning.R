@@ -4,6 +4,8 @@
 # 11/3/2020 - Used commenting strings to seperate functions for ease of use
 # 11/5/2020 - Finsihed fix so that metric determines the summary function
 # 11/6/2020 - Finishing fix to allow user to code in Positive class for two class classifiers (did not finish it's being very stubborn)
+# 11/10/2020 - Finally got postive and negative class to properly call, changed out accuracy function with confusionMatrix function 
+#              (as it allows for a positive class call), reworked metric function and added code to fix numeric calls for classifiers
 
 ##########################################################################################################################################
 ## MISC CODE FOR MODELING
@@ -127,13 +129,68 @@ f1 <- function (data
   f1_val
 }
 
+
+customTwoClassSummary <- function(data
+                                  , lev = NULL
+                                  , model = NULL
+                                  , positive = NULL
+                                  , negative=NULL
+                                  ) 
+{
+  lvls <- levels(data$obs)
+  if (length(lvls) > 2) 
+    stop(paste("Your outcome has", length(lvls), "levels. The twoClassSummary() function isn't appropriate."))
+  caret:::requireNamespaceQuietStop("ModelMetrics")
+  if (!all(levels(data[, "pred"]) == lvls)) 
+    stop("levels of observed and predicted data do not match")
+  rocAUC <- ModelMetrics::auc(ifelse(data$obs == lev[2], 0, 
+                                     1), data[, lvls[1]])
+  out <- c(rocAUC, 
+           # Only change happens here!
+           sensitivity(data[, "pred"], data[, "obs"], positive=positive), 
+           specificity(data[, "pred"], data[, "obs"], negative=negative))
+  names(out) <- c("ROC", "Sens", "Spec")
+  out
+}
+
 ###### Summary_Function based on chosen metric function
 
 metric_fun <- function(num_classes
-                       , metric){ ##
+                       , metric
+                       , PositiveClass = NULL
+                       , NegativeClass = NULL
+                       ){ ##
   if((metric == "ROC" || metric == "Sens" || metric == "Spec") && num_classes == 2 ){
-  
+    
     summary_function <- twoClassSummary
+    
+    if(!is.null(PositiveClass)){
+      #if(PositiveClass != "1" & PositiveClass != "0" & PositiveClass != "2"){
+        #
+        summary_function <- function(...) customTwoClassSummary(..., 
+                                                  positive = PositiveClass
+                                                  , negative= NegativeClass)
+        #
+      }
+    # else{
+    #    # summary_function <- function(...) customTwoClassSummary(..., 
+    #    #                                           positive = paste0('X', PositiveClass)
+    #    #                                           , negative= paste0('X',NegativeClass))
+    #     PositiveClass <- paste0('X', PositiveClass)
+    #     NegativeClass <- paste0('X',NegativeClass)
+    #     
+    #     summary_function <- function(...) customTwoClassSummary(..., 
+    #                                                             positive = PositiveClass
+    #                                                             , negative= NegativeClass)
+    #     
+    #     #return(PositiveClass)
+    #     #return(NegativeClass)
+    #    # data$Class <- fct_relevel(data$Class, paste0("X",PositiveClass))
+    #     #
+    #   }
+   # }
+  
+    
     #paste('twoClassSummary')
  
     
@@ -163,24 +220,24 @@ metric_fun <- function(num_classes
   return(summary_function)
 }
   
-# Positive Class fix  
+ #Positive Class fix  
 #Lets order our class variable by positive class, negative class
-Pos_class_fun <- function(data
-                          ,PositiveClass
-                          ){
-if(!is.null(PositiveClass)){
-  if(PositiveClass != "1" & PositiveClass != "0" & PositiveClass != "2"){
-    #     
-    data$Class <- fct_relevel(data$Class, PositiveClass)
-    #     
-  }else{
-    #     
-    data$Class <- fct_relevel(data$Class, paste0("X",PositiveClass))
-    #     
-  } 
-}
-  return(data)
-}
+# Pos_class_fun <- function(PositiveClass
+  #                         , NegativeClass
+  #                         ){
+# if(!is.null(PositiveClass)){
+#   if(PositiveClass != "1" & PositiveClass != "0" & PositiveClass != "2"){
+#     #     
+#     data$Class <- fct_relevel(data$Class, PositiveClass)
+#     #     
+#   }else{
+#     #     
+#     data$Class <- fct_relevel(data$Class, paste0("X",PositiveClass))
+#     #     
+#   } 
+# }
+#   return(data)
+# }
 #######################################
 ## XGboost optimization functions
 ######################################
@@ -602,13 +659,19 @@ classifyXGBoostTree <- function(data
                                 , save.directory=NULL
                                 , save.name="classifyXGBModel"
                                 , parallelMethod=NULL
-                                , PositiveClass= NULL
+                                , PositiveClass= PositiveClass
+                                , NegativeClass = NegativeClass
                                 ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
     
-
+    ### Fix Negative and Positive class if needed
+    if(PositiveClass == "1" | PositiveClass == "0" | PositiveClass == "2"){
+      PositiveClass <- paste0('X', PositiveClass)
+      NegativeClass <- paste0('X',NegativeClass)
+      }
+  
     
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -695,7 +758,11 @@ classifyXGBoostTree <- function(data
      }
      
      # Set up summary Function by chosen metric
-     summary_function <- metric_fun(num_classes, metric)
+     summary_function <- metric_fun(num_classes
+                                    , metric
+                                    , PositiveClass= PositiveClass
+                                    , NegativeClass = NegativeClass
+                                    )
      
      # summary_function <- if(is.null(summary_function)){
      #     if(num_classes>2){
@@ -968,16 +1035,22 @@ classifyXGBoostTree <- function(data
     # This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train, na.action = na.pass)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
-    accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    accuracy.rate_train <- confusionMatrix(results.frame_train$Predicted, results.frame_train$Known, positive = PositiveClass)
     
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
         y_predict <- predict(object=xgb_model, newdata=x_test, na.action = na.pass)
-        results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Class, Predicted=y_predict)
-        accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        results.frame <- data.frame(Sample=data.test$Sample
+                                    , Known=data.test$Class
+                                    , Predicted=y_predict
+                                    )
+        #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        accuracy.rate <- confusionMatrix(results.frame$Predicted, results.frame$Known, positive = PositiveClass)
         
-        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
+        #results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1], accuracy.rate$overall[1]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
         
         ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
         geom_bar(stat="identity") +
@@ -999,7 +1072,8 @@ classifyXGBoostTree <- function(data
                            , ResultPlot=ResultPlot
                            )
     } else if(is.null(split)){
-        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
+        #results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1]), Type=c("1. Train"), stringsAsFactors=FALSE)
         
         ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
         geom_bar(stat="identity") +
@@ -1483,7 +1557,8 @@ autoXGBoostTree <- function(data
                             , save.directory=NULL
                             , save.name=NULL
                             , parallelMethod=NULL
-                            , PositiveClass= NULL
+                            , PositiveClass= PositiveClass
+                            , NegativeClass = NegativeClass
                             ){
     
     if(is.null(save.name)){
@@ -1532,7 +1607,8 @@ autoXGBoostTree <- function(data
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
-                            , PositiveClass= NULL
+                            , PositiveClass= PositiveClass
+                            , NegativeClass = NegativeClass
                             )
     } else if(is.numeric(data[,variable])){
         regressXGBoostTree(data=data
@@ -1593,11 +1669,18 @@ classifyXGBoostLinear <- function(data
                                   , save.directory=NULL
                                   , save.name=NULL
                                   , parallelMethod=NULL
-                                  , PositiveClass = NULL
+                                  , PositiveClass= PositiveClass
+                                  , NegativeClass = NegativeClass
                                   ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
+    
+    ### Fix Negative and Positive class if needed
+    if(PositiveClass == "1" | PositiveClass == "0" | PositiveClass == "2"){
+      PositiveClass <- paste0('X', PositiveClass)
+      NegativeClass <- paste0('X',NegativeClass)
+    }
     
     # # Set up summary Function by chosen metric
     # summary_function <- metric_fun(num_classes, metric)
@@ -1624,7 +1707,7 @@ classifyXGBoostLinear <- function(data
         data <- data[, !colnames(data) %in% class]
         data$Class <- as.vector(as.character(classhold))
         
-        data <- Pos_class_fun(data,PositiveClass)
+        #data <- Pos_class_fun(data,PositiveClass)
      
         
     
@@ -1662,7 +1745,7 @@ classifyXGBoostLinear <- function(data
     #Take out the Sample #, this could really cause problems with the machine learning process
     data.training <- data.train[, !colnames(data.train) %in% "Sample"]
     data.training$Class <- as.factor(as.character(data.training$Class))
-    data.training<-Pos_class_fun(data.training,PositiveClass)
+    #data.training<-Pos_class_fun(data.training,PositiveClass)
     
     # Let's insure the Positive class is positive 
     #data.train <- Pos_class_fun(data.train,PositiveClass)
@@ -1688,7 +1771,11 @@ classifyXGBoostLinear <- function(data
      }
      
      # Set up summary Function by chosen metric
-     summary_function <- metric_fun(num_classes, metric)
+     summary_function <- metric_fun(num_classes
+                                    , metric
+                                    , PositiveClass= PositiveClass
+                                    , NegativeClass = NegativeClass
+                                    )
      
      # #Lets order our class variable by positive class, negative class
      # 
@@ -1913,7 +2000,7 @@ classifyXGBoostLinear <- function(data
         stopCluster(cl)
     } else if(parallel_method=="linux"){
         data.training <- data.train[, !colnames(data.train) %in% "Sample"]
-        data.training<-Pos_class_fun(data.training,PositiveClass)
+       # data.training<-Pos_class_fun(data.training,PositiveClass)
         
         xgb_model <- if(num_classes>2){
             caret::train(Class~.
@@ -1952,7 +2039,7 @@ classifyXGBoostLinear <- function(data
     # Here we generate predictions based on the model on the data used to train it. 
     # This will be used to asses trainAccuracy
     
-    data.train <- Pos_class_fun(data.train,PositiveClass)
+   # data.train <- Pos_class_fun(data.train,PositiveClass)
     
     
     y_predict_train <- predict(object=xgb_model, newdata=x_train, na.action = na.pass)
@@ -1960,21 +2047,23 @@ classifyXGBoostLinear <- function(data
                                       , Known=data.train$Class
                                       , Predicted=y_predict_train
                                       )
-    accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    accuracy.rate_train <- confusionMatrix(results.frame_train$Predicted, results.frame_train$Known, positive = PositiveClass)
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
       
-      data.test <- Pos_class_fun(data.test,PositiveClass)
+      #data.test <- Pos_class_fun(data.test,PositiveClass)
       
         y_predict <- predict(object=xgb_model, newdata=x_test, na.action = na.pass)
         results.frame <- data.frame(Sample=data.test$Sample
                                     , Known=data.test$Class
                                     , Predicted=y_predict
                                     )
-        accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        accuracy.rate <- confusionMatrix(results.frame$Predicted, results.frame$Known, positive = PositiveClass)
         
-        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1], accuracy.rate$overall[1]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
         
         ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
         geom_bar(stat="identity") +
@@ -1995,7 +2084,7 @@ classifyXGBoostLinear <- function(data
                            , ResultPlot=ResultPlot
                            )
     } else if(is.null(split)){
-        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1]), Type=c("1. Train"), stringsAsFactors=FALSE)
         
         ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
         geom_bar(stat="identity") +
@@ -2449,7 +2538,8 @@ autoXGBoostLinear <- function(data
                               , save.directory=NULL
                               , save.name=NULL
                               , parallelMethod=NULL
-                              , PositiveClass= NULL
+                              , PositiveClass= PositiveClass
+                              , NegativeClass = NegativeClass
                               ){
     
     if(is.null(save.name)){
@@ -2495,7 +2585,8 @@ autoXGBoostLinear <- function(data
                               , save.directory=save.directory
                               , save.name=save.name
                               , parallelMethod=parallelMethod
-                              , PositiveClass= NULL
+                              , PositiveClass= PositiveClass
+                              , NegativeClass = NegativeClass
                               )
     } else if(is.numeric(data[,variable])){
         regressXGBoostLinear(data=data
@@ -2541,12 +2632,19 @@ classifyForest <- function(data
                            , save.directory=NULL
                            , save.name=NULL
                            , parallelMethod=NULL
-                           , PositiveClass= NULL
+                           , PositiveClass= PositiveClass
+                           , NegativeClass = NegativeClass
                            ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
     
+    
+    ### Fix Negative and Positive class if needed
+    if(PositiveClass == "1" | PositiveClass == "0" | PositiveClass == "2"){
+      PositiveClass <- paste0('X', PositiveClass)
+      NegativeClass <- paste0('X',NegativeClass)
+    }
     # # Set up summary Function by chosen metric
     # summary_function <- metric_fun(num_classes, metric)
     
@@ -2593,7 +2691,11 @@ classifyForest <- function(data
     num_classes <- as.numeric(length(unique(data.training$Class)))
     
     # Set up summary Function by chosen metric
-    summary_function <- metric_fun(num_classes = , metric)
+    summary_function <- metric_fun(num_classes 
+                                   , metric
+                                   , PositiveClass= PositiveClass
+                                   , NegativeClass = NegativeClass
+                                   )
 
      # summary_function <- if(is.null(summary_function)){
      #     if(num_classes>2){
@@ -2733,7 +2835,8 @@ classifyForest <- function(data
                                       , Known=data.train$Class
                                       , Predicted=y_predict_train
                                       )
-    accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    accuracy.rate_train <- confusionMatrix(results.frame_train$Predicted, results.frame_train$Known, positive = PositiveClass)
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
@@ -2742,9 +2845,10 @@ classifyForest <- function(data
                                     , Known=data.test$Class
                                     , Predicted=y_predict
                                     )
-        accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        accuracy.rate <- confusionMatrix(results.frame$Predicted, results.frame$Known, positive = PositiveClass)
         
-        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1], accuracy.rate$overall[1]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
         
         ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
         geom_bar(stat="identity") +
@@ -2762,7 +2866,7 @@ classifyForest <- function(data
                            , ResultPlot=ResultPlot
                            )
     } else if(is.null(split)){
-        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1]), Type=c("1. Train"), stringsAsFactors=FALSE)
         
         ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
         geom_bar(stat="identity") +
@@ -3038,7 +3142,8 @@ autoForest<- function(data
                       , save.directory=NULL
                       , save.name=NULL
                       , parallelMethod=NULL
-                      , PositiveClass= NULL
+                      , PositiveClass= PositiveClass
+                      , NegativeClass = NegativeClass
                       ){
     
     if(is.null(save.name)){
@@ -3077,7 +3182,8 @@ autoForest<- function(data
                        , save.directory=save.directory
                        , save.name=save.name
                        , parallelMethod=parallelMethod
-                       , PositiveClass= NULL
+                       , PositiveClass= PositiveClass
+                       , NegativeClass = NegativeClass
                        )
     } else if(is.numeric(data[,variable])){
         regressForest(data=data
@@ -3123,7 +3229,8 @@ classifySVM <- function(data
                         , save.directory=NULL
                         , save.name=NULL
                         , parallelMethod=NULL
-                        , PositiveClass= NULL
+                        , PositiveClass= PositiveClass
+                        , NegativeClass = NegativeClass
                         ){
     
     ###Prepare the data
@@ -3133,7 +3240,11 @@ classifySVM <- function(data
     # # Set up summary Function by chosen metric
     # summary_function <- metric_fun(data,
     #                                metric)
-    
+    ### Fix Negative and Positive class if needed
+    if(PositiveClass == "1" | PositiveClass == "0" | PositiveClass == "2"){
+      PositiveClass <- paste0('X', PositiveClass)
+      NegativeClass <- paste0('X',NegativeClass)
+    }
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
         parallelMethod
@@ -3220,7 +3331,11 @@ classifySVM <- function(data
         }
     }
     # Set up summary Function by chosen metric
-    summary_function <- metric_fun(num_classes , metric)
+    summary_function <- metric_fun(num_classes 
+                                   , metric
+                                   , PositiveClass= PositiveClass
+                                   , NegativeClass = NegativeClass
+                                   )
 
      # summary_function <- if(is.null(summary_function)){
      #     if(num_classes>2){
@@ -3370,7 +3485,8 @@ classifySVM <- function(data
                                       , Known=data.train$Class
                                       , Predicted=y_predict_train
                                       )
-    accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    accuracy.rate_train <- confusionMatrix(results.frame_train$Predicted, results.frame_train$Known, positive = PositiveClass)
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
@@ -3379,9 +3495,10 @@ classifySVM <- function(data
                                     , Known=data.test$Class
                                     , Predicted=y_predict
                                     )
-        accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        accuracy.rate <- confusionMatrix(results.frame$Predicted, results.frame$Known, positive = PositiveClass)
         
-        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1], accuracy.rate$overall[1]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
         
         ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
         geom_bar(stat="identity") +
@@ -3399,7 +3516,7 @@ classifySVM <- function(data
                            , ResultPlot=ResultPlot
                            )
     } else if(is.null(split)){
-        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1]), Type=c("1. Train"), stringsAsFactors=FALSE)
         
         ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
         geom_bar(stat="identity") +
@@ -3741,7 +3858,8 @@ autoSVM <- function(data
                     , save.directory=NULL
                     , save.name=NULL
                     , parallelMethod=NULL
-                    , PositiveClass= NULL
+                    , PositiveClass= PositiveClass
+                    , NegativeClass = NegativeClass
                     ){
     
     if(is.null(save.name)){
@@ -3786,7 +3904,8 @@ autoSVM <- function(data
                     , save.directory=save.directory
                     , save.name=save.name
                     , parallelMethod=parallelMethod
-                    , PositiveClass= NULL
+                    , PositiveClass= PositiveClass
+                    , NegativeClass = NegativeClass
                     )
     } else if(is.numeric(data[,variable])){
         regressSVM(data=data
@@ -3839,13 +3958,19 @@ classifyBayes <- function(data
                           , save.directory=NULL
                           , save.name=NULL
                           , parallelMethod=NULL
-                          , PositiveClass= NULL
+                          , PositiveClass= PositiveClass
+                          , NegativeClass = NegativeClass
                           ){
     
     ###Prepare the data
     data.hold <- data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
     
+    ### Fix Negative and Positive class if needed
+    if(PositiveClass == "1" | PositiveClass == "0" | PositiveClass == "2"){
+      PositiveClass <- paste0('X', PositiveClass)
+      NegativeClass <- paste0('X',NegativeClass)
+    }
     # # Set up summary Function by chosen metric
     # summary_function <- metric_fun(num_classes, metric)
     
@@ -3902,7 +4027,11 @@ classifyBayes <- function(data
     num_classes <- as.numeric(length(unique(data.training$Class)))
     
     # Set up summary Function by chosen metric
-    summary_function <- metric_fun(num_classes, metric)
+    summary_function <- metric_fun(num_classes
+                                   , metric
+                                   , PositiveClass= PositiveClass
+                                   , NegativeClass = NegativeClass
+                                   )
     
      # summary_function <- 
      #   if(is.null(summary_function)){
@@ -4087,7 +4216,8 @@ classifyBayes <- function(data
                                       , Known=data.train$Class
                                       , Predicted=y_predict_train
                                       )
-    accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    accuracy.rate_train <- confusionMatrix(results.frame_train$Predicted, results.frame_train$Known, positive = PositiveClass)
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
@@ -4096,9 +4226,10 @@ classifyBayes <- function(data
                                     , Known=data.test$Class
                                     , Predicted=y_predict
                                     )
-        accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        accuracy.rate <- confusionMatrix(results.frame$Predicted, results.frame$Known, positive = PositiveClass)
         
-        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1], accuracy.rate$overall[1]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
         
         ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
         geom_bar(stat="identity") +
@@ -4117,7 +4248,7 @@ classifyBayes <- function(data
                            , ResultPlot=ResultPlot
                            )
     } else if(is.null(split)){
-        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
+        results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1]), Type=c("1. Train"), stringsAsFactors=FALSE)
         
         ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
         geom_bar(stat="identity") +
@@ -4491,7 +4622,8 @@ autoBayes <- function(data
                       , save.directory=NULL
                       , save.name=NULL
                       , parallelMethod=NULL
-                      , PositiveClass= NULL
+                      , PositiveClass= PositiveClass
+                      , NegativeClass = NegativeClass
                       ){
     
     if(is.null(save.name)){
@@ -4536,7 +4668,8 @@ autoBayes <- function(data
                       , save.directory=save.directory
                       , save.name=save.name
                       , parallelMethod=parallelMethod
-                      , PositiveClass= NULL
+                      , PositiveClass= PositiveClass
+                      , NegativeClass = NegativeClass
                       )
     } else if(is.numeric(data[,variable])){
         regressBayes(data=data
@@ -4612,6 +4745,7 @@ autoMLTable <- function(data
                         , save.name=NULL
                         , parallelMethod=NULL
                         , PositiveClass= NULL
+                        , NegativeClass = NULL
                         ){
     
     
@@ -4642,7 +4776,8 @@ autoMLTable <- function(data
                         , save.directory=save.directory
                         , save.name=save.name
                         , parallelMethod=parallelMethod
-                        , PositiveClass= NULL
+                        , PositiveClass= PositiveClass
+                        , NegativeClass = NegativeClass
                         )
     } else if(type=="xgbLinear"){
         autoXGBoostLinear(data=data
@@ -4667,7 +4802,8 @@ autoMLTable <- function(data
                           , save.directory=save.directory
                           , save.name=save.name
                           , parallelMethod=parallelMethod
-                          , PositiveClass= NULL
+                          , PositiveClass= PositiveClass
+                          , NegativeClass = NegativeClass
                           )
     } else if(type=="Forest"){
         autoForest(data=data
@@ -4685,7 +4821,8 @@ autoMLTable <- function(data
                    , save.directory=save.directory
                    , save.name=save.name
                    , parallelMethod=parallelMethod
-                   , PositiveClass= NULL
+                   , PositiveClass= PositiveClass
+                   , NegativeClass = NegativeClass
                    )
     } else if(type=="svmLinear" | type=="svmPoly" | type=="svmRadial" | type=="svmRadialCost" | type=="svmRadialSigma" | type=="svmBoundrangeString" | type=="svmExpoString" | type=="svmSpectrumString"){
         autoSVM(data=data,
@@ -4709,7 +4846,8 @@ autoMLTable <- function(data
                 , save.directory=save.directory
                 , save.name=save.name
                 , parallelMethod=parallelMethod
-                , PositiveClass= NULL
+                , PositiveClass= PositiveClass
+                , NegativeClass = NegativeClass
                 )
     } else if(type=="bayesLinear" | type=="bayesTree" | type=="bayesNeuralNet"){
         autoBayes(data=data
@@ -4733,7 +4871,8 @@ autoMLTable <- function(data
                   , save.directory=save.directory
                   , save.name=save.name
                   , parallelMethod=parallelMethod
-                  , PositiveClass= NULL
+                  , PositiveClass= PositiveClass
+                  , NegativeClass = NegativeClass
         )
     }
     
