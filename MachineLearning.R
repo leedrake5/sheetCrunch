@@ -659,12 +659,20 @@ classifyXGBoostTree <- function(data
                                 , save.directory=NULL
                                 , save.name="classifyXGBModel"
                                 , parallelMethod=NULL
-                                , PositiveClass= PositiveClass
-                                , NegativeClass = NegativeClass
+                                , PositiveClass= NULL
+                                , NegativeClass = NULL
                                 ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
+    
+    ####Set Defaults for Negative and Positive classes
+    if(is.null(PositiveClass)){
+        PositiveClass <- unique(data$Class)[1]
+    }
+    if(is.null(NegativeClass)){
+        NegativeClass <- unique(data$Class])[2]
+    }
     
     ### Fix Negative and Positive class if needed
     if(PositiveClass == "1" | PositiveClass == "0" | PositiveClass == "2"){
@@ -1557,8 +1565,8 @@ autoXGBoostTree <- function(data
                             , save.directory=NULL
                             , save.name=NULL
                             , parallelMethod=NULL
-                            , PositiveClass= PositiveClass
-                            , NegativeClass = NegativeClass
+                            , PositiveClass= NULL
+                            , NegativeClass = NULL
                             ){
     
     if(is.null(save.name)){
@@ -1574,7 +1582,7 @@ autoXGBoostTree <- function(data
         metric
     } else if(is.null(metric)){
         if(!is.numeric(data[,variable])){
-            "Accuracy"
+            "ROC"
         } else if(is.numeric(data[,variable])){
             "RMSE"
         }
@@ -1669,12 +1677,20 @@ classifyXGBoostLinear <- function(data
                                   , save.directory=NULL
                                   , save.name=NULL
                                   , parallelMethod=NULL
-                                  , PositiveClass= PositiveClass
-                                  , NegativeClass = NegativeClass
+                                  , PositiveClass= NULL
+                                  , NegativeClass = NULL
                                   ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
+    
+    ####Set Defaults for Negative and Positive classes
+    if(is.null(PositiveClass)){
+        PositiveClass <- unique(data$Class)[1]
+    }
+    if(is.null(NegativeClass)){
+        NegativeClass <- unique(data$Class])[2]
+    }
     
     ### Fix Negative and Positive class if needed
     if(PositiveClass == "1" | PositiveClass == "0" | PositiveClass == "2"){
@@ -2538,8 +2554,8 @@ autoXGBoostLinear <- function(data
                               , save.directory=NULL
                               , save.name=NULL
                               , parallelMethod=NULL
-                              , PositiveClass= PositiveClass
-                              , NegativeClass = NegativeClass
+                              , PositiveClass= NULL
+                              , NegativeClass = NULL
                               ){
     
     if(is.null(save.name)){
@@ -2632,13 +2648,20 @@ classifyForest <- function(data
                            , save.directory=NULL
                            , save.name=NULL
                            , parallelMethod=NULL
-                           , PositiveClass= PositiveClass
-                           , NegativeClass = NegativeClass
+                           , PositiveClass= NULL
+                           , NegativeClass = NULL
                            ){
     
     ###Prepare the data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
     
+    ####Set Defaults for Negative and Positive classes
+    if(is.null(PositiveClass)){
+        PositiveClass <- unique(data$Class)[1]
+    }
+    if(is.null(NegativeClass)){
+        NegativeClass <- unique(data$Class])[2]
+    }
     
     ### Fix Negative and Positive class if needed
     if(PositiveClass == "1" | PositiveClass == "0" | PositiveClass == "2"){
@@ -3142,8 +3165,8 @@ autoForest<- function(data
                       , save.directory=NULL
                       , save.name=NULL
                       , parallelMethod=NULL
-                      , PositiveClass= PositiveClass
-                      , NegativeClass = NegativeClass
+                      , PositiveClass= NULL
+                      , NegativeClass = NULL
                       ){
     
     if(is.null(save.name)){
@@ -3229,13 +3252,21 @@ classifySVM <- function(data
                         , save.directory=NULL
                         , save.name=NULL
                         , parallelMethod=NULL
-                        , PositiveClass= PositiveClass
-                        , NegativeClass = NegativeClass
+                        , PositiveClass= NULL
+                        , NegativeClass = NULL
                         ){
     
     ###Prepare the data
     data.hold <- data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
+    
+    ####Set Defaults for Negative and Positive classes
+    if(is.null(PositiveClass)){
+        PositiveClass <- unique(data$Class)[1]
+    }
+    if(is.null(NegativeClass)){
+        NegativeClass <- unique(data$Class])[2]
+    }
     
     # # Set up summary Function by chosen metric
     # summary_function <- metric_fun(data,
@@ -3858,8 +3889,8 @@ autoSVM <- function(data
                     , save.directory=NULL
                     , save.name=NULL
                     , parallelMethod=NULL
-                    , PositiveClass= PositiveClass
-                    , NegativeClass = NegativeClass
+                    , PositiveClass= NULL
+                    , NegativeClass = NULL
                     ){
     
     if(is.null(save.name)){
@@ -3875,7 +3906,7 @@ autoSVM <- function(data
         metric
     } else if(is.null(metric)){
         if(!is.numeric(data[,variable])){
-            "Accuracy"
+            "ROC"
         } else if(is.numeric(data[,variable])){
             "RMSE"
         }
@@ -3958,13 +3989,21 @@ classifyBayes <- function(data
                           , save.directory=NULL
                           , save.name=NULL
                           , parallelMethod=NULL
-                          , PositiveClass= PositiveClass
-                          , NegativeClass = NegativeClass
+                          , PositiveClass= NULL
+                          , NegativeClass = NULL
                           ){
     
     ###Prepare the data
     data.hold <- data
     data <- dataPrep(data=data, variable=class, predictors=predictors)
+    
+    ####Set Defaults for Negative and Positive classes
+    if(is.null(PositiveClass)){
+        PositiveClass <- unique(data$Class)[1]
+    }
+    if(is.null(NegativeClass)){
+        NegativeClass <- unique(data$Class])[2]
+    }
     
     ### Fix Negative and Positive class if needed
     if(PositiveClass == "1" | PositiveClass == "0" | PositiveClass == "2"){
@@ -4622,8 +4661,8 @@ autoBayes <- function(data
                       , save.directory=NULL
                       , save.name=NULL
                       , parallelMethod=NULL
-                      , PositiveClass= PositiveClass
-                      , NegativeClass = NegativeClass
+                      , PositiveClass= NULL
+                      , NegativeClass = NULL
                       ){
     
     if(is.null(save.name)){
@@ -4639,7 +4678,7 @@ autoBayes <- function(data
         metric
     } else if(is.null(metric)){
         if(!is.numeric(data[,variable])){
-            "Accuracy"
+            "ROC"
         } else if(is.numeric(data[,variable])){
             "RMSE"
         }
