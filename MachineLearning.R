@@ -668,10 +668,10 @@ classifyXGBoostTree <- function(data
     
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
-        PositiveClass <- unique(data$Class)[1]
+        PositiveClass <- unique(sort(data[,class]))[1]
     }
     if(is.null(NegativeClass)){
-        NegativeClass <- unique(data$Class])[2]
+        NegativeClass <- unique(sort(data[,class]))[2]
     }
     
     ### Fix Negative and Positive class if needed
@@ -1044,7 +1044,7 @@ classifyXGBoostTree <- function(data
     y_predict_train <- predict(object=xgb_model, newdata=x_train, na.action = na.pass)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
     #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
-    accuracy.rate_train <- confusionMatrix(results.frame_train$Predicted, results.frame_train$Known, positive = PositiveClass)
+    accuracy.rate_train <- confusionMatrix(as.factor(results.frame_train$Predicted), as.factor(results.frame_train$Known), positive = PositiveClass)
     
     
     #If you chose a random split, we will generate the same accuracy metrics
@@ -1055,7 +1055,7 @@ classifyXGBoostTree <- function(data
                                     , Predicted=y_predict
                                     )
         #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
-        accuracy.rate <- confusionMatrix(results.frame$Predicted, results.frame$Known, positive = PositiveClass)
+        accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
         
         #results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1], accuracy.rate$overall[1]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
@@ -1665,9 +1665,9 @@ classifyXGBoostLinear <- function(data
                                   , xgblambda="0-0"
                                   , nrounds=500
                                   , test_nrounds=100
-                                  , metric=metric
+                                  , metric=NULL
                                   #, summary_function="f1"
-                                  , train="repeatedcv"
+                                  , train="boot"
                                   , cvrepeats=5
                                   , number=100
                                   , Bayes=FALSE
@@ -1686,10 +1686,10 @@ classifyXGBoostLinear <- function(data
     
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
-        PositiveClass <- unique(data$Class)[1]
+        PositiveClass <- unique(sort(data[,class]))[1]
     }
     if(is.null(NegativeClass)){
-        NegativeClass <- unique(data$Class])[2]
+        NegativeClass <- unique(sort(data[,class]))[2]
     }
     
     ### Fix Negative and Positive class if needed
@@ -2064,7 +2064,7 @@ classifyXGBoostLinear <- function(data
                                       , Predicted=y_predict_train
                                       )
     #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
-    accuracy.rate_train <- confusionMatrix(results.frame_train$Predicted, results.frame_train$Known, positive = PositiveClass)
+    accuracy.rate_train <- caret::confusionMatrix(as.factor(results.frame_train$Predicted), as.factor(results.frame_train$Known), positive = PositiveClass)
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
@@ -2077,7 +2077,7 @@ classifyXGBoostLinear <- function(data
                                     , Predicted=y_predict
                                     )
         #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
-        accuracy.rate <- confusionMatrix(results.frame$Predicted, results.frame$Known, positive = PositiveClass)
+        accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
         
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1], accuracy.rate$overall[1]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
         
@@ -2657,10 +2657,10 @@ classifyForest <- function(data
     
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
-        PositiveClass <- unique(data$Class)[1]
+        PositiveClass <- unique(sort(data[,class]))[1]
     }
     if(is.null(NegativeClass)){
-        NegativeClass <- unique(data$Class])[2]
+        NegativeClass <- unique(sort(data[,class]))[2]
     }
     
     ### Fix Negative and Positive class if needed
@@ -2859,7 +2859,7 @@ classifyForest <- function(data
                                       , Predicted=y_predict_train
                                       )
     #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
-    accuracy.rate_train <- confusionMatrix(results.frame_train$Predicted, results.frame_train$Known, positive = PositiveClass)
+    accuracy.rate_train <- confusionMatrix(as.factor(results.frame_train$Predicted), as.factor(results.frame_train$Known), positive = PositiveClass)
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
@@ -2869,7 +2869,7 @@ classifyForest <- function(data
                                     , Predicted=y_predict
                                     )
         #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
-        accuracy.rate <- confusionMatrix(results.frame$Predicted, results.frame$Known, positive = PositiveClass)
+        accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
         
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1], accuracy.rate$overall[1]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
         
@@ -3262,10 +3262,10 @@ classifySVM <- function(data
     
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
-        PositiveClass <- unique(data$Class)[1]
+        PositiveClass <- unique(sort(data[,class]))[1]
     }
     if(is.null(NegativeClass)){
-        NegativeClass <- unique(data$Class])[2]
+        NegativeClass <- unique(sort(data[,class]))[2]
     }
     
     # # Set up summary Function by chosen metric
@@ -3517,7 +3517,7 @@ classifySVM <- function(data
                                       , Predicted=y_predict_train
                                       )
     #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
-    accuracy.rate_train <- confusionMatrix(results.frame_train$Predicted, results.frame_train$Known, positive = PositiveClass)
+    accuracy.rate_train <- confusionMatrix(as.factor(results.frame_train$Predicted), as.factor(results.frame_train$Known), positive = PositiveClass)
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
@@ -3527,7 +3527,7 @@ classifySVM <- function(data
                                     , Predicted=y_predict
                                     )
         #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
-        accuracy.rate <- confusionMatrix(results.frame$Predicted, results.frame$Known, positive = PositiveClass)
+        accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
         
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1], accuracy.rate$overall[1]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
         
@@ -3999,10 +3999,10 @@ classifyBayes <- function(data
     
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
-        PositiveClass <- unique(data$Class)[1]
+        PositiveClass <- unique(sort(data[,class]))[1]
     }
     if(is.null(NegativeClass)){
-        NegativeClass <- unique(data$Class])[2]
+        NegativeClass <- unique(sort(data[,class]))[2]
     }
     
     ### Fix Negative and Positive class if needed
@@ -4256,7 +4256,7 @@ classifyBayes <- function(data
                                       , Predicted=y_predict_train
                                       )
     #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
-    accuracy.rate_train <- confusionMatrix(results.frame_train$Predicted, results.frame_train$Known, positive = PositiveClass)
+    accuracy.rate_train <- confusionMatrix(as.factor(results.frame_train$Predicted), as.factor(results.frame_train$Known), positive = PositiveClass)
     
     #If you chose a random split, we will generate the same accuracy metrics
     if(!is.null(split)){
@@ -4266,7 +4266,7 @@ classifyBayes <- function(data
                                     , Predicted=y_predict
                                     )
         #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
-        accuracy.rate <- confusionMatrix(results.frame$Predicted, results.frame$Known, positive = PositiveClass)
+        accuracy.rate <- confusionMatrix((results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
         
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1], accuracy.rate$overall[1]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
         
