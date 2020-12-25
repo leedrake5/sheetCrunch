@@ -1465,7 +1465,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     
     if(is.null(weights)){
         if(num_classes > 2){
-               counter=funModeling::freq(y_train, plot=F) %>% select(var, frequency)
+               counter=funModeling::freq(y_train, plot=F) %>% dplyr::select(var, frequency)
                majority=max(counter$frequency)
                counter$weight=pracma::ceil(majority/counter$frequency)
                l_weights=setNames(as.list(counter$weight), counter$var)
@@ -1546,6 +1546,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
             epochs = epochs,
             verbose=verbose,
             class_weight = l_weights,
+            validation_data=list(x_test, y_test),
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
@@ -1573,6 +1574,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
             epochs = epochs,
             verbose=verbose,
             class_weight = l_weights,
+            validation_data=list(x_test, y_test),
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE
@@ -1596,6 +1598,8 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
         keras::save_model_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
     }
     
+    history_plot <- plot(result) + theme_light()
+    
     predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=1)
     predictions.train.pre <- predictions.train.proto + 1
     #predictions.train.pre <- ramify::argmax(predictions.train.proto)
@@ -1608,7 +1612,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     if(importance==TRUE){
         if(model.type=="Dense" | model.type=="SuperDense" | model.type=="EvenDense"){
             predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, type = "prob"), error=function(e) NULL)
-            imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = "ce"), error=function(e) NULL)
             imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
         }
         
@@ -1619,10 +1623,11 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
                 predict_classes(object=model, x=data_wrap, batch_size=batch_size, verbose=verbose)
             }
             predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_pre), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
-            imp = tryCatch(FeatureImp$new(predictor, loss = "f1"), error=function(e) NULL)
+            imp = tryCatch(FeatureImp$new(predictor, loss = "ce"), error=function(e) NULL)
             imp_plot <- tryCatch(plot_importance(imp), error=function(e) NULL)
         }
     } else if(importance==FALSE){
+        imp <- NULL
         imp_plot <- NULL
     }
     
@@ -1630,30 +1635,34 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     
     
     if(!is.null(split)){
-        predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=1)
-        predictions.test.pre <- predictions.test.proto + 1
-        predictions.test <- levels(y_train_pre)[predictions.test.pre]
-        
-        test.results.frame <- data.frame(Sample=as.vector(data.test$Sample), Known=as.vector(data.test$Class), Predicted=predictions.test)
-        test.accuracy.rate <- rfUtilities::accuracy(x=test.results.frame$Known, y=test.results.frame$Predicted)
-        
-        KnownSet <- data.frame(Sample=data.train$Sample, Known=data.train[,"Class"], Predicted=predictions.train, stringsAsFactors=FALSE)
-        KnownSet$Type <- rep("1. Train", nrow(KnownSet))
-        test.results.frame$Type <- rep("2. Test", nrow(test.results.frame))
-        All <- rbind(KnownSet, test.results.frame)
-        
-        results.bar.frame <- data.frame(Accuracy=c(train.accuracy.rate$PCC, test.accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
-               
-        ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
-        geom_bar(stat="identity") +
-        geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
-                  position = position_dodge(0.9), size=3.5) +
-        theme_light()
-                
-        
-        results <- list(Model=serialize_model(model), Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, y_test=y_test, x_test=x_test, model.data=data, y_train_pre=y_train_pre, y_test_pre=y_test_pre), ResultPlot=ResultPlot, ImportancePlot=imp_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, testAccuracy=test.accuracy.rate, testAccuracyFrame=test.results.frame)
+        if(split>0){
+            predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=1)
+            predictions.test.pre <- predictions.test.proto + 1
+            predictions.test <- levels(y_train_pre)[predictions.test.pre]
+            
+            test.results.frame <- data.frame(Sample=as.vector(data.test$Sample), Known=as.vector(data.test$Class), Predicted=predictions.test)
+            test.accuracy.rate <- rfUtilities::accuracy(x=test.results.frame$Known, y=test.results.frame$Predicted)
+            
+            KnownSet <- data.frame(Sample=data.train$Sample, Known=data.train[,"Class"], Predicted=predictions.train, stringsAsFactors=FALSE)
+            KnownSet$Type <- rep("1. Train", nrow(KnownSet))
+            test.results.frame$Type <- rep("2. Test", nrow(test.results.frame))
+            All <- rbind(KnownSet, test.results.frame)
+            
+            results.bar.frame <- data.frame(Accuracy=c(train.accuracy.rate$PCC, test.accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
+                   
+            ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
+            geom_bar(stat="identity") +
+            geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
+                      position = position_dodge(0.9), size=3.5) +
+            theme_light()
+                    
+            
+            results <- list(Model=serialize_model(model), Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, y_test=y_test, x_test=x_test, model.data=data, y_train_pre=y_train_pre, y_test_pre=y_test_pre), ResultPlot=ResultPlot, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, testAccuracy=test.accuracy.rate, testAccuracyFrame=test.results.frame)
+        } else if(split==0){
+            results <- list(Model=model, Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, model.data=data, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, y_train_pre=y_train_pre), trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame)
+        }
     } else if(is.null(split)){
-        results <- list(Model=model, Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, model.data=data, ImportancePlot=imp_plot, y_train_pre=y_train_pre), trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame)
+        results <- list(Model=model, Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, model.data=data, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, y_train_pre=y_train_pre), trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame)
     }
     
     
