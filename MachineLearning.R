@@ -273,9 +273,10 @@ metric_fun <- function(num_classes
              seed = seed)
      }
      else {
-         quolabel <- enquo(label)
-         datalabel <- (data %>% select(!!quolabel))[[1]]
-         mx <- Matrix::sparse.model.matrix(datalabel ~ ., data)
+         #quolabel <- enquo(label)
+         #datalabel <- (data %>% select(!!quolabel))[[1]]
+         datalabel <- data$Class
+         mx <- Matrix::sparse.model.matrix(datalabel ~ ., data[,!colnames(data) %in% "Class"])
          if (class(datalabel) == "factor") {
              dtrain <- xgb.DMatrix(mx, label = as.integer(datalabel) -
                  1)
@@ -555,16 +556,44 @@ importanceBarFrame <- function(model){
 
 #Create a bar plot of variable importance
 importanceBar <- function(model){
-    ggplot(importanceBarFrame(model), aes(reorder(Variable, Importance), Importance)) +
+    plot <- ggplot(importanceBarFrame(model), aes(reorder(Variable, Importance), Importance)) +
     geom_bar(stat="identity", position="dodge") +
     theme_light() +
     coord_flip() +
     scale_x_discrete("Variable")
+    tryCatch(plot$plot_env <- butcher::axe_env(plot$plot_env), error=function(e) NULL)
+    tryCatch(plot$layers <- butcher::axe_env(plot$layers), error=function(e) NULL)
+    tryCatch(plot$mapping <- butcher::axe_env(plot$mapping), error=function(e) NULL)
+    return(plot)
 }
+
+###Dependent Transformation
+scaleTransform <- function(values, y_min=NULL, y_max=NULL){
+    
+    if(is.null(y_min)){
+        y_min <- my.min(values)
+    }
+    
+    if(is.null(y_max)){
+        y_max <- my.max(values)
+    }
+    
+    y_train_scale <- ((values-y_min)/(y_max-y_min))
+
+    return(y_train_scale)
+}
+
+scaleDecode <- function(values, y_min, y_max){
+    
+    y_train_decoded <- (values*(y_max-y_min)) + y_min
+
+    return(y_train_decoded)
+}
+
 
 # Prepare the data for machine learning. Data is the imported data, variable is the name of the variable you want to analyize. 
 # This function will automatically prepare qualitative data for analysis if needed.
-dataPrep <- function(data, variable, predictors=NULL){
+dataPrep <- function(data, variable, predictors=NULL, scale=FALSE){
     
     ###Remove any columns that don't have more than one value
     data <- data[,sapply(data, function(x) length(unique(x))>1)]
@@ -582,6 +611,15 @@ dataPrep <- function(data, variable, predictors=NULL){
     
     #Generate a holder frame for later
     sample.frame <- data[,c("Sample", variable)]
+    if(scale==TRUE & is.numeric(data[,variable])){
+        
+        y_min <- my.min(data[,variable])
+        y_max <- my.max(data[,variable])
+        sample.frame[,variable] <- ((sample.frame[,variable]-y_min)/(y_max-y_min))
+    } else {
+        y_min <- NULL
+        y_max <- NULL
+    }
     
     #Create a subframe with the variable and sample id removed
     just.fish <- data[, !colnames(data) %in% c(variable, "Sample")]
@@ -592,6 +630,18 @@ dataPrep <- function(data, variable, predictors=NULL){
         error=function(e) as.data.frame(data[,"Sample"])
         )
         colnames(quant.fish) <- colnames(just.fish)[sapply(just.fish, is.numeric)]
+        if(scale==TRUE){
+            mins <- apply(quant.fish, 2, my.min)
+            maxes <- apply(quant.fish, 2, my.max)
+            quant.fish %>% scaleTransform
+            
+            #mean <- apply(quant.fish, 2, mean)
+            #std <- apply(quant.fish, 2, sd)
+            #quant.fish <- scale(quant.fish, center = mean, scale = std)
+        } else if(scale==FALSE){
+            mins <- NULL
+            maxes <- NULL
+        }
     #Create a dataframe of just qualitative values, with a fallback dataframe if there are none
     qual.fish <- tryCatch(
         as.data.frame(just.fish[, !sapply(just.fish, is.numeric)]),
@@ -626,7 +676,7 @@ dataPrep <- function(data, variable, predictors=NULL){
     results.final <- merge(sample.frame, results, by="Sample")
     results.final[,variable] <- as.vector(results.final[,variable])
     results.final <- results.final[!duplicated(results.final),]
-    return(results.final)
+    return(list(Data=results.final, YMin=y_min, YMax=y_max, Mins=mins, Maxes=maxes))
 }
 
 ############################################################################################################
@@ -638,7 +688,10 @@ dataPrep <- function(data, variable, predictors=NULL){
 classifyXGBoostTree <- function(data
                                 , class
                                 , predictors=NULL
-                                , min.n=5, split=NULL
+                                , min.n=5
+                                , split=NULL
+                                , split_by_group=NULL
+                                , the_group=NULL
                                 , treedepth="5-5"
                                 , xgbgamma="0-0"
                                 , xgbeta="0.1-0.1"
@@ -661,10 +714,17 @@ classifyXGBoostTree <- function(data
                                 , parallelMethod=NULL
                                 , PositiveClass= NULL
                                 , NegativeClass = NULL
+                                , save_plots=FALSE
+                                , scale=FALSE
                                 ){
     
     ###Prepare the data
-    data <- dataPrep(data=data, variable=class, predictors=predictors)
+    if(!is.null(split_by_group)){
+        split_string <- as.vector(data[,split_by_group])
+        data <- data[, !colnames(data) %in% split_by_group]
+    }
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale)
+    data <- data_list$Data
     
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
@@ -726,6 +786,17 @@ classifyXGBoostTree <- function(data
         data.train <- data
         y_train <- data$Class
         x_train <- data[, !colnames(data) %in% c("Sample", "Class")]
+    }
+    
+    if(!is.null(split_by_group)){
+        a <- !split_string %in% the_group
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Class
+        y_test <- data.test$Class
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Class")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Class")]
     }
     
     #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
@@ -1031,6 +1102,8 @@ classifyXGBoostTree <- function(data
         }
     }
     
+    tryCatch(xgb_model$terms <- butcher::axe_env(xgb_model$terms), error=function(e) NULL)
+    
     xgb_model_serialized <- tryCatch(xgb.serialize(xgb_model$finalModel), error=function(e) NULL)
     
     if(!is.null(save.directory)){
@@ -1047,8 +1120,10 @@ classifyXGBoostTree <- function(data
     accuracy.rate_train <- confusionMatrix(as.factor(results.frame_train$Predicted), as.factor(results.frame_train$Known), positive = PositiveClass)
     
     
+    
+    
     #If you chose a random split, we will generate the same accuracy metrics
-    if(!is.null(split)){
+    if(!is.null(split) | !is.null(split_by_group)){
         y_predict <- predict(object=xgb_model, newdata=x_test, na.action = na.pass)
         results.frame <- data.frame(Sample=data.test$Sample
                                     , Known=data.test$Class
@@ -1065,9 +1140,13 @@ classifyXGBoostTree <- function(data
         geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data
+                                          , Data=data_list
+                                          , Predictors=predictors
                                           )
                            , Model=xgb_model
                            , serializedModel=xgb_model_serialized
@@ -1075,11 +1154,12 @@ classifyXGBoostTree <- function(data
                                                , error=function(e) NULL)
                            , ImportancePlot=importanceBar(xgb_model)
                            , ValidationSet=results.frame
+                           , PlotData=results.bar.frame
                            , trainAccuracy=accuracy.rate_train
                            , testAccuracy=accuracy.rate
                            , ResultPlot=ResultPlot
                            )
-    } else if(is.null(split)){
+    } else if(is.null(split) | is.null(split_by_group)){
         #results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC), Type=c("1. Train"), stringsAsFactors=FALSE)
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1]), Type=c("1. Train"), stringsAsFactors=FALSE)
         
@@ -1088,13 +1168,17 @@ classifyXGBoostTree <- function(data
         geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
-        model.list <- list(ModelData=list(Model.Data=data.train, data=data)
+        model.list <- list(ModelData=list(Model.Data=data.train, Data=data_list, Predictors=predictors)
                            , Model=xgb_model
                            , serializedModel=xgb_model_serialized
                            , preModel=tryCatch(xgb_model_pre
                                                , error=function(e) NULL)
                            , ImportancePlot=importanceBar(xgb_model)
+                           , PlotData=results.bar.frame
                            , trainAccuracy=accuracy.rate_train
                            , ResultPlot=ResultPlot
                            )
@@ -1106,6 +1190,11 @@ classifyXGBoostTree <- function(data
         #ImportancePlot, a ggplot of variables
         #trainAccuracy - the performance of the model on its own training data
         #testAccuracy - the performance of the model on the validation test data set - only if split is a number betweene 0 and 0.99
+        
+        if(save_plots==FALSE){
+            model.list$ImportancePlot <- NULL
+            model.list$ResultPlot <- NULL
+        }
         
     return(model.list)
 }
@@ -1123,6 +1212,8 @@ regressXGBoostTree <- function(data
                                , merge.by=NULL
                                , min.n=5
                                , split=NULL
+                               , split_by_group=NULL
+                               , the_group=NULL
                                , treedepth="5-5"
                                , xgbgamma="0-0"
                                , xgbeta="0.1-0.1"
@@ -1142,10 +1233,17 @@ regressXGBoostTree <- function(data
                                , save.directory=NULL
                                , save.name="regressXGBModel"
                                , parallelMethod=NULL
+                               , save_plots=FALSE
+                               , scale=FALSE
                                ){
     
     ###Prepare the data
-    data <- dataPrep(data=data, variable=dependent, predictors=predictors)
+    if(!is.null(split_by_group)){
+        split_string <- as.vector(data[,split_by_group])
+        data <- data[, !colnames(data) %in% split_by_group]
+    }
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale)
+    data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
         parallelMethod
@@ -1193,6 +1291,17 @@ regressXGBoostTree <- function(data
         data.train <- data
         y_train <- data$Dependent
         x_train <- data[, !colnames(data) %in% c("Sample", "Dependent")]
+    }
+    
+    if(!is.null(split_by_group)){
+        a <- !split_string %in% the_group
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Class
+        y_test <- data.test$Class
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
     }
     
     #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
@@ -1452,19 +1561,33 @@ regressXGBoostTree <- function(data
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. 
     # This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train)
+    if(scale==TRUE){
+        y_predict_train <- (y_predict_train*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        data.train$Dependent <- (data.train$Dependent*(data_list$YMax-data_list$YMin)) + data_list$YMin
+    }
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Dependent, Predicted=y_predict_train)
     accuracy.rate_train <- lm(Known~Predicted, data=results.frame_train)
     
     
     #If you chose a random split, we will generate the same accuracy metrics
-    if(!is.null(split)){
+    if(!is.null(split) | !is.null(split_by_group)){
         y_predict <- predict(object=xgb_model, newdata=x_test, na.action = na.pass)
+        if(scale==TRUE){
+            y_predict <- (y_predict*(data_list$YMax-data_list$YMin)) + data_list$YMin
+            data.test$Dependent <- (data.test$Dependent*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         results.frame <- data.frame(Sample=data.test$Sample, Known=data.test$Dependent, Predicted=y_predict)
         accuracy.rate <- lm(Known~Predicted, data=results.frame)
         
         all.data <- data.orig
+        if(scale==TRUE){
+            all.data[,dependent] <- (all.data[,dependent]*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
         train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
+        if(scale==TRUE){
+            train.predictions <- (train.predictions*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         KnownSet <- data.frame(Sample=train.frame$Sample
                                , Known=train.frame[,dependent]
                                , Predicted=train.predictions
@@ -1478,25 +1601,33 @@ regressXGBoostTree <- function(data
         geom_point(alpha=0.5) +
         stat_smooth(method="lm") +
         theme_light()
-        
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data
-                                          , predictors=predictors
+                                          , Data=data_list
+                                          , Predictors=predictors
                                           )
                            , Model=xgb_model
                            , serializedModel=xgb_model_serialized
                            , ImportancePlot=importanceBar(xgb_model)
                            , ValidationSet=results.frame
-                           , AllData=All
+                           , PlotData=All
                            , ResultPlot=ResultPlot
                            , trainAccuracy=accuracy.rate_train
                            , testAccuracy=accuracy.rate
                            )
-    } else if(is.null(split)){
+    } else if(is.null(split) | is.null(split_by_group)){
         all.data <- data.orig
+        if(scale==TRUE){
+            all.data[,dependent] <- (all.data[,dependent]*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         train.frame <- all.data
         train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
+        if(scale==TRUE){
+            train.predictions <- (train.predictions*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         KnownSet <- data.frame(Sample=train.frame$Sample
                                , Known=train.frame[,dependent]
                                , Predicted=train.predictions
@@ -1509,17 +1640,20 @@ regressXGBoostTree <- function(data
         geom_point(alpha=0.5) +
         stat_smooth(method="lm") +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data
-                                          , predictors=predictors
+                                          , Data=data_list
+                                          , Predictors=predictors
                                           )
                            , Model=xgb_model
                            , serializedModel=xgb_model_serialized
                            , preModel=tryCatch(xgb_model_pre
                                                , error=function(e) NULL)
                            , ImportancePlot=importanceBar(xgb_model)
-                           , AllData=All
+                           , PlotData=All
                            , ResultPlot=ResultPlot
                            , trainAccuracy=accuracy.rate_train
                            )
@@ -1531,6 +1665,11 @@ regressXGBoostTree <- function(data
         #ImportancePlot, a ggplot of variables
         #trainAccuracy - the performance of the model on its own training data
         #testAccuracy - the performance of the model on the validation test data set - only if split is a number betweene 0 and 0.99
+        
+        if(save_plots==FALSE){
+            model.list$ImportancePlot <- NULL
+            model.list$ResultPlot <- NULL
+        }
     
     return(model.list)
 }
@@ -1545,6 +1684,8 @@ autoXGBoostTree <- function(data
                             , predictors=NULL
                             , min.n=5
                             , split=NULL
+                            , split_by_group=NULL
+                            , the_group=NULL
                             , treedepth="5-5"
                             , xgbgamma="0-0"
                             , xgbeta="0.1-0.1"
@@ -1567,6 +1708,8 @@ autoXGBoostTree <- function(data
                             , parallelMethod=NULL
                             , PositiveClass= NULL
                             , NegativeClass = NULL
+                            , save_plots=FALSE
+                            , scale=FALSE
                             ){
     
     if(is.null(save.name)){
@@ -1595,6 +1738,8 @@ autoXGBoostTree <- function(data
                             , predictors=predictors
                             , min.n=min.n
                             , split=split
+                            , split_by_group=split_by_group
+                            , the_group=the_group
                             , treedepth=treedepth
                             , xgbgamma=xgbgamma
                             , xgbeta=xgbeta
@@ -1617,6 +1762,8 @@ autoXGBoostTree <- function(data
                             , parallelMethod=parallelMethod
                             , PositiveClass= PositiveClass
                             , NegativeClass = NegativeClass
+                            , save_plots=save_plots
+                            , scale=scale
                             )
     } else if(is.numeric(data[,variable])){
         regressXGBoostTree(data=data
@@ -1624,6 +1771,8 @@ autoXGBoostTree <- function(data
                            , predictors=predictors
                            , min.n=min.n
                            , split=split
+                           , split_by_group=split_by_group
+                           , the_group=the_group
                            , treedepth=treedepth
                            , xgbgamma=xgbgamma
                            , xgbeta=xgbeta
@@ -1643,6 +1792,8 @@ autoXGBoostTree <- function(data
                            , save.directory=save.directory
                            , save.name=save.name
                            , parallelMethod=parallelMethod
+                           , save_plots=save_plots
+                           , scale=scale
                            )
     }
     
@@ -1660,6 +1811,8 @@ classifyXGBoostLinear <- function(data
                                   , predictors=NULL
                                   , min.n=5
                                   , split=NULL
+                                  , split_by_group=NULL
+                                  , the_group=NULL
                                   , xgbalpha="0-0"
                                   , xgbeta="0.1-0.1"
                                   , xgblambda="0-0"
@@ -1679,11 +1832,17 @@ classifyXGBoostLinear <- function(data
                                   , parallelMethod=NULL
                                   , PositiveClass= NULL
                                   , NegativeClass = NULL
+                                  , save_plots=FALSE
+                                  , scale=FALSE
                                   ){
     
     ###Prepare the data
-    data <- dataPrep(data=data, variable=class, predictors=predictors)
-    
+    if(!is.null(split_by_group)){
+        split_string <- as.vector(data[,split_by_group])
+        data <- data[, !colnames(data) %in% split_by_group]
+    }
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale)
+    data <- data_list$Data
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
         PositiveClass <- unique(sort(data[,class]))[1]
@@ -1744,6 +1903,17 @@ classifyXGBoostLinear <- function(data
         data.train <- data
         y_train <- data$Class
         x_train <- data[, !colnames(data) %in% c("Sample", "Class")]
+    }
+    
+    if(!is.null(split_by_group)){
+        a <- !split_string %in% the_group
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Class
+        y_test <- data.test$Class
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Class")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Class")]
     }
     
     #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
@@ -2067,7 +2237,7 @@ classifyXGBoostLinear <- function(data
     accuracy.rate_train <- caret::confusionMatrix(as.factor(results.frame_train$Predicted), as.factor(results.frame_train$Known), positive = PositiveClass)
     
     #If you chose a random split, we will generate the same accuracy metrics
-    if(!is.null(split)){
+    if(!is.null(split) | !is.null(split_by_group)){
       
       #data.test <- Pos_class_fun(data.test,PositiveClass)
       
@@ -2086,20 +2256,24 @@ classifyXGBoostLinear <- function(data
         geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data)
+                                          , Data=data_list, Predictors=predictors)
                            , Model=xgb_model
                            , serializedModel=xgb_model_serialized
                            , preModel=tryCatch(xgb_model_pre
                                                , error=function(e) NULL)
                            , ImportancePlot=importanceBar(xgb_model)
                            , ValidationSet=results.frame
+                           , PlotData=results.bar.frame
                            , trainAccuracy=accuracy.rate_train
                            , testAccuracy=accuracy.rate
                            , ResultPlot=ResultPlot
                            )
-    } else if(is.null(split)){
+    } else if(is.null(split) | is.null(split_by_group)){
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1]), Type=c("1. Train"), stringsAsFactors=FALSE)
         
         ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
@@ -2107,17 +2281,26 @@ classifyXGBoostLinear <- function(data
         geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data)
+                                          , Data=data_list, Predictors=predictors)
                            , Model=xgb_model
                            , serializedModel=xgb_model_serialized
                            , preModel=tryCatch(xgb_model_pre
                                                , error=function(e) NULL)
                            , ImportancePlot=importanceBar(xgb_model)
+                           , PlotData=results.bar.frame
                            , trainAccuracy=accuracy.rate_train
                            , ResultPlot=ResultPlot
                            )
+    }
+    
+    if(save_plots==FALSE){
+        model.list$ImportancePlot <- NULL
+        model.list$ResultPlot <- NULL
     }
     
     #Model list includes the following objects in a list:
@@ -2141,6 +2324,8 @@ regressXGBoostLinear <- function(data
                                  , merge.by=NULL
                                  , min.n=5
                                  , split=NULL
+                                 , split_by_group=NULL
+                                 , the_group=NULL
                                  , xgbalpha="0-0"
                                  , xgbeta="0.1-0.1"
                                  , xgblambda="0-0"
@@ -2157,11 +2342,17 @@ regressXGBoostLinear <- function(data
                                  , save.directory=NULL
                                  , save.name=NULL
                                  , parallelMethod=NULL
+                                 , save_plots=FALSE
+                                 , scale=FALSE
                                  ){
     
     ###Prepare the data
-    data <- dataPrep(data=data, variable=dependent, predictors=predictors)
-    
+    if(!is.null(split_by_group)){
+        split_string <- as.vector(data[,split_by_group])
+        data <- data[, !colnames(data) %in% split_by_group]
+    }
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale)
+    data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
         parallelMethod
@@ -2203,6 +2394,17 @@ regressXGBoostLinear <- function(data
         data.train <- data
         y_train <- data$Dependent
         x_train <- data[, !colnames(data) %in% c("Sample", "Dependent")]
+    }
+    
+    if(!is.null(split_by_group)){
+        a <- !split_string %in% the_group
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Class
+        y_test <- data.test$Class
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
     }
     
     #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
@@ -2439,6 +2641,10 @@ regressXGBoostLinear <- function(data
     # Here we generate predictions based on the model on the data used to train it. 
     # This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train)
+    if(scale==TRUE){
+        y_predict_train <- (y_predict_train*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        data.train$Dependent <- (data.train$Dependent*(data_list$YMax-data_list$YMin)) + data_list$YMin
+    }
     results.frame_train <- data.frame(Sample=data.train$Sample
                                       , Known=data.train$Dependent
                                       , Predicted=y_predict_train
@@ -2446,8 +2652,12 @@ regressXGBoostLinear <- function(data
     accuracy.rate_train <- lm(Known~Predicted, data=results.frame_train)
     
     #If you chose a random split, we will generate the same accuracy metrics
-    if(!is.null(split)){
+    if(!is.null(split) | !is.null(split_by_group)){
         y_predict <- predict(object=xgb_model, newdata=x_test, na.action = na.pass)
+        if(scale==TRUE){
+            y_predict <- (y_predict*(data_list$YMax-data_list$YMin)) + data_list$YMin
+            data.test$Dependent <- (data.test$Dependent*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         results.frame <- data.frame(Sample=data.test$Sample
                                     , Known=data.test$Dependent
                                     , Predicted=y_predict
@@ -2455,8 +2665,14 @@ regressXGBoostLinear <- function(data
         accuracy.rate <- lm(Known~Predicted, data=results.frame)
         
         all.data <- data.orig
+        if(scale==TRUE){
+            all.data[,dependent] <- (all.data[,dependent]*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
         train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
+        if(scale==TRUE){
+            train.predictions <- (train.predictions*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         KnownSet <- data.frame(Sample=train.frame$Sample
                                , Known=train.frame[,dependent]
                                , Predicted=train.predictions
@@ -2470,11 +2686,13 @@ regressXGBoostLinear <- function(data
         geom_point(alpha=0.5) +
         stat_smooth(method="lm") +
         theme_light()
-        
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data
-                                          , predictors=predictors
+                                          , Data=data_list
+                                          , Predictors=predictors
                                           )
                            , Model=xgb_model
                            , serializedModel=xgb_model_serialized
@@ -2482,14 +2700,21 @@ regressXGBoostLinear <- function(data
                                                , error=function(e) NULL)
                            , ImportancePlot=importanceBar(xgb_model)
                            , ValidationSet=results.frame
-                           , AllData=All, ResultPlot=ResultPlot
+                           , PlotData=All, ResultPlot=ResultPlot
                            , trainAccuracy=accuracy.rate_train
                            , testAccuracy=accuracy.rate
                            )
-    } else if(is.null(split)){
-        all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
+    } else if(is.null(split) | is.null(split_by_group)){
+        all.data <- data.orig
+        if(scale==TRUE){
+            all.data[,dependent] <- (all.data[,dependent]*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         train.frame <- all.data
         train.predictions <- predict(xgb_model, train.frame, na.action = na.pass)
+        if(scale==TRUE){
+            train.predictions <- (train.predictions*(data_list$YMax-data_list$YMin)) + data_list$YMin
+            
+        }
         KnownSet <- data.frame(Sample=train.frame$Sample
                                , Known=train.frame[,dependent]
                                , Predicted=train.predictions
@@ -2502,10 +2727,13 @@ regressXGBoostLinear <- function(data
         geom_point(alpha=0.5) +
         stat_smooth(method="lm") +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data
-                                          , predictors=predictors
+                                          , Data=data_list
+                                          , Predictors=predictors
                                           )
                            , Model=xgb_model
                            , serializedModel=xgb_model_serialized
@@ -2513,11 +2741,16 @@ regressXGBoostLinear <- function(data
                            , preModel=tryCatch(xgb_model_pre
                                                , error=function(e) NULL)
                            , ImportancePlot=importanceBar(xgb_model)
-                           , AllData=All
+                           , PlotData=All
                            , ResultPlot=ResultPlot
                            , trainAccuracy=accuracy.rate_train
                            )   
         }
+    
+    if(save_plots==FALSE){
+        model.list$ImportancePlot <- NULL
+        model.list$ResultPlot <- NULL
+    }
     
     #Model list includes the following objects in a list:
         #Model data, a list that includes training and full data sets
@@ -2537,6 +2770,8 @@ autoXGBoostLinear <- function(data
                               , predictors=NULL
                               , min.n=5
                               , split=NULL
+                              , split_by_group=NULL
+                              , the_group=NULL
                               , xgbalpha="0-0"
                               , xgbeta="0.1-0.1"
                               , xgblambda="0-0"
@@ -2556,6 +2791,8 @@ autoXGBoostLinear <- function(data
                               , parallelMethod=NULL
                               , PositiveClass= NULL
                               , NegativeClass = NULL
+                              , save_plots=FALSE
+                              , scale=FALSE
                               ){
     
     if(is.null(save.name)){
@@ -2584,6 +2821,8 @@ autoXGBoostLinear <- function(data
                               , predictors=predictors
                               , min.n=min.n
                               , split=split
+                              , split_by_group=split_by_group
+                              , the_group=the_group
                               , xgbalpha=xgbalpha
                               , xgbeta=xgbeta
                               , xgblambda=xgblambda
@@ -2602,13 +2841,18 @@ autoXGBoostLinear <- function(data
                               , save.name=save.name
                               , parallelMethod=parallelMethod
                               , PositiveClass= PositiveClass
-                              , NegativeClass = NegativeClass
+                              , NegativeClass = NegativeClass,
+                              , save_plots=save_plots
+                              , scale=scale
                               )
     } else if(is.numeric(data[,variable])){
         regressXGBoostLinear(data=data
                              , dependent=variable
                              , predictors=predictors
-                             , min.n=min.n, split=split
+                             , split=split
+                             , split_by_group=split_by_group
+                             , the_group=the_group
+                             , min.n=min.n
                              , xgbalpha=xgbalpha
                              , xgbeta=xgbeta
                              , xgblambda=xgblambda
@@ -2624,7 +2868,9 @@ autoXGBoostLinear <- function(data
                              , n_iter=n_iter
                              , save.directory=save.directory
                              , save.name=save.name
-                             , parallelMethod=parallelMethod
+                             , parallelMethod=parallelMethod,
+                             , save_plots=save_plots
+                             , scale=scale
                              )
     }
     
@@ -2639,6 +2885,8 @@ classifyForest <- function(data
                            , predictors=NULL
                            , min.n=5
                            , split=NULL
+                           , split_by_group=NULL
+                           , the_group=NULL
                            , try, trees
                            , metric=metric
                            #, summary_function="f1"
@@ -2650,11 +2898,17 @@ classifyForest <- function(data
                            , parallelMethod=NULL
                            , PositiveClass= NULL
                            , NegativeClass = NULL
+                           , save_plots=FALSE
+                           , scale=FALSE
                            ){
     
     ###Prepare the data
-    data <- dataPrep(data=data, variable=class, predictors=predictors)
-    
+    if(!is.null(split_by_group)){
+        split_string <- as.vector(data[,split_by_group])
+        data <- data[, !colnames(data) %in% split_by_group]
+    }
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale)
+    data <- data_list$Data
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
         PositiveClass <- unique(sort(data[,class]))[1]
@@ -2701,6 +2955,17 @@ classifyForest <- function(data
         data.train <- data
         y_train <- data$Class
         x_train <- data[, !colnames(data) %in% c("Sample", "Class")]
+    }
+    
+    if(!is.null(split_by_group)){
+        a <- !split_string %in% the_group
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Class
+        y_test <- data.test$Class
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Class")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Class")]
     }
     
     #Boring x_train stuff for later
@@ -2878,12 +3143,16 @@ classifyForest <- function(data
         geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data)
+                                          , Data=data_list, Predictors=predictors)
                            , Model=forest_model
                            , ImportancePlot=importanceBar(forest_model)
                            , ValidationSet=results.frame
+                           , PlotData=results.bar.frame
                            , trainAccuracy=accuracy.rate_train
                            , testAccuracy=accuracy.rate
                            , ResultPlot=ResultPlot
@@ -2896,14 +3165,23 @@ classifyForest <- function(data
         geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data)
+                                          , Data=data_list, Predictors=predictors)
                            , Model=forest_model
                            , ImportancePlot=importanceBar(forest_model)
+                           , PlotData=results.bar.frame
                            , trainAccuracy=accuracy.rate_train
                            , ResultPlot=ResultPlot
                            )
+    }
+    
+    if(save_plots==FALSE){
+        model.list$ImportancePlot <- NULL
+        model.list$ResultPlot <- NULL
     }
     
     #Model list includes the following objects in a list:
@@ -2925,6 +3203,8 @@ regressForest <- function(data
                           , merge.by=NULL
                           , min.n=5
                           , split=NULL
+                          , split_by_group=NULL
+                          , the_group=NULL
                           , try
                           , trees
                           , metric="RMSE"
@@ -2938,11 +3218,17 @@ regressForest <- function(data
                           , save.directory=NULL
                           , save.name=NULL
                           , parallelMethod=NULL
+                          , save_plots=FALSE
+                          , scale=FALSE
                           ){
     
     ###Prepare the data
-    data <- dataPrep(data=data, variable=dependent, predictors=predictors)
-    
+    if(!is.null(split_by_group)){
+        split_string <- as.vector(data[,split_by_group])
+        data <- data[, !colnames(data) %in% split_by_group]
+    }
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale)
+    data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
         parallelMethod
@@ -2973,6 +3259,17 @@ regressForest <- function(data
         data.train <- data
         y_train <- data$Dependent
         x_train <- data[, !colnames(data) %in% c("Sample", "Dependent")]
+    }
+    
+    if(!is.null(split_by_group)){
+        a <- !split_string %in% the_group
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Class
+        y_test <- data.test$Class
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
     }
         
     
@@ -3065,6 +3362,10 @@ regressForest <- function(data
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. 
     # This will be used to asses trainAccuracy
     y_predict_train <- predict(object=forest_model, newdata=x_train, na.action = na.pass)
+    if(scale==TRUE){
+        y_predict_train <- (y_predict_train*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        data.train$Dependent <- (data.train$Dependent*(data_list$YMax-data_list$YMin)) + data_list$YMin
+    }
     results.frame_train <- data.frame(Sample=data.train$Sample
                                       , Known=data.train$Dependent
                                       , Predicted=y_predict_train
@@ -3072,8 +3373,12 @@ regressForest <- function(data
     accuracy.rate_train <- lm(Known~Predicted, data=results.frame_train)
     
     #If you chose a random split, we will generate the same accuracy metrics
-    if(!is.null(split)){
+    if(!is.null(split) | !is.null(split_by_group)){
         y_predict <- predict(object=forest_model, newdata=x_test, na.action = na.pass)
+        if(scale==TRUE){
+            y_predict <- (y_predict*(data_list$YMax-data_list$YMin)) + data_list$YMin
+            data.test$Dependent <- (data.test$Dependent*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         results.frame <- data.frame(Sample=data.test$Sample
                                     , Known=data.test$Dependent
                                     , Predicted=y_predict
@@ -3081,6 +3386,9 @@ regressForest <- function(data
         accuracy.rate <- lm(Known~Predicted, data=results.frame)
         
         all.data <- data.orig
+        if(scale==TRUE){
+            all.data[,dependent] <- (all.data[,dependent]*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         train.frame <- all.data[!all.data$Sample %in% results.frame,]
         KnownSet <- data.frame(Sample=train.frame$Sample
                                , Known=data[,dependent]
@@ -3095,24 +3403,32 @@ regressForest <- function(data
         geom_point(alpha=0.5) +
         stat_smooth(method="lm") +
         theme_light()
-        
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data
-                                          , predictors=predictors
+                                          , Data=data_list
+                                          , Predictors=predictors
                                           )
                            , Model=forest_model
                            , ImportancePlot=importanceBar(forest_model)
                            , ValidationSet=results.frame
-                           , AllData=All
+                           , PlotData=All
                            , ResultPlot=ResultPlot
                            , trainAccuracy=accuracy.rate_train
                            , testAccuracy=accuracy.rate
                            )
-    } else if(is.null(split)){
-        all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
+    } else if(is.null(split) | is.null(split_by_group)){
+        all.data <- data.orig
+        if(scale==TRUE){
+            all.data[,dependent] <- (all.data[,dependent]*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         train.frame <- all.data
         train.predictions <- predict(forest_model, train.frame, na.action = na.pass)
+        if(scale==TRUE){
+            train.predictions <- (train.predictions*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         KnownSet <- data.frame(Sample=train.frame$Sample
                                , Known=train.frame[,dependent]
                                , Predicted=train.predictions
@@ -3125,18 +3441,26 @@ regressForest <- function(data
         geom_point(alpha=0.5) +
         stat_smooth(method="lm") +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data
-                                          , predictors=predictors
+                                          , Data=data_list
+                                          , Predictors=predictors
                                           )
                            , Model=forest_model
                            , ImportancePlot=importanceBar(forest_model)
-                           , AllData=All
+                           , PlotData=All
                            , ResultPlot=ResultPlot
                            , trainAccuracy=accuracy.rate_train
         )    
         }
+    
+    if(save_plots==FALSE){
+        model.list$ImportancePlot <- NULL
+        model.list$ResultPlot <- NULL
+    }
     
     #Model list includes the following objects in a list:
         #Model data, a list that includes training and full data sets
@@ -3155,6 +3479,8 @@ autoForest<- function(data
                       , predictors=NULL
                       , min.n=5
                       , split=NULL
+                      , split_by_group=NULL
+                      , the_group=NULL
                       , try=10
                       , trees=500
                       , metric=metric
@@ -3167,6 +3493,8 @@ autoForest<- function(data
                       , parallelMethod=NULL
                       , PositiveClass= NULL
                       , NegativeClass = NULL
+                      , save_plots=FALSE
+                      , scale=FALSE
                       ){
     
     if(is.null(save.name)){
@@ -3195,7 +3523,9 @@ autoForest<- function(data
                        , predictors=predictors
                        , min.n=min.n
                        , split=split
-                       ,  try=try
+                       , split_by_group=split_by_group
+                       , the_group=the_group
+                       , try=try
                        , trees=trees
                        , metric=metric
                        #, summary_function=summary_function
@@ -3207,6 +3537,8 @@ autoForest<- function(data
                        , parallelMethod=parallelMethod
                        , PositiveClass= PositiveClass
                        , NegativeClass = NegativeClass
+                       , save_plots=save_plots
+                       , scale=scale
                        )
     } else if(is.numeric(data[,variable])){
         regressForest(data=data
@@ -3214,6 +3546,8 @@ autoForest<- function(data
                       , predictors=predictors
                       , min.n=min.n
                       , split=split
+                      , split_by_group=split_by_group
+                      , the_group=the_group
                       , try=try
                       , trees=trees
                       , metric=metric
@@ -3223,6 +3557,8 @@ autoForest<- function(data
                       , save.directory=save.directory
                       , save.name=save.name
                       , parallelMethod=parallelMethod
+                      , save_plots=save_plots
+                      , scale=scale
                       )
     }
     
@@ -3236,6 +3572,8 @@ classifySVM <- function(data
                         , predictors=NULL
                         , min.n=5
                         , split=NULL
+                        , split_by_group=NULL
+                        , the_group=NULL
                         , type="Linear"
                         , xgblambda="1-2"
                         , svmc="1-5"
@@ -3254,12 +3592,18 @@ classifySVM <- function(data
                         , parallelMethod=NULL
                         , PositiveClass= NULL
                         , NegativeClass = NULL
+                        , save_plots=FALSE
+                        , scale=FALSE
                         ){
     
     ###Prepare the data
+    if(!is.null(split_by_group)){
+        split_string <- as.vector(data[,split_by_group])
+        data <- data[, !colnames(data) %in% split_by_group]
+    }
     data.hold <- data
-    data <- dataPrep(data=data, variable=class, predictors=predictors)
-    
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale)
+    data <- data_list$Data
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
         PositiveClass <- unique(sort(data[,class]))[1]
@@ -3315,6 +3659,17 @@ classifySVM <- function(data
         data.train <- data
         y_train <- data$Class
         x_train <- data[, !colnames(data) %in% c("Sample", "Class")]
+    }
+    
+    if(!is.null(split_by_group)){
+        a <- !split_string %in% the_group
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Class
+        y_test <- data.test$Class
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Class")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Class")]
     }
     
     #Boring x_train stuff for later
@@ -3520,7 +3875,7 @@ classifySVM <- function(data
     accuracy.rate_train <- confusionMatrix(as.factor(results.frame_train$Predicted), as.factor(results.frame_train$Known), positive = PositiveClass)
     
     #If you chose a random split, we will generate the same accuracy metrics
-    if(!is.null(split)){
+    if(!is.null(split) | !is.null(split_by_group)){
         y_predict <- predict(object=svm_model, newdata=x_test, na.action = na.pass)
         results.frame <- data.frame(Sample=data.test$Sample
                                     , Known=data.test$Class
@@ -3536,17 +3891,21 @@ classifySVM <- function(data
         geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data)
+                                          , Data=data_list, Predictors=predictors)
                            , Model=svm_model
                            , ImportancePlot=importanceBar(svm_model)
                            , ValidationSet=results.frame
+                           , PlotData=results.bar.frame
                            , trainAccuracy=accuracy.rate_train
                            , testAccuracy=accuracy.rate
                            , ResultPlot=ResultPlot
                            )
-    } else if(is.null(split)){
+    } else if(is.null(split) | is.null(split_by_group)){
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1]), Type=c("1. Train"), stringsAsFactors=FALSE)
         
         ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
@@ -3554,14 +3913,23 @@ classifySVM <- function(data
         geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data)
+                                          , Data=data_list, Predictors=predictors)
                            , Model=svm_model
                            , ImportancePlot=importanceBar(svm_model)
+                           , PlotData=results.bar.frame
                            , trainAccuracy=accuracy.rate_train
                            , ResultPlot=ResultPlot
                            )
+    }
+    
+    if(save_plots==FALSE){
+        model.list$ImportancePlot <- NULL
+        model.list$ResultPlot <- NULL
     }
     
     #Model list includes the following objects in a list:
@@ -3582,6 +3950,8 @@ regressSVM <- function(data
                        , merge.by=NULL
                        , min.n=5
                        , split=NULL
+                       , split_by_group=NULL
+                       , the_group=NULL
                        , type="Linear"
                        , xgblambda="1-2"
                        , svmc="1-5"
@@ -3601,11 +3971,17 @@ regressSVM <- function(data
                        , save.directory=NULL
                        , save.name=NULL
                        , parallelMethod=NULL
+                       , save_plots=FALSE
+                       , scale=scale
                        ){
     
     ###Prepare the data
-    data <- dataPrep(data=data, variable=dependent, predictors=predictors)
-    
+    if(!is.null(split_by_group)){
+        split_string <- as.vector(data[,split_by_group])
+        data <- data[, !colnames(data) %in% split_by_group]
+    }
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale)
+    data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
         parallelMethod
@@ -3636,6 +4012,17 @@ regressSVM <- function(data
         data.train <- data
         y_train <- data$Dependent
         x_train <- data[, !colnames(data) %in% c("Sample", "Dependent")]
+    }
+    
+    if(!is.null(split_by_group)){
+        a <- !split_string %in% the_group
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Class
+        y_test <- data.test$Class
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
     }
         
     #Boring x_train stuff for later
@@ -3782,6 +4169,10 @@ regressSVM <- function(data
     
     #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. This will be used to asses trainAccuracy
     y_predict_train <- predict(object=svm_model, newdata=x_train, na.action = na.pass)
+    if(scale==TRUE){
+        y_predict_train <- (y_predict_train*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        data.train$Dependent <- (data.train$Dependent*(data_list$YMax-data_list$YMin)) + data_list$YMin
+    }
     results.frame_train <- data.frame(Sample=data.train$Sample
                                       , Known=data.train$Dependent
                                       , Predicted=y_predict_train
@@ -3789,8 +4180,12 @@ regressSVM <- function(data
     accuracy.rate_train <- lm(Known~Predicted, data=results.frame_train)
     
     #If you chose a random split, we will generate the same accuracy metrics
-    if(!is.null(split)){
+    if(!is.null(split) | !is.null(split_by_group)){
         y_predict <- predict(object=svm_model, newdata=x_test, na.action = na.pass)
+        if(scale==TRUE){
+            y_predict <- (y_predict*(data_list$YMax-data_list$YMin)) + data_list$YMin
+            data.test$Dependent <- (data.test$Dependent*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         results.frame <- data.frame(Sample=data.test$Sample
                                     , Known=data.test$Dependent
                                     , Predicted=y_predict
@@ -3798,8 +4193,14 @@ regressSVM <- function(data
         accuracy.rate <- lm(Known~Predicted, data=results.frame)
         
         all.data <- data.orig
+        if(scale==TRUE){
+            all.data[,dependent] <- (all.data[,dependent]*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
         train.predictions <- predict(svm_model, train.frame, na.action = na.pass)
+        if(scale==TRUE){
+            train.predictions <- (train.predictions*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         KnownSet <- data.frame(Sample=train.frame$Sample
                                , Known=train.frame[,dependent]
                                , Predicted=train.predictions
@@ -3813,24 +4214,33 @@ regressSVM <- function(data
         geom_point(alpha=0.5) +
         stat_smooth(method="lm") +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data
-                                          , predictors=predictors
+                                          , Data=data_list
+                                          , Predictors=predictors
                                           )
                            , Model=svm_model
                            , ImportancePlot=importanceBar(svm_model)
                            , ValidationSet=results.frame
-                           , AllData=All
+                           , PlotData=All
                            , ResultPlot=ResultPlot
                            , trainAccuracy=accuracy.rate_train
                            , testAccuracy=accuracy.rate
                            )
-    } else if(is.null(split)){
-        all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
+    } else if(is.null(split) | is.null(split_by_group)){
+        all.data <- data.orig
+        if(scale==TRUE){
+            all.data[,dependent] <- (all.data[,dependent]*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         train.frame <- all.data
         train.predictions <- predict(svm_model, train.frame, na.action = na.pass)
+        if(scale==TRUE){
+            train.predictions <- (train.predictions*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         KnownSet <- data.frame(Sample=train.frame$Sample
                                , Known=train.frame[,dependent]
                                , Predicted=train.predictions
@@ -3843,18 +4253,26 @@ regressSVM <- function(data
         geom_point(alpha=0.5) +
         stat_smooth(method="lm") +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data
-                                          , predictors=predictors
+                                          , Data=data_list
+                                          , Predictors=predictors
                                           )
                            , Model=svm_model
                            , ImportancePlot=importanceBar(svm_model)
-                           , AllData=All
+                           , PlotData=All
                            , ResultPlot=ResultPlot
                            , trainAccuracy=accuracy.rate_train
         )   
         }
+    
+    if(save_plots==FALSE){
+        model.list$ImportancePlot <- NULL
+        model.list$ResultPlot <- NULL
+    }
     
     #Model list includes the following objects in a list:
         #Model data, a list that includes training and full data sets
@@ -3873,6 +4291,8 @@ autoSVM <- function(data
                     , predictors=NULL
                     , min.n=5
                     , split=NULL
+                    , split_by_group=NULL
+                    , the_group=NULL
                     , type="svmLinear"
                     , xgblambda="1-2"
                     , svmc="1-5"
@@ -3891,6 +4311,8 @@ autoSVM <- function(data
                     , parallelMethod=NULL
                     , PositiveClass= NULL
                     , NegativeClass = NULL
+                    , save_plots=FALSE
+                    , scale=FALSE
                     ){
     
     if(is.null(save.name)){
@@ -3919,6 +4341,8 @@ autoSVM <- function(data
                     , predictors=predictors
                     , min.n=min.n
                     , split=split
+                    , split_by_group=split_by_group
+                    , the_group=the_group
                     , type=type
                     , xgblambda=xgblambda
                     , svmc=svmc
@@ -3937,6 +4361,8 @@ autoSVM <- function(data
                     , parallelMethod=parallelMethod
                     , PositiveClass= PositiveClass
                     , NegativeClass = NegativeClass
+                    , save_plots=save_plots
+                    , scale=scale
                     )
     } else if(is.numeric(data[,variable])){
         regressSVM(data=data
@@ -3944,6 +4370,8 @@ autoSVM <- function(data
                    , predictors=predictors
                    , min.n=min.n
                    , split=split
+                   , split_by_group=split_by_group
+                   , the_group=the_group
                    , type=type
                    , xgblambda=xgblambda
                    , svmc=svmc
@@ -3959,6 +4387,8 @@ autoSVM <- function(data
                    , save.directory=save.directory
                    , save.name=save.name
                    , parallelMethod=parallelMethod
+                   , save_plots=save_plots
+                   , scale=scale
                    )
     }
     
@@ -3973,6 +4403,8 @@ classifyBayes <- function(data
                           , predictors=NULL
                           , min.n=5
                           , split=NULL
+                          , split_by_group=split_by_group
+                          , the_group=the_group
                           , type="bayesLinear"
                           , trees=100
                           , xgbalpha="1-2"
@@ -3991,12 +4423,18 @@ classifyBayes <- function(data
                           , parallelMethod=NULL
                           , PositiveClass= NULL
                           , NegativeClass = NULL
+                          , save_plots=FALSE
+                          , scale=FALSE
                           ){
     
     ###Prepare the data
+    if(!is.null(split_by_group)){
+        split_string <- as.vector(data[,split_by_group])
+        data <- data[, !colnames(data) %in% split_by_group]
+    }
     data.hold <- data
-    data <- dataPrep(data=data, variable=class, predictors=predictors)
-    
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale)
+    data <- data_list$Data
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
         PositiveClass <- unique(sort(data[,class]))[1]
@@ -4053,6 +4491,17 @@ classifyBayes <- function(data
         data.train <- data
         y_train <- data$Class
         x_train <- data[, !colnames(data) %in% c("Sample", "Class")]
+    }
+    
+    if(!is.null(split_by_group)){
+        a <- !split_string %in% the_group
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Class
+        y_test <- data.test$Class
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Class")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Class")]
     }
     
     #Boring x_train stuff for later
@@ -4275,18 +4724,22 @@ classifyBayes <- function(data
         geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data)
+                                          , Data=data_list, Predictors=predictors)
                            , Model=bayes_model
                            , tryCatch(ImportancePlot=importanceBar(bayes_model)
                                       , error=function(e) NULL)
                            , ValidationSet=results.frame
+                           , PlotData=results.bar.frame
                            , trainAccuracy=accuracy.rate_train
                            , testAccuracy=accuracy.rate
                            , ResultPlot=ResultPlot
                            )
-    } else if(is.null(split)){
+    } else if(is.null(split) | is.null(split_by_group)){
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1]), Type=c("1. Train"), stringsAsFactors=FALSE)
         
         ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
@@ -4294,15 +4747,24 @@ classifyBayes <- function(data
         geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data)
+                                          , Data=data_list, Predictors=predictors)
                            , Model=bayes_model
                            , tryCatch(ImportancePlot=importanceBar(bayes_model)
                                       , error=function(e) NULL)
+                           , PlotData=results.bar.frame
                            , trainAccuracy=accuracy.rate_train
                            , ResultPlot=ResultPlot
                            )
+    }
+    
+    if(save_plots==FALSE){
+        model.list$ImportancePlot <- NULL
+        model.list$ResultPlot <- NULL
     }
     
     #Model list includes the following objects in a list:
@@ -4323,6 +4785,8 @@ regressBayes <- function(data
                          , merge.by=NULL
                          , min.n=5
                          , split=NULL
+                         , split_by_group=NULL
+                         , the_group=NULL
                          , type="bayesLinear"
                          , trees=100
                          , xgbalpha="1-2"
@@ -4342,11 +4806,17 @@ regressBayes <- function(data
                          , save.directory=NULL
                          , save.name=NULL
                          , parallelMethod=NULL
+                         , save_plots=FALSE
+                         , scale=FALSE
                          ){
     
     ###Prepare the data
-    data <- dataPrep(data=data, variable=dependent, predictors=predictors)
-    
+    if(!is.null(split_by_group)){
+        split_string <- as.vector(data[,split_by_group])
+        data <- data[, !colnames(data) %in% split_by_group]
+    }
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale)
+    data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
         parallelMethod
@@ -4380,6 +4850,17 @@ regressBayes <- function(data
         data.train <- data
         y_train <- data$Dependent
         x_train <- data[, !colnames(data) %in% c("Sample", "Dependent")]
+    }
+    
+    if(!is.null(split_by_group)){
+        a <- !split_string %in% the_group
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        #Set y_train and x_train for later
+        y_train <- data.train$Class
+        y_test <- data.test$Class
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
     }
         
     #Boring x_train stuff for later
@@ -4559,12 +5040,19 @@ regressBayes <- function(data
     # Here we generate predictions based on the model on the data used to train it. 
     # This will be used to asses trainAccuracy
     y_predict_train <- predict(object=bayes_model, newdata=x_train, na.action = na.pass)
+    if(scale==TRUE){
+        y_predict_train <- (y_predict_train*(data_list$YMax-data_list$YMin)) + data_list$YMin
+    }
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Dependent, Predicted=y_predict_train)
     accuracy.rate_train <- lm(Known~Predicted, data=results.frame_train)
     
     #If you chose a random split, we will generate the same accuracy metrics
-    if(!is.null(split)){
+    if(!is.null(split) | !is.null(split_by_group)){
         y_predict <- predict(object=bayes_model, newdata=x_test, na.action = na.pass)
+        if(scale==TRUE){
+            y_predict <- (y_predict*(data_list$YMax-data_list$YMin)) + data_list$YMin
+            data.test$Dependent <- (data.test$Dependent*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         results.frame <- data.frame(Sample=data.test$Sample
                                     , Known=data.test$Dependent
                                     , Predicted=y_predict
@@ -4572,8 +5060,15 @@ regressBayes <- function(data
         accuracy.rate <- lm(Known~Predicted, data=results.frame)
         
         all.data <- data.orig
+        if(scale==TRUE){
+            all.data[,dependent] <- (all.data[,dependent]*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
         train.predictions <- predict(bayes_model, train.frame, na.action = na.pass)
+        if(scale==TRUE){
+            train.predictions <- (train.predictions*(data_list$YMax-data_list$YMin)) + data_list$YMin
+            train.frame[,dependent] <- (train.frame[,dependent]*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         KnownSet <- data.frame(Sample=train.frame$Sample
                                , Known=train.frame[,dependent]
                                , Predicted=train.predictions
@@ -4587,23 +5082,32 @@ regressBayes <- function(data
         geom_point(alpha=0.5) +
         stat_smooth(method="lm") +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data
-                                          , predictors=predictors)
+                                          , Data=data_list
+                                          , Predictors=predictors)
                            , Model=bayes_model
                            , ImportancePlot=importanceBar(bayes_model)
                            , ValidationSet=results.frame
-                           , AllData=All
+                           , PlotData=All
                            , ResultPlot=ResultPlot
                            , trainAccuracy=accuracy.rate_train
                            , testAccuracy=accuracy.rate
                            )
-    } else if(is.null(split)){
-        all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
+    } else if(is.null(split) | is.null(split_by_group)){
+        all.data <- data.orig
+        if(scale==TRUE){
+            all.data[,dependent] <- (all.data[,dependent]*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         train.frame <- all.data
         train.predictions <- predict(bayes_model, train.frame, na.action = na.pass)
+        if(scale==TRUE){
+            train.predictions <- (train.predictions*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
         KnownSet <- data.frame(Sample=train.frame$Sample
                                , Known=train.frame[,dependent]
                                , Predicted=train.predictions
@@ -4616,17 +5120,25 @@ regressBayes <- function(data
         geom_point(alpha=0.5) +
         stat_smooth(method="lm") +
         theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
         
         model.list <- list(ModelData=list(Model.Data=data.train
-                                          , data=data
-                                          , predictors=predictors)
+                                          , Data=data_list
+                                          , Predictors=predictors)
                            , Model=bayes_model
                            , ImportancePlot=importanceBar(bayes_model)
-                           , AllData=All
+                           , PlotData=All
                            , ResultPlot=ResultPlot
                            , trainAccuracy=accuracy.rate_train
         )   
         }
+    
+    if(save_plots==FALSE){
+        model.list$ImportancePlot <- NULL
+        model.list$ResultPlot <- NULL
+    }
     
     #Model list includes the following objects in a list:
         #Model data, a list that includes training and full data sets
@@ -4645,6 +5157,8 @@ autoBayes <- function(data
                       , predictors=NULL
                       , min.n=5
                       , split=NULL
+                      , split_by_group=NULL
+                      , the_group=NULL
                       , type="bayesLinear"
                       , trees=100
                       , xgbalpha="1-2"
@@ -4663,6 +5177,8 @@ autoBayes <- function(data
                       , parallelMethod=NULL
                       , PositiveClass= NULL
                       , NegativeClass = NULL
+                      , save_plots=FALSE
+                      , scale=FALSE
                       ){
     
     if(is.null(save.name)){
@@ -4691,6 +5207,8 @@ autoBayes <- function(data
                       , predictors=predictors
                       , min.n=min.n
                       , split=split
+                      , split_by_group=split_by_group
+                      , the_group=the_group
                       , type=type
                       , trees=trees
                       , neuralhiddenunits=neuralhiddenunits
@@ -4708,7 +5226,9 @@ autoBayes <- function(data
                       , save.name=save.name
                       , parallelMethod=parallelMethod
                       , PositiveClass= PositiveClass
-                      , NegativeClass = NegativeClass
+                      , NegativeClass = NegativeClass,
+                      , save_plots=save_plots
+                      , scale=scale
                       )
     } else if(is.numeric(data[,variable])){
         regressBayes(data=data
@@ -4716,6 +5236,8 @@ autoBayes <- function(data
                      , predictors=predictors
                      , min.n=min.n
                      , split=split
+                     , split_by_group=split_by_group
+                     , the_group=the_group
                      , type=type
                      , trees=trees
                      , neuralhiddenunits=neuralhiddenunits
@@ -4731,6 +5253,8 @@ autoBayes <- function(data
                      , save.directory=save.directory
                      , save.name=save.name
                      , parallelMethod=parallelMethod
+                     , save_plots=save_plots
+                     , scale=scale
                      )
     }
 
@@ -4745,6 +5269,8 @@ autoMLTable <- function(data
                         , predictors=NULL
                         , min.n=5
                         , split=NULL
+                        , split_by_group=NULL
+                        , the_group=NULL
                         , type="XGBLinear"
                         , treedepth="2-2"
                         , xgbalpha="0-0"
@@ -4785,16 +5311,20 @@ autoMLTable <- function(data
                         , parallelMethod=NULL
                         , PositiveClass= NULL
                         , NegativeClass = NULL
+                        , save_plots=FALSE
+                        , scale=FALSE
                         ){
     
     
     #Choose model class
-    model <- if(type=="xgbTree"){
+    qualpart <- if(type=="xgbTree"){
         autoXGBoostTree(data=data
                         , variable=variable
                         , predictors=predictors
                         , min.n=min.n
                         , split=split
+                        , split_by_group=split_by_group
+                        , the_group=the_group
                         , treedepth=treedepth
                         , xgbgamma=xgbgamma
                         , xgbeta=xgbeta
@@ -4817,6 +5347,8 @@ autoMLTable <- function(data
                         , parallelMethod=parallelMethod
                         , PositiveClass= PositiveClass
                         , NegativeClass = NegativeClass
+                        , save_plots=save_plots
+                        , scale=scale
                         )
     } else if(type=="xgbLinear"){
         autoXGBoostLinear(data=data
@@ -4824,6 +5356,8 @@ autoMLTable <- function(data
                           , predictors=predictors
                           , min.n=min.n
                           , split=split
+                          , split_by_group=split_by_group
+                          , the_group=the_group
                           , xgbalpha=xgbalpha
                           , xgbeta=xgbeta
                           , xgblambda=xgblambda
@@ -4843,6 +5377,8 @@ autoMLTable <- function(data
                           , parallelMethod=parallelMethod
                           , PositiveClass= PositiveClass
                           , NegativeClass = NegativeClass
+                          , save_plots=save_plots
+                          , scale=scale
                           )
     } else if(type=="Forest"){
         autoForest(data=data
@@ -4850,6 +5386,8 @@ autoMLTable <- function(data
                    , predictors=predictors
                    , min.n=min.n
                    , split=split
+                   , split_by_group=split_by_group
+                   , the_group=the_group
                    , try=try
                    , trees=trees
                    , metric=metric
@@ -4862,6 +5400,8 @@ autoMLTable <- function(data
                    , parallelMethod=parallelMethod
                    , PositiveClass= PositiveClass
                    , NegativeClass = NegativeClass
+                   , save_plots=save_plots
+                   , scale=scale
                    )
     } else if(type=="svmLinear" | type=="svmPoly" | type=="svmRadial" | type=="svmRadialCost" | type=="svmRadialSigma" | type=="svmBoundrangeString" | type=="svmExpoString" | type=="svmSpectrumString"){
         autoSVM(data=data,
@@ -4869,6 +5409,8 @@ autoMLTable <- function(data
                 , predictors=predictors
                 , min.n=min.n
                 , split=split
+                , split_by_group=split_by_group
+                , the_group=the_group
                 , type=type
                 , xgblambda=xgblambda
                 , svmc=svmc
@@ -4887,6 +5429,8 @@ autoMLTable <- function(data
                 , parallelMethod=parallelMethod
                 , PositiveClass= PositiveClass
                 , NegativeClass = NegativeClass
+                , save_plots=save_plots
+                , scale=scale
                 )
     } else if(type=="bayesLinear" | type=="bayesTree" | type=="bayesNeuralNet"){
         autoBayes(data=data
@@ -4894,6 +5438,8 @@ autoMLTable <- function(data
                   , predictors=predictors
                   , min.n=min.n
                   , split=split
+                  , split_by_group=split_by_group
+                  , the_group=the_group
                   , type=type
                   , trees=trees
                   , neuralhiddenunits=neuralhiddenunits
@@ -4912,8 +5458,87 @@ autoMLTable <- function(data
                   , parallelMethod=parallelMethod
                   , PositiveClass= PositiveClass
                   , NegativeClass = NegativeClass
+                  , save_plots=save_plots
+                  , scale=scale
         )
     }
     
-    return(model)
+    tryCatch(qualpart$Model$terms <- butcher::axe_env(qualpart$Model$terms), error=function(e) NULL)
+    tryCatch(qualpart$Model$finalModel$callbacks <- butcher::axe_env(qualpart$Model$finalModel$callbacks), error=function(e) NULL)
+    tryCatch(qualpart$Model$finalModel <- butcher::axe_env(qualpart$Model$finalModel), error=function(e) NULL)
+    tryCatch(qualpart$Model$finalModel$model <- butcher::axe_env(qualpart$Model$finalModel$model), error=function(e) NULL)
+    tryCatch(qualpart$Model$finalModel$formula <- butcher::axe_env(qualpart$Model$finalModel$formula), error=function(e) NULL)
+    tryCatch(qualpart$Model$finalModel$proximity <- butcher::axe_env(qualpart$Model$finalModel$proximity), error=function(e) NULL)
+
+    
+    return(qualpart)
+}
+
+qualCompress <- function(qualpart){
+    tryCatch(qualpart$ResultPlot <- NULL, error=function(e) NULL)
+    tryCatch(qualpart$ImportancePlot <- NULL, error=function(e) NULL)
+    
+    tryCatch(qualpart$Model <- butcher::axe_env(qualpart$Model), error=function(e) NULL)
+    tryCatch(qualpart$Model$terms <- butcher::axe_env(qualpart$Model$terms), error=function(e) NULL)
+    tryCatch(qualpart$Model$finalModel$callbacks <- butcher::axe_env(qualpart$Model$finalModel$callbacks), error=function(e) NULL)
+    tryCatch(qualpart$Model$finalModel <- butcher::axe_env(qualpart$Model$finalModel), error=function(e) NULL)
+    tryCatch(qualpart$Model$finalModel$model <- butcher::axe_env(qualpart$Model$finalModel$model), error=function(e) NULL)
+    tryCatch(qualpart$Model$finalModel$formula <- butcher::axe_env(qualpart$Model$finalModel$formula), error=function(e) NULL)
+    tryCatch(qualpart$Model$finalModel$proximity <- butcher::axe_env(qualpart$Model$finalModel$proximity), error=function(e) NULL)
+    
+    tryCatch(qualpart$preModel <- butcher::axe_env(qualpart$preModel), error=function(e) NULL)
+    tryCatch(qualpart$preModel$terms <- butcher::axe_env(qualpart$preModel$terms), error=function(e) NULL)
+    tryCatch(qualpart$preModel$finalModel$callbacks <- butcher::axe_env(qualpart$preModel$finalModel$callbacks), error=function(e) NULL)
+    tryCatch(qualpart$preModel$finalModel <- butcher::axe_env(qualpart$preModel$finalModel), error=function(e) NULL)
+    tryCatch(qualpart$preModel$finalModel$model <- butcher::axe_env(qualpart$preModel$finalModel$model), error=function(e) NULL)
+    tryCatch(qualpart$preModel$finalModel$formula <- butcher::axe_env(qualpart$preModel$finalModel$formula), error=function(e) NULL)
+    tryCatch(qualpart$preModel$finalModel$proximity <- butcher::axe_env(qualpart$preModel$finalModel$proximity), error=function(e) NULL)
+    
+    tryCatch(qualpart$trainAccuracy <- butcher::axe_env(qualpart$trainAccuracy), error=function(e) NULL)
+    tryCatch(qualpart$testAccuracy <- butcher::axe_env(qualpart$testAccuracy), error=function(e) NULL)
+
+    
+    return(qualpart)
+}
+
+qualPartLoad <- function(qualpart_directory=NULL, qualpart=NULL){
+    
+    if(is.null(qualpart)){
+        qualpart <- readRDS(qualpart_directory)
+    }
+    
+    if("AllData" %in% names(qualpart)){
+        qualpart$PlotData <- qualpart$AllData
+    }
+    
+    qualpart$ResultPlot <- if(class(qualpart$trainAccuracy)=="confusionMatrix"){
+        ggplot(qualpart$PlotData, aes(x=Type, y=Accuracy, fill=Type)) +
+        geom_bar(stat="identity") +
+        geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
+                  position = position_dodge(0.9), size=3.5) +
+        theme_light()
+    } else if(class(qualpart$trainAccuracy)!="confusionMatrix"){
+        ggplot(qualpart$PlotData, aes(Known, Predicted, colour=Type, shape=Type)) +
+        geom_point(alpha=0.5) +
+        stat_smooth(method="lm") +
+        theme_light()
+    }
+    
+    qualpart$ImportancePlot <- importanceBar(qualpart$Model)
+    
+    return(qualpart)
+}
+
+batchCompress <- function(qualpart_directory){
+    detail_data <- list.files(qualpart_directory, pattern=c(".rdata", ".qualpart"))
+    detail_list <- pblapply(detail_data, function(x) tryCatch(readRDS(paste0(qualpart_directory, "/", x)), error=function(e) NULL))
+    names(detail_list) <- detail_data
+    detail_list_converted <- pblapply(detail_list, qualCompress)
+    names(detail_list_converted) <- detail_data
+
+    for(i in names(detail_list_converted) ){
+        print(paste0("Saving ", i))
+        saveRDS(detail_list_converted[[i]], paste0(qualpart_directory, "/", i), compress="xz")
+    }
+
 }

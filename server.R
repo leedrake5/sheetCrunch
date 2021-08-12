@@ -2453,18 +2453,18 @@ dataMerge3 <- reactive({
     spectra.line.table <- if(input$usefull==FALSE){
         dataMerge2()
     } else if(input$usefull==TRUE){
-        dataMerge0()
+        dataMerge()
     }
     
     quality.table <- values[["DF"]]
 
-    spectra.line.table <- spectra.line.table[,c("Spectrum", input$show_vars, names(quality.table[,-1]))]
+    spectra.line.table <- merge(spectra.line.table[,c("Spectrum", input$show_vars),], quality.table, by="Spectrum")
     
     #spectra.line.table <- spectra.line.table[complete.cases(spectra.line.table[,input$show_vars]),]
     
     
     
-    spectra.line.table <- spectra.line.table[complete.cases(spectra.line.table),]
+    #spectra.line.table <- spectra.line.table[complete.cases(spectra.line.table),]
     
     if(input$logtrans==TRUE){spectra.line.table[,input$show_vars] <- log(spectra.line.table[,input$show_vars]+10)}
 
@@ -2524,10 +2524,10 @@ choiceLines <- reactive({
      
       xrf.pca.frame <- spectra.line.table[,input$show_vars]
       xrf.pca.frame <- xrf.pca.frame[complete.cases(xrf.pca.frame),]
-      
+      #xrf.pca.frame <- as.data.frame(sapply( xrf.pca.frame, as.numeric ))
 
       
-      xrf.k <- kmeans(xrf.pca.frame, input$knum, iter.max=1000, nstart=15, algorithm=c("Hartigan-Wong"))
+      xrf.k <- kmeans(xrf.pca.frame, centers=input$knum, iter.max=1000, nstart=500, algorithm=c("Hartigan-Wong"), trace=TRUE)
       xrf.pca <- prcomp(xrf.pca.frame, scale.=FALSE)
       
       xrf.scores <- as.data.frame(xrf.pca$x)
@@ -3801,6 +3801,13 @@ secondDefaultSelect <- reactive({
       
   })
   
+  output$ratioFocusShape <- renderUI({
+      if(input$ratiocolour=="Focus"){selectInput('ratiofocusshape', "Choose Label", choices=c("None", names(values[["DF"]])), selected="None")} else {
+          p()
+      }
+      
+  })
+  
   ratioFrame <- reactive({
       
       spectra.line.table <- dataMerge3()
@@ -3942,17 +3949,22 @@ secondDefaultSelect <- reactive({
       
       if (input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {colnames(new.ratio.table) <- c("Spectrum", "X", "Y", "Selected")}
       
-      if (input$elipseplot2 == FALSE && input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {select.plot <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
+      if(input$ratiofocusshape!="None"){
+          new.ratio.table$Shape <- ratio.frame[,input$ratiofocusshape]
+          colnames(new.ratio.table) <- c("Spectrum", "X", "Y", "Selected", input$ratiofocusshape)
+      }
       
-      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel=="None") {select.plot <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + scale_x_continuous(ratio.names.x) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      if (input$elipseplot2 == FALSE && input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {select.plot <- gghighlight_point(new.ratio.table, aes_string("X", "Y", colour="Selected", shape=input$ratiofocusshape), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
+      
+      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel=="None") {select.plot <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected, shape=input$ratiofocusshape), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + scale_x_continuous(ratio.names.x) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
       
       if (input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {newer.ratio.table <- ratio.frame[,c("Spectrum", "X", "Y", input$ratiofocusvariable, input$ratiofocuslabel)]}
       
       if (input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {colnames(newer.ratio.table) <- c("Spectrum", "X", "Y", "Selected", "Label")}
       
-      if (input$elipseplot2 == FALSE && input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {select.plot <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
+      if (input$elipseplot2 == FALSE && input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {select.plot <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected, shape=input$ratiofocusshape), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
       
-      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel!="None") {select.plot <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel!="None") {select.plot <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected, shape=input$ratiofocusshape), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
       
       select.plot
       
