@@ -716,6 +716,7 @@ classifyXGBoostTree <- function(data
                                 , NegativeClass = NULL
                                 , save_plots=FALSE
                                 , scale=FALSE
+                                , ...
                                 ){
     
     ###Prepare the data
@@ -1235,6 +1236,7 @@ regressXGBoostTree <- function(data
                                , parallelMethod=NULL
                                , save_plots=FALSE
                                , scale=FALSE
+                               , ...
                                ){
     
     ###Prepare the data
@@ -1710,6 +1712,7 @@ autoXGBoostTree <- function(data
                             , NegativeClass = NULL
                             , save_plots=FALSE
                             , scale=FALSE
+                            , ...
                             ){
     
     if(is.null(save.name)){
@@ -1834,6 +1837,7 @@ classifyXGBoostLinear <- function(data
                                   , NegativeClass = NULL
                                   , save_plots=FALSE
                                   , scale=FALSE
+                                  , ...
                                   ){
     
     ###Prepare the data
@@ -2344,6 +2348,7 @@ regressXGBoostLinear <- function(data
                                  , parallelMethod=NULL
                                  , save_plots=FALSE
                                  , scale=FALSE
+                                 , ...
                                  ){
     
     ###Prepare the data
@@ -2793,6 +2798,7 @@ autoXGBoostLinear <- function(data
                               , NegativeClass = NULL
                               , save_plots=FALSE
                               , scale=FALSE
+                              , ...
                               ){
     
     if(is.null(save.name)){
@@ -2900,6 +2906,7 @@ classifyForest <- function(data
                            , NegativeClass = NULL
                            , save_plots=FALSE
                            , scale=FALSE
+                           , ...
                            ){
     
     ###Prepare the data
@@ -3220,6 +3227,7 @@ regressForest <- function(data
                           , parallelMethod=NULL
                           , save_plots=FALSE
                           , scale=FALSE
+                          , ...
                           ){
     
     ###Prepare the data
@@ -3495,6 +3503,7 @@ autoForest<- function(data
                       , NegativeClass = NULL
                       , save_plots=FALSE
                       , scale=FALSE
+                      , ...
                       ){
     
     if(is.null(save.name)){
@@ -3594,6 +3603,7 @@ classifySVM <- function(data
                         , NegativeClass = NULL
                         , save_plots=FALSE
                         , scale=FALSE
+                        , ...
                         ){
     
     ###Prepare the data
@@ -3973,6 +3983,7 @@ regressSVM <- function(data
                        , parallelMethod=NULL
                        , save_plots=FALSE
                        , scale=scale
+                       , ...
                        ){
     
     ###Prepare the data
@@ -4313,6 +4324,7 @@ autoSVM <- function(data
                     , NegativeClass = NULL
                     , save_plots=FALSE
                     , scale=FALSE
+                    , ...
                     ){
     
     if(is.null(save.name)){
@@ -4425,6 +4437,7 @@ classifyBayes <- function(data
                           , NegativeClass = NULL
                           , save_plots=FALSE
                           , scale=FALSE
+                          , ...
                           ){
     
     ###Prepare the data
@@ -4808,6 +4821,7 @@ regressBayes <- function(data
                          , parallelMethod=NULL
                          , save_plots=FALSE
                          , scale=FALSE
+                         , ...
                          ){
     
     ###Prepare the data
@@ -5179,6 +5193,7 @@ autoBayes <- function(data
                       , NegativeClass = NULL
                       , save_plots=FALSE
                       , scale=FALSE
+                      , ...
                       ){
     
     if(is.null(save.name)){
@@ -5313,6 +5328,7 @@ autoMLTable <- function(data
                         , NegativeClass = NULL
                         , save_plots=FALSE
                         , scale=FALSE
+                        , ...
                         ){
     
     
