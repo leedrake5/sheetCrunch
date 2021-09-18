@@ -23,7 +23,7 @@ library(ggplot2)
 library(nnet)
 library(randomForest)
 library(kernlab)
-tryCatch(library(bartMachine), error=function(e) NULL)
+#tryCatch(library(bartMachine), error=function(e) NULL)
 tryCatch(library(brnn), error=function(e) NULL)
 tryCatch(library(arm), error=function(e) NULL)
 library(doParallel)
@@ -164,14 +164,14 @@ metric_fun <- function(num_classes
     
     summary_function <- twoClassSummary
     
-    if(!is.null(PositiveClass)){
+    #if(!is.null(PositiveClass)){
       #if(PositiveClass != "1" & PositiveClass != "0" & PositiveClass != "2"){
         #
-        summary_function <- function(...) customTwoClassSummary(..., 
-                                                  positive = PositiveClass
-                                                  , negative= NegativeClass)
+        #summary_function <- function(...) customTwoClassSummary(...,
+                                                 # positive = PositiveClass
+                                                 # , negative= NegativeClass)
         #
-      }
+      #}
     # else{
     #    # summary_function <- function(...) customTwoClassSummary(..., 
     #    #                                           positive = paste0('X', PositiveClass)
@@ -700,7 +700,7 @@ classifyXGBoostTree <- function(data
                                 , xgbminchild="1-3"
                                 , nrounds=500
                                 , test_nrounds=100
-                                , metric=metric
+                                , metric="Accuracy"
                                 #, summary_function="f1"
                                 , train="repeatedcv"
                                 , cvrepeats=5
@@ -1696,7 +1696,7 @@ autoXGBoostTree <- function(data
                             , xgbminchild="1-3"
                             , nrounds=500
                             , test_nrounds=100
-                            , metric=metric
+                            , metric="RMSE"
                             #, summary_function="f1"
                             , train="repeatedcv"
                             , cvrepeats=5
@@ -4415,8 +4415,8 @@ classifyBayes <- function(data
                           , predictors=NULL
                           , min.n=5
                           , split=NULL
-                          , split_by_group=split_by_group
-                          , the_group=the_group
+                          , split_by_group=NULL
+                          , the_group=NULL
                           , type="bayesLinear"
                           , trees=100
                           , xgbalpha="1-2"
@@ -4425,7 +4425,7 @@ classifyBayes <- function(data
                           , bartbeta="1-2"
                           , bartnu="1-2"
                           , missing=FALSE
-                          , metric=metric
+                          , metric="ROC"
                           #, summary_function="f1"
                           , train="repeatedcv"
                           , cvrepeats=5
@@ -5181,7 +5181,7 @@ autoBayes <- function(data
                       , bartbeta="1-2"
                       , bartnu="1-2"
                       , missing=FALSE
-                      , metric=metric
+                      , metric="RMSE"
                       #, summary_function="f1"
                       , train="repeatedcv"
                       , cvrepeats=5
