@@ -243,7 +243,7 @@ metric_fun <- function(num_classes
 ######################################
 # What does this fuction optimize?
 
- xgb_cv_opt_tree <- function (data
+ xgb_cv_opt_tree_exp <- function (data
                               , label
                               , objectfun
                               , evalmetric
@@ -317,7 +317,7 @@ metric_fun <- function(num_classes
                           , data = dtrain
                           , folds = cv_folds
                           , watchlist = xg_watchlist
-                          , prediction = TRUE
+                          , prediction = FALSE
                           , showsd = TRUE
                           , early_stopping_rounds = 5
                           , maximize = TRUE
@@ -330,7 +330,7 @@ metric_fun <- function(num_classes
              else {
                  s <- max(-(cv$evaluation_log[, 4]))
              }
-             list(Score = s, Pred = cv$pred)
+             list(Score = s)
          }
      } else {
          xgb_cv <- function(object_fun
@@ -363,11 +363,11 @@ metric_fun <- function(num_classes
                           , data = dtrain
                           , folds = cv_folds
                           , watchlist = xg_watchlist
-                          , prediction = TRUE
+                          , prediction = FALSE
                           , showsd = TRUE
                           , early_stopping_rounds = 50
                           , maximize = FALSE
-                          , verbose = 0
+                          , verbose = 1
                           , nrounds = nrounds_opt
                           )
              if (eval_met %in% c("auc", "ndcg", "map")) {
@@ -376,33 +376,208 @@ metric_fun <- function(num_classes
              else {
                  s <- max(-(cv$evaluation_log[, 4]))
              }
-             list(Score = s, Pred = cv$pred)
+             list(Score = s)
          }
      }
-     opt_res <- BayesianOptimization(xgb_cv
-                                     , bounds = list(gamma_opt = gamma_range
-                                                     , minchild_opt = min_child_range
-                                                     , eta_opt = eta_range
-                                                     , max_depth_opt = max_depth_range
-                                                     , nrounds_opt = nrounds_range
-                                                     , subsample_opt = subsample_range
-                                                     , bytree_opt = bytree_range
-                                                     )
-                                     , init_points
-                                     , init_grid_dt = NULL
-                                     , n_iter
-                                     , acq
-                                     , kappa
-                                     , eps
-                                     , optkernel
-                                     , verbose = TRUE
-                                     )
+     
+     
+     opt_res_pre <- bayesOpt(FUN=xgb_cv,
+                bounds = list(gamma_opt = gamma_range
+                , minchild_opt = min_child_range
+                , eta_opt = eta_range
+                , max_depth_opt = max_depth_range
+                , nrounds_opt = nrounds_range
+                , subsample_opt = subsample_range
+                , bytree_opt = bytree_range
+                ),
+                initPoints=init_points,
+                iters.n=n_iter)
+                
+    opt_res_best <- getBestPars(opt_res_pre)
+                
+    opt_res <- list(Best_Par=data.frame(nrounds_opt=opt_res_best$nrounds, max_depth_opt=opt_res_best$max_depth, eta_opt=opt_res_best$eta, gamma_opt=opt_res_best$gamma, subsample_opt=opt_res_best$subsample, bytree_opt=opt_res_best$colsample_bytree, minchild_opt=opt_res_best$min_child_weight))
+     
+     #opt_res <- BayesianOptimization(xgb_cv
+                                     #, bounds = list(gamma_opt = gamma_range
+                                     #                , minchild_opt = min_child_range
+                                     #                , eta_opt = eta_range
+                                     #                , max_depth_opt = max_depth_range
+                                     #                , nrounds_opt = nrounds_range
+                                     #                , subsample_opt = subsample_range
+                                     #                , bytree_opt = bytree_range
+                                     #                )
+                                     #, init_points
+                                     #, init_grid_dt = NULL
+                                     #, n_iter
+                                     #, acq
+                                     #, kappa
+                                     #, eps
+                                     #, optkernel
+                                     #, verbose = TRUE
+                                     #)
      return(opt_res)
  }
 
 
 
 ## What does this function do? 
+
+xgb_cv_opt_tree <- function (data
+                             , label
+                             , objectfun
+                             , evalmetric
+                             , n_folds
+                             , eta_range = c(0.1, 1L)
+                             , max_depth_range = c(4L, 6L)
+                             , nrounds_range = c(70, 160L)
+                             , subsample_range = c(0.1, 1L)
+                             , bytree_range = c(0.4, 1L)
+                             , min_child_range=c(1L, 3L)
+                             , gamma_range=c(0L, 1L)
+                             , init_points = 4
+                             , n_iter = 10
+                             , acq = "ei"
+                             , kappa = 2.576
+                             , eps = 0
+                             , optkernel = list(type = "exponential", power = 2)
+                             , classes = NULL
+                             , seed = 0
+                             )
+{
+    
+    if (class(data)[1] == "dgCMatrix") {
+        dtrain <- xgb.DMatrix(data, label = label)
+        xg_watchlist <- list(msr = dtrain)
+        cv_folds <- KFold(label, nfolds = n_folds, stratified = TRUE,
+            seed = seed)
+    }
+    else {
+        #quolabel <- enquo(label)
+        #datalabel <- (data %>% select(!!quolabel))[[1]]
+        datalabel <- data$Class
+        mx <- Matrix::sparse.model.matrix(datalabel ~ ., data[,!colnames(data) %in% "Class"])
+        if (class(datalabel) == "factor") {
+            dtrain <- xgb.DMatrix(mx, label = as.integer(datalabel) -
+                1)
+        }
+        else {
+            dtrain <- xgb.DMatrix(mx, label = datalabel)
+        }
+        xg_watchlist <- list(msr = dtrain)
+        cv_folds <- KFold(datalabel, nfolds = n_folds, stratified = TRUE,
+            seed = seed)
+    }
+    if (grepl("logi", objectfun) == TRUE) {
+        xgb_cv <- function(object_fun
+                           , eval_met
+                           , num_classes
+                           , gamma_opt
+                           , minchild_opt
+                           , eta_opt
+                           , max_depth_opt
+                           , nrounds_opt
+                           , subsample_opt
+                           , bytree_opt
+                           ) {
+            object_fun <- objectfun
+            eval_met <- evalmetric
+            cv <- xgb.cv(params = list(booster = "gbtree"
+                                       , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                       , objective = object_fun
+                                       , eval_metric = eval_met
+                                       , gamma = gamma_opt
+                                       , min_child_weight = minchild_opt
+                                       , eta = eta_opt
+                                       , max_depth = max_depth_opt
+                                       , subsample = subsample_opt
+                                       , colsample_bytree = bytree_opt
+                                       , lambda = 1
+                                       , alpha = 0)
+                         , data = dtrain
+                         , folds = cv_folds
+                         , watchlist = xg_watchlist
+                         , prediction = FALSE
+                         , showsd = TRUE
+                         , early_stopping_rounds = 5
+                         , maximize = TRUE
+                         , verbose = 0
+                         , nrounds = nrounds_opt
+                         )
+            if (eval_met %in% c("auc", "ndcg", "map")) {
+                s <- max(cv$evaluation_log[, 4])
+            }
+            else {
+                s <- max(-(cv$evaluation_log[, 4]))
+            }
+            list(Score = s)
+        }
+    } else {
+        xgb_cv <- function(object_fun
+                           , eval_met
+                           , num_classes
+                           , gamma_opt
+                           , minchild_opt
+                           , eta_opt
+                           , max_depth_opt
+                           , nrounds_opt
+                           , subsample_opt
+                           , bytree_opt
+                           ) {
+            object_fun <- objectfun
+            eval_met <- evalmetric
+            num_classes <- classes
+            cv <- xgb.cv(params = list(booster = "gbtree"
+                                       , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                       , objective = object_fun
+                                       , num_class = num_classes
+                                       , eval_metric = eval_met
+                                       , gamma = gamma_opt
+                                       , min_child_weight = minchild_opt
+                                       , eta = eta_opt
+                                       , max_depth = max_depth_opt
+                                       , subsample = subsample_opt
+                                       , colsample_bytree = bytree_opt
+                                       , lambda = 1
+                                       , alpha = 0)
+                         , data = dtrain
+                         , folds = cv_folds
+                         , watchlist = xg_watchlist
+                         , prediction = FALSE
+                         , showsd = TRUE
+                         , early_stopping_rounds = 50
+                         , maximize = FALSE
+                         , verbose = 1
+                         , nrounds = nrounds_opt
+                         )
+            if (eval_met %in% c("auc", "ndcg", "map")) {
+                s <- max(cv$evaluation_log[, 4])
+            }
+            else {
+                s <- max(-(cv$evaluation_log[, 4]))
+            }
+            list(Score = s)
+        }
+    }
+    opt_res <- BayesianOptimization(xgb_cv
+                                    , bounds = list(gamma_opt = gamma_range
+                                                    , minchild_opt = min_child_range
+                                                    , eta_opt = eta_range
+                                                    , max_depth_opt = max_depth_range
+                                                    , nrounds_opt = nrounds_range
+                                                    , subsample_opt = subsample_range
+                                                    , bytree_opt = bytree_range
+                                                    )
+                                    , init_points
+                                    , init_grid_dt = NULL
+                                    , n_iter
+                                    , acq
+                                    , kappa
+                                    , eps
+                                    , optkernel
+                                    , verbose = TRUE
+                                    )
+    return(opt_res)
+}
 
 
 xgb_cv_opt_linear <- function (data
@@ -504,7 +679,7 @@ xgb_cv_opt_linear <- function (data
                          , data = dtrain
                          , folds = cv_folds
                          , watchlist = xg_watchlist
-                         , prediction = TRUE
+                         , prediction = FALSE
                          , showsd = TRUE
                          , early_stopping_rounds = 50
                          , maximize = TRUE
@@ -517,7 +692,7 @@ xgb_cv_opt_linear <- function (data
             else {
                 s <- max(-(cv$evaluation_log[, 4]))
             }
-            list(Score = s, Pred = cv$pred)
+            list(Score = s)
         }
     }
     opt_res <- BayesianOptimization(xgb_cv
@@ -970,7 +1145,7 @@ classifyXGBoostTree <- function(data
                    , objectfun = objective.mod
                    , evalmetric = eval_metric
                    , n_folds = folds
-                   , acq = "ucb"
+                   , acq = "ei"
                    , init_points = init_points
                    , n_iter = n_iter
                    )
@@ -1411,7 +1586,9 @@ regressXGBoostTree <- function(data
             cv_folds <- KFold(data.training$Dependent, nfolds = folds, stratified = TRUE)
                       xgb_cv_bayes <- function(max_depth
                                                , min_child_weight
-                                               , subsample, eta
+                                               , subsample
+                                               , eta
+                                               , nrounds
                                                , gamma
                                                , colsample_bytree) {
                           param <- list(booster = "gbtree"
@@ -1427,12 +1604,12 @@ regressXGBoostTree <- function(data
                           cv <- xgb.cv(params = param
                                        , data = dtrain
                                        , folds=cv_folds
-                                       , nround = 100
+                                       , nrounds=nrounds
                                        , early_stopping_rounds = 50
                                        , tree_method = tree_method
                                        , nthread=n_threads
-                                       , maximize = FALSE
-                                       , verbose = FALSE
+                                       , maximize = TRUE
+                                       , verbose = TRUE
                                        )
                           
                           if(metric.mod=="rmse"){
@@ -1451,13 +1628,14 @@ regressXGBoostTree <- function(data
                                                           , min_child_weight = as.integer(xgbminchild.vec)
                                                           , subsample = xgbsubsample.vec
                                                           , eta = xgbeta.vec
+                                                          , nrounds = as.integer(c(100, nrounds))
                                                           , gamma = c(0L, xgbgamma.vec[2])
                                                           , colsample_bytree=xgbcolsample.vec
                                                           )
                                             , init_grid_dt = NULL
                                             , init_points = init_points
                                             , n_iter = n_iter
-                                            , acq = "ucb"
+                                            , acq = "ei"
                                             , kappa = 2.576
                                             , eps = 0.0
                                             , verbose = TRUE
@@ -1469,16 +1647,18 @@ regressXGBoostTree <- function(data
                 , objective = "reg:squarederror"
                 , max_depth = OPT_Res$Best_Par["max_depth"]
                 , eta = OPT_Res$Best_Par["eta"]
+                , nrounds=OPT_Res$Best_Par["nrounds"]
                 , gamma = OPT_Res$Best_Par["gamma"]
                 , subsample = OPT_Res$Best_Par["subsample"]
                 , colsample_bytree = OPT_Res$Best_Par["colsample_bytree"]
                 , min_child_weight = OPT_Res$Best_Par["min_child_weight"]
                 )
+                
             
             xgb_model_pre <- OPT_Res
 
             xgbGrid <- expand.grid(
-                nrounds = nrounds
+                nrounds = best_param$nrounds
                 , max_depth = best_param$max_depth
                 , colsample_bytree = best_param$colsample_bytree
                 , eta = best_param$eta
@@ -2512,13 +2692,14 @@ regressXGBoostLinear <- function(data
                           , alpha = alpha
                           , eta=eta
                           , lambda=lambda
+                          , nrounds=nrounds
                           , objective = "reg:squarederror"
                           , eval_metric = metric.mod
                           )
                           cv <- xgb.cv(params = param
                                        , data = dtrain
                                        , folds=cv_folds
-                                       , nround = 100
+                                       , nround = nrounds
                                        , early_stopping_rounds = 50
                                        , nthread=n_threads
                                        , maximize = FALSE
@@ -2539,13 +2720,14 @@ regressXGBoostLinear <- function(data
             OPT_Res <- BayesianOptimization(xgb_cv_bayes,
               bounds = list(
                            alpha = xgbalpha.vec
-                           ,eta = xgbeta.vec
-                           ,lambda = xgblambda.vec
+                           , eta = xgbeta.vec
+                           , lambda = xgblambda.vec
+                           , nrounds = as.integer(c(100, nrounds))
                            )
                        , init_grid_dt = NULL
                        , init_points = init_points
                        , n_iter = n_iter
-                       , acq = "ucb"
+                       , acq = "ei"
                        , kappa = 2.576
                        , eps = 0.0
                        , verbose = TRUE
@@ -2558,12 +2740,13 @@ regressXGBoostLinear <- function(data
                 , alpha = OPT_Res$Best_Par["alpha"]
                 , eta = OPT_Res$Best_Par["eta"]
                 , lambda = OPT_Res$Best_Par["lambda"]
+                , nrounds = OPT_Res$Best_Par["nrounds"]
                 )
                 
             xgb_model_pre <- OPT_Res
             
             xgbGrid <- expand.grid(
-                nrounds = nrounds
+                nrounds = best_param$nrounds
                 , alpha = best_param$alpha
                 , eta = best_param$eta
                 , lambda = best_param$lambda
