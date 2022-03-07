@@ -445,6 +445,12 @@ xgb_cv_opt_tree <- function (data
                              )
 {
     
+    to_maximize = if(evalmetric=="auc"){
+        TRUE
+    } else if(evalmetric!="auc"){
+        FALSE
+    }
+    
     if (class(data)[1] == "dgCMatrix") {
         dtrain <- xgb.DMatrix(data, label = label)
         xg_watchlist <- list(msr = dtrain)
@@ -498,9 +504,9 @@ xgb_cv_opt_tree <- function (data
                          , watchlist = xg_watchlist
                          , prediction = FALSE
                          , showsd = TRUE
-                         , early_stopping_rounds = 5
-                         , maximize = TRUE
-                         , verbose = 0
+                         , early_stopping_rounds = 100
+                         , maximize = to_maximize
+                         , verbose = 1
                          , nrounds = nrounds_opt
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
@@ -544,8 +550,8 @@ xgb_cv_opt_tree <- function (data
                          , watchlist = xg_watchlist
                          , prediction = FALSE
                          , showsd = TRUE
-                         , early_stopping_rounds = 50
-                         , maximize = FALSE
+                         , early_stopping_rounds = 100
+                         , maximize = to_maximize
                          , verbose = 1
                          , nrounds = nrounds_opt
                          )
@@ -597,6 +603,12 @@ xgb_cv_opt_linear <- function (data
                                , seed = 0
                                )
 {
+    to_maximize = if(evalmetric=="auc"){
+        TRUE
+    } else if(evalmetric!="auc"){
+        FALSE
+    }
+    
     if (class(data)[1] == "dgCMatrix") {
         dtrain <- xgb.DMatrix(data, label = label)
         xg_watchlist <- list(msr = dtrain)
@@ -642,9 +654,9 @@ xgb_cv_opt_linear <- function (data
                          , watchlist = xg_watchlist
                          , prediction = TRUE
                          , showsd = TRUE
-                         , early_stopping_rounds = 5
-                         , maximize = TRUE
-                         , verbose = 0
+                         , early_stopping_rounds = 100
+                         , maximize = to_maximize
+                         , verbose = 1
                          , nrounds = nrounds_opt
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
@@ -681,9 +693,9 @@ xgb_cv_opt_linear <- function (data
                          , watchlist = xg_watchlist
                          , prediction = FALSE
                          , showsd = TRUE
-                         , early_stopping_rounds = 50
-                         , maximize = TRUE
-                         , verbose = 0
+                         , early_stopping_rounds = 100
+                         , maximize = to_maximize
+                         , verbose = 1
                          , nrounds = nrounds_opt
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
@@ -996,21 +1008,31 @@ classifyXGBoostTree <- function(data
     
     
     num_classes <- as.numeric(length(unique(data.training$Class)))
-     metric.mod <- if(num_classes>2){
-         "merror"
-     } else  if(num_classes==2){
-         "error"
-     }
+     metric.mod <- if(metric %in% c("AUC", "ROC")){
+         "auc"
+     } else if(!metric %in% c("AUC", "ROC")){
+         if(num_classes>2){
+             "merror"
+         } else  if(num_classes==2){
+             "error"
+         }
+    }
+     
+     
      objective.mod <- if(num_classes>2){
          "multi:softprob"
      } else  if(num_classes==2){
          "binary:logistic"
      }
-     eval_metric <- if(num_classes>2){
-         "merror"
-     } else  if(num_classes==2){
-         "error"
-     }
+     eval_metric <- if(metric %in% c("AUC", "ROC")){
+         "auc"
+     } else if(!metric %in% c("AUC", "ROC")){
+         if(num_classes>2){
+             "merror"
+         } else  if(num_classes==2){
+             "error"
+         }
+    }
      
      # Set up summary Function by chosen metric
      summary_function <- metric_fun(num_classes
@@ -2124,21 +2146,29 @@ classifyXGBoostLinear <- function(data
     #data.training<-Pos_class_fun(data.training,PositiveClass)    
     
     num_classes <- as.numeric(length(unique(data.training$Class)))
-     metric.mod <- if(num_classes>2){
-         "merror"
-     } else  if(num_classes==2){
-         "error"
-     }
+     metric.mod <- if(metric %in% c("AUC", "ROC")){
+         "auc"
+     } else if(!metric %in% c("AUC", "ROC")){
+         if(num_classes>2){
+             "merror"
+         } else  if(num_classes==2){
+             "error"
+         }
+    }
      objective.mod <- if(num_classes>2){
          "multi:softprob"
      } else  if(num_classes==2){
          "binary:logistic"
      }
-     eval_metric <- if(num_classes>2){
-         "merror"
-     } else  if(num_classes==2){
-         "error"
-     }
+     eval_metric <- if(metric %in% c("AUC", "ROC")){
+         "auc"
+     } else if(!metric %in% c("AUC", "ROC")){
+         if(num_classes>2){
+             "merror"
+         } else  if(num_classes==2){
+             "error"
+         }
+    }
      
      # Set up summary Function by chosen metric
      summary_function <- metric_fun(num_classes
