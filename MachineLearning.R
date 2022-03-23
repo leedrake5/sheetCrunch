@@ -303,7 +303,7 @@ metric_fun <- function(num_classes
              object_fun <- objectfun
              eval_met <- evalmetric
              cv <- xgb.cv(params = list(booster = "gbtree"
-                                        , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                        , nthread=-1
                                         , objective = object_fun
                                         , eval_metric = eval_met
                                         , gamma = gamma_opt
@@ -348,7 +348,7 @@ metric_fun <- function(num_classes
              eval_met <- evalmetric
              num_classes <- classes
              cv <- xgb.cv(params = list(booster = "gbtree"
-                                        , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                        , nthread=-1
                                         , objective = object_fun
                                         , num_class = num_classes
                                         , eval_metric = eval_met
@@ -488,7 +488,7 @@ xgb_cv_opt_tree <- function (data
             object_fun <- objectfun
             eval_met <- evalmetric
             cv <- xgb.cv(params = list(booster = "gbtree"
-                                       , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                       , nthread=-1
                                        , objective = object_fun
                                        , eval_metric = eval_met
                                        , gamma = gamma_opt
@@ -533,7 +533,7 @@ xgb_cv_opt_tree <- function (data
             eval_met <- evalmetric
             num_classes <- classes
             cv <- xgb.cv(params = list(booster = "gbtree"
-                                       , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                       , nthread=-1
                                        , objective = object_fun
                                        , num_class = num_classes
                                        , eval_metric = eval_met
@@ -642,7 +642,7 @@ xgb_cv_opt_linear <- function (data
             object_fun <- objectfun
             eval_met <- evalmetric
             cv <- xgb.cv(params = list(booster = "gblinear"
-                                       , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                       , nthread=-1
                                        , objective = object_fun
                                        , eval_metric = eval_met
                                        , alpha = alpha_opt
@@ -680,7 +680,7 @@ xgb_cv_opt_linear <- function (data
             eval_met <- evalmetric
             num_classes <- classes
             cv <- xgb.cv(params = list(booster = "gblinear"
-                                       , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                       , nthread=-1
                                        , objective = object_fun
                                        , num_class = num_classes
                                        , eval_metric = eval_met
@@ -1125,7 +1125,7 @@ classifyXGBoostTree <- function(data
                              , objective = objective.mod
                              , num_class=num_classes
                              , na.action=na.omit
-                             , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                             , nthread=-1
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -1136,7 +1136,7 @@ classifyXGBoostTree <- function(data
                              , method = "xgbTree"
                              , objective = objective.mod
                              , na.action=na.omit
-                             , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                             , nthread=-1
                              )
             }
         }
@@ -1283,7 +1283,7 @@ classifyXGBoostTree <- function(data
                          , method = "xgbTree"
                          , objective = objective.mod
                          , num_class=num_classes
-                         , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                         , nthread=-1
                          , na.action=na.omit
                          )
         } else if(num_classes==2){
@@ -1294,7 +1294,7 @@ classifyXGBoostTree <- function(data
                          , metric=metric
                          , method = "xgbTree"
                          , objective = objective.mod
-                         , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                         , nthread=-1
                          , na.action=na.omit
                          )
         }
@@ -1575,7 +1575,7 @@ regressXGBoostTree <- function(data
                                           , method = "xgbTree"
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
-                                          , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                          , nthread=-1
                                           )
         }
         
@@ -1599,7 +1599,7 @@ regressXGBoostTree <- function(data
                 "rmse"
             }
             tree_method <- 'hist'
-            n_threads <- round((as.numeric(my.cores)+1)/2, 0)
+            n_threads <- -1
             dependent <- "Dependent"
             x_train <- data.training[,!colnames(data.training) %in% dependent]
             x_train <- as.matrix(x_train)
@@ -1750,7 +1750,7 @@ regressXGBoostTree <- function(data
                                   , metric=metric
                                   , method = "xgbTree"
                                   , objective = "reg:squarederror"
-                                  , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                  , nthread=-1
                                   , na.action=na.omit
                                   )
     }
@@ -2263,7 +2263,7 @@ classifyXGBoostLinear <- function(data
                              , objective = objective.mod
                              , num_class=num_classes
                              , na.action=na.omit
-                             , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                             , nthread=-1
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -2274,7 +2274,7 @@ classifyXGBoostLinear <- function(data
                              , method = "xgbLinear"
                              , objective = objective.mod
                              , na.action=na.omit
-                             , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                             , nthread=-1
                              )
             }
         }
@@ -2411,7 +2411,7 @@ classifyXGBoostLinear <- function(data
                          , method = "xgbLinear"
                          , objective = objective.mod
                          , num_class=num_classes
-                         , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                         , nthread=-1
                          , na.action=na.omit
                          )
         } else if(num_classes==2){
@@ -2422,7 +2422,7 @@ classifyXGBoostLinear <- function(data
                          , metric=metric
                          , method = "xgbLinear"
                          , objective = objective.mod
-                         , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                         , nthread=-1
                          , na.action=na.omit
                          )
         }
@@ -2690,7 +2690,7 @@ regressXGBoostLinear <- function(data
                                           , method = "xgbLinear"
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
-                                          , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                          , nthread=-1
                                           )
         }
         
@@ -2710,7 +2710,7 @@ regressXGBoostLinear <- function(data
             } else if(metric!="RMSE" | metric!="MAE"){
                 "rmse"
             }
-            n_threads <- round((as.numeric(my.cores)+1)/2, 0)
+            n_threads <- -1
             dependent <- "Dependent"
             x_train <- data.training[,!colnames(data.training) %in% dependent]
             x_train <- as.matrix(x_train)
@@ -2843,7 +2843,7 @@ regressXGBoostLinear <- function(data
                                   , metric=metric
                                   , method = "xgbLinear"
                                   , objective = "reg:squarederror"
-                                  , nthread=round((as.numeric(my.cores)+1)/2, 0)
+                                  , nthread=-1
                                   , na.action=na.omit
                                   )
     }
