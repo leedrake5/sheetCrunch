@@ -1035,11 +1035,18 @@ classifyXGBoostTree <- function(data
     }
      
      # Set up summary Function by chosen metric
-     summary_function <- metric_fun(num_classes
-                                    , metric
-                                    , PositiveClass= PositiveClass
-                                    , NegativeClass = NegativeClass
-                                    )
+     if(num_classes==2){
+         summary_function <- metric_fun(num_classes
+                                        , metric
+                                        , PositiveClass= PositiveClass
+                                        , NegativeClass = NegativeClass
+                                        )
+     } else if(num_classes>2){
+         summary_function <- metric_fun(num_classes
+                                        , metric
+                                        )
+     }
+
      
      # summary_function <- if(is.null(summary_function)){
      #     if(num_classes>2){
@@ -1167,7 +1174,7 @@ classifyXGBoostTree <- function(data
                    , objectfun = objective.mod
                    , evalmetric = eval_metric
                    , n_folds = folds
-                   , acq = "ei"
+                   , acq = "poi"
                    , init_points = init_points
                    , n_iter = n_iter
                    )
