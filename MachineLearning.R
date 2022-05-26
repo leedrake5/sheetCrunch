@@ -592,7 +592,7 @@ xgb_cv_opt_dart <- function (data
                              , n_folds
                              , eta_range = c(0.1, 1L)
                              , max_depth_range = c(4L, 6L)
-                             , drop_range = (0.1, 0.9)
+                             , drop_range = c(0.1, 0.9)
                              , drop_skip = c(0.1, 0.9)
                              , nrounds_range = c(70, 160L)
                              , subsample_range = c(0.1, 1L)
