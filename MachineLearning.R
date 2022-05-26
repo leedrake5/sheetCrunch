@@ -3302,7 +3302,7 @@ autoXGBoostDart <- function(data
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!is.numeric(data[,variable])){
-        classifyXGBoostTree(data=data
+        classifyXGBoostDart(data=data
                             , class=variable
                             , predictors=predictors
                             , min.n=min.n
@@ -3337,7 +3337,7 @@ autoXGBoostDart <- function(data
                             , scale=scale
                             )
     } else if(is.numeric(data[,variable])){
-        regressXGBoostTree(data=data
+        regressXGBoostDart(data=data
                            , dependent=variable
                            , predictors=predictors
                            , min.n=min.n
