@@ -2627,7 +2627,7 @@ classifyXGBoostDart <- function(data
                          , trControl = tune_control
                          , tuneGrid = xgbGrid
                          , metric=metric
-                         , method = "xgbDart"
+                         , method = "xgbDART"
                          , objective = objective.mod
                          , num_class=num_classes
                          , nthread=-1
@@ -2639,7 +2639,7 @@ classifyXGBoostDart <- function(data
                          , trControl = tune_control
                          , tuneGrid = xgbGrid
                          , metric=metric
-                         , method = "xgbDart"
+                         , method = "xgbDART"
                          , objective = objective.mod
                          , nthread=-1
                          , na.action=na.omit
@@ -3098,7 +3098,7 @@ regressXGBoostDart <- function(data
                                   , trControl = tune_control
                                   , tuneGrid = xgbGrid
                                   , metric=metric
-                                  , method = "xgbDart"
+                                  , method = "xgbDART"
                                   , objective = "reg:squarederror"
                                   , na.action=na.omit
                                   )
@@ -3110,7 +3110,7 @@ regressXGBoostDart <- function(data
                                   , trControl = tune_control
                                   , tuneGrid = xgbGrid
                                   , metric=metric
-                                  , method = "xgbDart"
+                                  , method = "xgbDART"
                                   , objective = "reg:squarederror"
                                   , nthread=-1
                                   , na.action=na.omit
