@@ -6950,6 +6950,7 @@ autoMLTable <- function(data
                         , scale=scale
                         )
     } else if(type=="xgbDart"){
+    #mistake
         autoXGBoostDart(data=data
                         , variable=variable
                         , predictors=predictors
