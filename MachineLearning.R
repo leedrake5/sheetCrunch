@@ -2190,20 +2190,6 @@ autoXGBoostTree <- function(data
 }
 
 
-eXtreme Gradient Boosting (method = 'xgbDART')
-
-For classification and regression using packages xgboost and plyr with tuning parameters:
-
-Number of Boosting Iterations (nrounds, numeric)
-Max Tree Depth (max_depth, numeric)
-Shrinkage (eta, numeric)
-Minimum Loss Reduction (gamma, numeric)
-Subsample Percentage (subsample, numeric)
-Subsample Ratio of Columns (colsample_bytree, numeric)
-Fraction of Trees Dropped (rate_drop, numeric)
-Prob. of Skipping Drop-out (skip_drop, numeric)
-Minimum Sum of Instance Weight (min_child_weight, numeric)
-
 ############################################################################################################
 ### XGBoost classification (DART) 
 ###########################################################################################################
