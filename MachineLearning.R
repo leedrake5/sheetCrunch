@@ -6950,7 +6950,7 @@ autoMLTable <- function(data
                         , scale=scale
                         )
     } else if(type=="xgbDart"){
-        autoXGBoostTree(data=data
+        autoXGBoostDart(data=data
                         , variable=variable
                         , predictors=predictors
                         , min.n=min.n
