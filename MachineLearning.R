@@ -593,7 +593,7 @@ xgb_cv_opt_dart <- function (data
                              , eta_range = c(0.1, 1L)
                              , max_depth_range = c(4L, 6L)
                              , drop_range = c(0.1, 0.9)
-                             , drop_skip = c(0.1, 0.9)
+                             , skip_drop = c(0.1, 0.9)
                              , nrounds_range = c(70, 160L)
                              , subsample_range = c(0.1, 1L)
                              , bytree_range = c(0.4, 1L)
@@ -743,7 +743,7 @@ xgb_cv_opt_dart <- function (data
                                                     , eta_opt = eta_range
                                                     , max_depth_opt = max_depth_range
                                                     , drop_range_opt = drop_range
-                                                    , skip_range_opt = drop_skip
+                                                    , skip_range_opt = skip_drop
                                                     , nrounds_opt = nrounds_range
                                                     , subsample_opt = subsample_range
                                                     , bytree_opt = bytree_range
@@ -1165,15 +1165,27 @@ classifyXGBoostTree <- function(data
     }
     
     #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
-    xgbGridPre <- expand.grid(
-        nrounds = test_nrounds
-        , max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5)
-        , colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1)
-        , eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1)
-        , gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1)
-        , min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2], 1)
-        , subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1)
-    )
+    xgbGridPre <- if(Bayes==FALSE){
+        expand.grid(
+            nrounds = test_nrounds
+            , max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5)
+            , colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1)
+            , eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1)
+            , gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1)
+            , min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2], 1)
+            , subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1)
+        )
+    } else if(Bayes==TRUE){
+        expand.grid(
+            nrounds = test_nrounds
+            , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
+            , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
+            , eta = c(xgbeta.vec[1], xgbeta.vec[2])
+            , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
+            , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
+            , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
+        )
+    }
     
     #Boring x_train stuff for later
     x_train <- as.matrix(data.frame(x_train))
@@ -1688,15 +1700,27 @@ regressXGBoostTree <- function(data
     }
     
     #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
-    xgbGridPre <- expand.grid(
-        nrounds = test_nrounds,
-        max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5),
-        colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1),
-        eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1),
-        gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1),
-        min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2], 1),
-        subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1)
-    )
+    xgbGridPre <- if(Bayes==FALSE){
+        expand.grid(
+            nrounds = test_nrounds
+            , max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5)
+            , colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1)
+            , eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1)
+            , gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1)
+            , min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2], 1)
+            , subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1)
+        )
+    } else if(Bayes==TRUE){
+        expand.grid(
+            nrounds = test_nrounds
+            , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
+            , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
+            , eta = c(xgbeta.vec[1], xgbeta.vec[2])
+            , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
+            , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
+            , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
+        )
+    }
     
     #Boring x_train stuff for later
     x_train <- as.matrix(data.frame(x_train))
@@ -2318,17 +2342,31 @@ classifyXGBoostDart <- function(data
     }
     
     #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
-    xgbGridPre <- expand.grid(
-        nrounds = test_nrounds
-        , max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5)
-        , rate_drop = seq(drop.tree.vec[1], drop.tree.vec[2], by=0.1)
-        , skip_drop = seq(skip.drop.vec[1], skip.drop.vec[2], by=0.1)
-        , colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1)
-        , eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1)
-        , gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1)
-        , min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2], 1)
-        , subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1)
-    )
+    xgbGridPre <- if(Bayes==FALSE){
+        expand.grid(
+            nrounds = test_nrounds
+            , max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5)
+            , rate_drop = seq(drop.tree.vec[1], drop.tree.vec[2], by=0.1)
+            , skip_drop = seq(skip.drop.vec[1], skip.drop.vec[2], by=0.1)
+            , colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1)
+            , eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1)
+            , gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1)
+            , min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2], 1)
+            , subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1)
+        )
+    } else if(Bayes==TRUE){
+        expand.grid(
+            nrounds = test_nrounds
+            , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
+            , rate_drop = c(drop.tree.vec[1], drop.tree.vec[2])
+            , skip_drop = c(skip.drop.vec[1], skip.drop.vec[2])
+            , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
+            , eta = c(xgbeta.vec[1], xgbeta.vec[2])
+            , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
+            , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
+            , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
+        )
+    }
     
     #Boring x_train stuff for later
     x_train <- as.matrix(data.frame(x_train))
@@ -2495,7 +2533,7 @@ classifyXGBoostDart <- function(data
     } else if(nrow(xgbGridPre)>1 && Bayes==TRUE){
         #data.training.temp <- data.training
         #data.training.temp$Class <- as.integer(data.training.temp$Class)
-        OPT_Res=xgb_cv_opt_tree(data = data.training,
+        OPT_Res=xgb_cv_opt_dart(data = data.training,
                    label = Class
                    , classes=num_classes
                    , nrounds_range=as.integer(c(100, nrounds))
@@ -2503,7 +2541,7 @@ classifyXGBoostDart <- function(data
                    , gamma_range=xgbgamma.vec
                    , max_depth_range=as.integer(tree.depth.vec)
                    , drop_range=drop.tree.vec
-                   , drop_skip=skip.drop.vec
+                   , skip_drop=skip.drop.vec
                    , min_child_range=as.integer(xgbminchild.vec)
                    , subsample_range=xgbsubsample.vec
                    , bytree_range=xgbcolsample.vec
@@ -2857,18 +2895,31 @@ regressXGBoostDart <- function(data
     }
     
     #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
-    xgbGridPre <- expand.grid(
-        nrounds = test_nrounds
-        , max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5)
-        , rate_drop = seq(drop.tree.vec[1], drop.tree.vec[2], by=0.1)
-        , skip_drop = seq(skip.drop.vec[1], skip.drop.vec[2], by=0.1)
-        , colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1)
-        , eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1)
-        , gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1)
-        , min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2], 1)
-        , subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1)
-    )
-    
+    xgbGridPre <- if(Bayes==FALSE){
+        expand.grid(
+            nrounds = test_nrounds
+            , max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5)
+            , rate_drop = seq(drop.tree.vec[1], drop.tree.vec[2], by=0.1)
+            , skip_drop = seq(skip.drop.vec[1], skip.drop.vec[2], by=0.1)
+            , colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1)
+            , eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1)
+            , gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1)
+            , min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2], 1)
+            , subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1)
+        )
+    } else if(Bayes==TRUE){
+        expand.grid(
+            nrounds = test_nrounds
+            , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
+            , rate_drop = c(drop.tree.vec[1], drop.tree.vec[2])
+            , skip_drop = c(skip.drop.vec[1], skip.drop.vec[2])
+            , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
+            , eta = c(xgbeta.vec[1], xgbeta.vec[2])
+            , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
+            , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
+            , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
+        )
+    }
     #Boring x_train stuff for later
     x_train <- as.matrix(data.frame(x_train))
     mode(x_train)="numeric"
@@ -2964,6 +3015,8 @@ regressXGBoostDart <- function(data
             dtrain <- xgboost::xgb.DMatrix(x_train, label = y_train)
             cv_folds <- KFold(data.training$Dependent, nfolds = folds, stratified = TRUE)
                       xgb_cv_bayes <- function(max_depth
+                                               , rate_drop
+                                               , skip_drop
                                                , min_child_weight
                                                , subsample
                                                , eta
@@ -2972,9 +3025,11 @@ regressXGBoostDart <- function(data
                                                , colsample_bytree) {
                           param <- list(booster = "dart"
                                         , max_depth = max_depth
+                                        , rate_drop = rate_drop
+                                        , skip_drop = skip_drop
                                         , min_child_weight = min_child_weight
-                                        , eta=eta
-                                        , gamma=gamma
+                                        , eta = eta
+                                        , gamma = gamma
                                         , subsample = subsample
                                         , colsample_bytree = colsample_bytree
                                         , objective = "reg:squarederror"
@@ -3004,8 +3059,8 @@ regressXGBoostDart <- function(data
                       
             OPT_Res <- BayesianOptimization(xgb_cv_bayes,
                       bounds = list(max_depth = as.integer(tree.depth.vec)
-                      , drop_range=drop.tree.vec
-                      , drop_skip=skip.drop.vec
+                      , rate_drop=drop.tree.vec
+                      , skip_drop=skip.drop.vec
                       , min_child_weight = as.integer(xgbminchild.vec)
                       , subsample = xgbsubsample.vec
                       , eta = xgbeta.vec
@@ -3022,12 +3077,12 @@ regressXGBoostDart <- function(data
                                             )
                        
             best_param <- list(
-                booster = "gbtree"
+                booster = "dart"
                 , eval.metric = metric.mod
                 , objective = "reg:squarederror"
                 , max_depth = OPT_Res$Best_Par["max_depth"]
-                , rate_drop = OPT_Res$Best_Par["drop_range_opt"]
-                , skip_drop = OPT_Res$Best_Par["skip_range_opt"]  
+                , rate_drop = OPT_Res$Best_Par["rate_drop"]
+                , skip_drop = OPT_Res$Best_Par["skip_drop"]  
                 , eta = OPT_Res$Best_Par["eta"]
                 , nrounds=OPT_Res$Best_Par["nrounds"]
                 , gamma = OPT_Res$Best_Par["gamma"]
@@ -3497,6 +3552,22 @@ classifyXGBoostLinear <- function(data
         eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1),
         lambda=seq(xgblambda.vec[1], xgblambda.vec[2], by=0.1)
     )
+    
+    xgbGridPre <- if(Bayes==FALSE){
+        expand.grid(
+           nrounds = test_nrounds,
+           alpha = c(xgbalpha.vec[1], xgbalpha.vec[2], by=0.1),
+           eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1),
+           lambda=seq(xgblambda.vec[1], xgblambda.vec[2], by=0.1)
+       )
+    } else if(Bayes==TRUE){
+        expand.grid(
+           nrounds = test_nrounds,
+           alpha = seq(xgbalpha.vec[1], xgbalpha.vec[2]),
+           eta = seq(xgbeta.vec[1], xgbeta.vec[2]),
+           lambda=seq(xgblambda.vec[1], xgblambda.vec[2])
+       )
+    }
     
     #Boring x_train stuff for later
     x_train <- as.matrix(data.frame(x_train))
