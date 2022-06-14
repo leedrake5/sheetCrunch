@@ -426,6 +426,7 @@ xgb_cv_opt_tree <- function (data
                              , label
                              , objectfun
                              , evalmetric
+                             , tree_method="hist"
                              , n_folds
                              , eta_range = c(0.1, 1L)
                              , max_depth_range = c(4L, 6L)
@@ -491,6 +492,7 @@ xgb_cv_opt_tree <- function (data
                                        , nthread=-1
                                        , objective = object_fun
                                        , eval_metric = eval_met
+                                       , tree_method = tree_method
                                        , gamma = gamma_opt
                                        , min_child_weight = minchild_opt
                                        , eta = eta_opt
@@ -537,6 +539,7 @@ xgb_cv_opt_tree <- function (data
                                        , objective = object_fun
                                        , num_class = num_classes
                                        , eval_metric = eval_met
+                                       , tree_method = tree_method
                                        , gamma = gamma_opt
                                        , min_child_weight = minchild_opt
                                        , eta = eta_opt
@@ -589,6 +592,7 @@ xgb_cv_opt_dart <- function (data
                              , label
                              , objectfun
                              , evalmetric
+                             , tree_method = 'hist'
                              , n_folds
                              , eta_range = c(0.1, 1L)
                              , max_depth_range = c(4L, 6L)
@@ -658,6 +662,7 @@ xgb_cv_opt_dart <- function (data
                                        , nthread=-1
                                        , objective = object_fun
                                        , eval_metric = eval_met
+                                       , tree_method = tree_method
                                        , gamma = gamma_opt
                                        , min_child_weight = minchild_opt
                                        , eta = eta_opt
@@ -708,6 +713,7 @@ xgb_cv_opt_dart <- function (data
                                        , objective = object_fun
                                        , num_class = num_classes
                                        , eval_metric = eval_met
+                                       , tree_method = tree_method
                                        , gamma = gamma_opt
                                        , min_child_weight = minchild_opt
                                        , eta = eta_opt
@@ -1056,6 +1062,7 @@ classifyXGBoostTree <- function(data
                                 , split=NULL
                                 , split_by_group=NULL
                                 , the_group=NULL
+                                , tree_method="hist" 
                                 , treedepth="5-5"
                                 , xgbgamma="0-0"
                                 , xgbeta="0.1-0.1"
@@ -1292,6 +1299,7 @@ classifyXGBoostTree <- function(data
                              , tuneGrid = xgbGridPre
                              , metric=metric
                              , method = "xgbTree"
+                             , tree_method = tree_method
                              , objective = objective.mod
                              , num_class=num_classes
                              , na.action=na.omit
@@ -1303,6 +1311,7 @@ classifyXGBoostTree <- function(data
                              , tuneGrid = xgbGridPre
                              , metric=metric
                              , method = "xgbTree"
+                             , tree_method = tree_method
                              , objective = objective.mod
                              , na.action=na.omit
                              )
@@ -1318,6 +1327,7 @@ classifyXGBoostTree <- function(data
                              , tuneGrid = xgbGridPre
                              , metric=metric
                              , method = "xgbTree"
+                             , tree_method = tree_method
                              , objective = objective.mod
                              , num_class=num_classes
                              , na.action=na.omit
@@ -1330,6 +1340,7 @@ classifyXGBoostTree <- function(data
                              , tuneGrid = xgbGridPre
                              , metric=metric
                              , method = "xgbTree"
+                             , tree_method = tree_method
                              , objective = objective.mod
                              , na.action=na.omit
                              , nthread=-1
@@ -1362,6 +1373,7 @@ classifyXGBoostTree <- function(data
                    , bytree_range=xgbcolsample.vec
                    , objectfun = objective.mod
                    , evalmetric = eval_metric
+                   , tree_method = tree_method
                    , n_folds = folds
                    , acq = "poi"
                    , init_points = init_points
@@ -1450,6 +1462,7 @@ classifyXGBoostTree <- function(data
                          , tuneGrid = xgbGrid
                          , metric=metric
                          , method = "xgbTree"
+                         , tree_method = tree_method
                          , objective = objective.mod
                          , num_class=num_classes
                          , na.action=na.omit
@@ -1461,6 +1474,7 @@ classifyXGBoostTree <- function(data
                          , tuneGrid = xgbGrid
                          , metric=metric
                          , method = "xgbTree"
+                         , tree_method = tree_method
                          , objective = objective.mod
                          , na.action=na.omit
                          )
@@ -1477,6 +1491,7 @@ classifyXGBoostTree <- function(data
                          , tuneGrid = xgbGrid
                          , metric=metric
                          , method = "xgbTree"
+                         , tree_method = tree_method
                          , objective = objective.mod
                          , num_class=num_classes
                          , nthread=-1
@@ -1489,6 +1504,7 @@ classifyXGBoostTree <- function(data
                          , tuneGrid = xgbGrid
                          , metric=metric
                          , method = "xgbTree"
+                         , tree_method = tree_method
                          , objective = objective.mod
                          , nthread=-1
                          , na.action=na.omit
@@ -1608,6 +1624,7 @@ regressXGBoostTree <- function(data
                                , split=NULL
                                , split_by_group=NULL
                                , the_group=NULL
+                               , tree_method="hist"
                                , treedepth="5-5"
                                , xgbgamma="0-0"
                                , xgbeta="0.1-0.1"
@@ -1768,6 +1785,7 @@ regressXGBoostTree <- function(data
                                           , tuneGrid = xgbGridPre
                                           , metric=metric
                                           , method = "xgbTree"
+                                          , tree_method = tree_method
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           )
@@ -1781,6 +1799,7 @@ regressXGBoostTree <- function(data
                                           , tuneGrid = xgbGridPre
                                           , metric=metric
                                           , method = "xgbTree"
+                                          , tree_method = tree_method
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           , nthread=-1
@@ -1806,7 +1825,7 @@ regressXGBoostTree <- function(data
             } else if(metric!="RMSE" | metric!="MAE"){
                 "rmse"
             }
-            tree_method <- 'hist'
+            #tree_method <- 'hist'
             n_threads <- -1
             dependent <- "Dependent"
             x_train <- data.training[,!colnames(data.training) %in% dependent]
@@ -1945,6 +1964,7 @@ regressXGBoostTree <- function(data
                                   , tuneGrid = xgbGrid
                                   , metric=metric
                                   , method = "xgbTree"
+                                  , tree_method = tree_method
                                   , objective = "reg:squarederror"
                                   , na.action=na.omit
                                   )
@@ -1957,6 +1977,7 @@ regressXGBoostTree <- function(data
                                   , tuneGrid = xgbGrid
                                   , metric=metric
                                   , method = "xgbTree"
+                                  , tree_method = tree_method
                                   , objective = "reg:squarederror"
                                   , nthread=-1
                                   , na.action=na.omit
@@ -2098,6 +2119,7 @@ autoXGBoostTree <- function(data
                             , split=NULL
                             , split_by_group=NULL
                             , the_group=NULL
+                            , tree_method="hist"
                             , treedepth="5-5"
                             , xgbgamma="0-0"
                             , xgbeta="0.1-0.1"
@@ -2153,6 +2175,7 @@ autoXGBoostTree <- function(data
                             , split=split
                             , split_by_group=split_by_group
                             , the_group=the_group
+                            , tree_method=tree_method
                             , treedepth=treedepth
                             , xgbgamma=xgbgamma
                             , xgbeta=xgbeta
@@ -2186,6 +2209,7 @@ autoXGBoostTree <- function(data
                            , split=split
                            , split_by_group=split_by_group
                            , the_group=the_group
+                           , tree_method=tree_method
                            , treedepth=treedepth
                            , xgbgamma=xgbgamma
                            , xgbeta=xgbeta
@@ -2227,6 +2251,7 @@ classifyXGBoostDart <- function(data
                                 , split=NULL
                                 , split_by_group=NULL
                                 , the_group=NULL
+                                , tree_method=tree_method
                                 , treedepth="5-5"
                                 , treedrop="0.3-0.3"
                                 , skipdrop="0.3-0.3"
@@ -2473,6 +2498,7 @@ classifyXGBoostDart <- function(data
                              , tuneGrid = xgbGridPre
                              , metric=metric
                              , method = "xgbTree"
+                             , tree_method = tree_method
                              , objective = objective.mod
                              , num_class=num_classes
                              , na.action=na.omit
@@ -2484,6 +2510,7 @@ classifyXGBoostDart <- function(data
                              , tuneGrid = xgbGridPre
                              , metric=metric
                              , method = "xgbTree"
+                             , tree_method = tree_method
                              , objective = objective.mod
                              , na.action=na.omit
                              )
@@ -2547,6 +2574,7 @@ classifyXGBoostDart <- function(data
                    , bytree_range=xgbcolsample.vec
                    , objectfun = objective.mod
                    , evalmetric = eval_metric
+                   , tree_method = tree_method
                    , n_folds = folds
                    , acq = "poi"
                    , init_points = init_points
@@ -2639,6 +2667,7 @@ classifyXGBoostDart <- function(data
                          , tuneGrid = xgbGrid
                          , metric=metric
                          , method = "xgbDart"
+                         , tree_method = tree_method
                          , objective = objective.mod
                          , num_class=num_classes
                          , na.action=na.omit
@@ -2650,6 +2679,7 @@ classifyXGBoostDart <- function(data
                          , tuneGrid = xgbGrid
                          , metric=metric
                          , method = "xgbDart"
+                         , tree_method = tree_method
                          , objective = objective.mod
                          , na.action=na.omit
                          )
@@ -2666,6 +2696,7 @@ classifyXGBoostDart <- function(data
                          , tuneGrid = xgbGrid
                          , metric=metric
                          , method = "xgbDART"
+                         , tree_method = tree_method
                          , objective = objective.mod
                          , num_class=num_classes
                          , nthread=-1
@@ -2678,6 +2709,7 @@ classifyXGBoostDart <- function(data
                          , tuneGrid = xgbGrid
                          , metric=metric
                          , method = "xgbDART"
+                         , tree_method = tree_method
                          , objective = objective.mod
                          , nthread=-1
                          , na.action=na.omit
@@ -2797,6 +2829,7 @@ regressXGBoostDart <- function(data
                                , split=NULL
                                , split_by_group=NULL
                                , the_group=NULL
+                               , tree_method="hist"
                                , treedepth="5-5"
                                , treedrop="0.3-0.3"
                                , skipdrop="0.3-0.3"
@@ -2966,6 +2999,7 @@ regressXGBoostDart <- function(data
                                           , tuneGrid = xgbGridPre
                                           , metric=metric
                                           , method = "xgbTree"
+                                          , tree_method = tree_method
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           )
@@ -2979,6 +3013,7 @@ regressXGBoostDart <- function(data
                                           , tuneGrid = xgbGridPre
                                           , metric=metric
                                           , method = "xgbTree"
+                                          , tree_method = tree_method
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           , nthread=-1
@@ -3006,7 +3041,7 @@ regressXGBoostDart <- function(data
             } else if(metric!="RMSE" | metric!="MAE"){
                 "rmse"
             }
-            tree_method <- 'hist'
+            #tree_method <- 'hist'
             n_threads <- -1
             dependent <- "Dependent"
             x_train <- data.training[,!colnames(data.training) %in% dependent]
@@ -3154,6 +3189,7 @@ regressXGBoostDart <- function(data
                                   , tuneGrid = xgbGrid
                                   , metric=metric
                                   , method = "xgbDART"
+                                  , tree_method = tree_method
                                   , objective = "reg:squarederror"
                                   , na.action=na.omit
                                   )
@@ -3166,6 +3202,7 @@ regressXGBoostDart <- function(data
                                   , tuneGrid = xgbGrid
                                   , metric=metric
                                   , method = "xgbDART"
+                                  , tree_method = tree_method
                                   , objective = "reg:squarederror"
                                   , nthread=-1
                                   , na.action=na.omit
@@ -3307,6 +3344,7 @@ autoXGBoostDart <- function(data
                             , split=NULL
                             , split_by_group=NULL
                             , the_group=NULL
+                            , tree_method="hist"
                             , treedepth="5-5"
                             , treedrop="0.3-0.3"
                             , skipdrop="0.3-0.3"  
@@ -3364,6 +3402,7 @@ autoXGBoostDart <- function(data
                             , split=split
                             , split_by_group=split_by_group
                             , the_group=the_group
+                            , tree_method=tree_method
                             , treedepth=treedepth
                             , treedrop=treedrop
                             , skipdrop=skipdrop
@@ -3399,6 +3438,7 @@ autoXGBoostDart <- function(data
                            , split=split
                            , split_by_group=split_by_group
                            , the_group=the_group
+                           , tree_method=tree_method
                            , treedepth=treedepth
                            , treedrop=treedrop
                            , skipdrop=skipdrop 
@@ -6939,6 +6979,7 @@ autoMLTable <- function(data
                         , split_by_group=NULL
                         , the_group=NULL
                         , type="XGBLinear"
+                        , tree_method="hist"
                         , treedepth="2-2"
                         , treedrop="0.3-0.3"
                         , skipdrop="0.3-0.3" 
@@ -6995,6 +7036,7 @@ autoMLTable <- function(data
                         , split=split
                         , split_by_group=split_by_group
                         , the_group=the_group
+                        , tree_method=tree_method
                         , treedepth=treedepth
                         , xgbgamma=xgbgamma
                         , xgbeta=xgbeta
@@ -7029,6 +7071,7 @@ autoMLTable <- function(data
                         , split=split
                         , split_by_group=split_by_group
                         , the_group=the_group
+                        , tree_method=tree_method
                         , treedepth=treedepth
                         , treedrop=treedrop
                         , skipdrop=skipdrop
