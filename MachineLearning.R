@@ -924,15 +924,17 @@ importanceBarFrame <- function(model){
 
 #Create a bar plot of variable importance
 importanceBar <- function(model){
+    tryCatch(
     plot <- ggplot(importanceBarFrame(model), aes(reorder(Variable, Importance), Importance)) +
     geom_bar(stat="identity", position="dodge") +
     theme_light() +
     coord_flip() +
-    scale_x_discrete("Variable")
+    scale_x_discrete("Variable"), error=function(e) NULL)
     tryCatch(plot$plot_env <- butcher::axe_env(plot$plot_env), error=function(e) NULL)
     tryCatch(plot$layers <- butcher::axe_env(plot$layers), error=function(e) NULL)
     tryCatch(plot$mapping <- butcher::axe_env(plot$mapping), error=function(e) NULL)
     return(plot)
+    
 }
 
 ###Dependent Transformation
@@ -993,6 +995,10 @@ dataPrep <- function(data, variable, predictors=NULL, scale=FALSE){
     
     #Create a subframe with the variable and sample id removed
     just.fish <- data[, !colnames(data) %in% c(variable, "Sample")]
+    if(is.data.frame(just.fish)==FALSE){
+        just.fish <- data.frame(Temp=just.fish)
+        colnames(just.fish) <- colnames(data)[c(!colnames(data) %in% c(variable, "Sample"))]
+    }
     
     #Create a dataframe of just quantitative values, with a fallback dataframe if there are none
     quant.fish <- tryCatch(
@@ -1697,7 +1703,15 @@ regressXGBoostTree <- function(data
         y_train <- data.train$Dependent
         y_test <- data.test$Dependent
         x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
+        if(!is.data.frame(x_train)){
+            x_train <- data.frame(Temp=x_train)
+            colnames(x_train) <- colnames(data)[!colnames(data) %in% c("Sample", "Dependent")]
+        }
         x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
+        if(!is.data.frame(x_test)){
+            x_test <- data.frame(Temp=x_test)
+            colnames(x_test) <- colnames(data)[!colnames(data) %in% c("Sample", "Dependent")]
+        }
     } else if(is.null(split)){
         #This just puts placeholders for the whole data set
         data.train <- data
@@ -1710,10 +1724,18 @@ regressXGBoostTree <- function(data
         data.train <- data[a,]
         data.test <- data[!a,]
         #Set y_train and x_train for later
-        y_train <- data.train$Class
-        y_test <- data.test$Class
+        y_train <- data.train$Dependent
+        y_test <- data.test$Dependent
         x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
+        if(!is.data.frame(x_train)){
+            x_train <- data.frame(Temp=x_train)
+            colnames(x_train) <- colnames(data)[!colnames(data) %in% c("Sample", "Dependent")]
+        }
         x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
+        if(!is.data.frame(x_test)){
+            x_test <- data.frame(Temp=x_test)
+            colnames(x_test) <- colnames(data)[!colnames(data) %in% c("Sample", "Dependent")]
+        }
     }
     
     #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
