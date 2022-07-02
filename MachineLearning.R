@@ -965,7 +965,7 @@ scaleDecode <- function(values, y_min, y_max){
 
 # Prepare the data for machine learning. Data is the imported data, variable is the name of the variable you want to analyize. 
 # This function will automatically prepare qualitative data for analysis if needed.
-dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, seed=1){
+dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, seed=NULL){
     
     ###Remove any columns that don't have more than one value
     data <- data[,sapply(data, function(x) length(unique(x))>1)]
@@ -1053,7 +1053,7 @@ dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, seed=1){
     results.final[,variable] <- as.vector(results.final[,variable])
     results.final <- results.final[!duplicated(results.final),]
     
-    set.seed(seed)
+    if(!is.null(seed)){set.seed(seed)}
     results.final$RandXXX <- rnorm(nrow(results.final), 1, 0.2)
     results.final <- results.final[order(results.final$RandXXX),!colnames(results.final) %in% "RandXXX"]
 
@@ -1099,7 +1099,7 @@ classifyXGBoostTree <- function(data
                                 , NegativeClass = NULL
                                 , save_plots=FALSE
                                 , scale=FALSE
-                                , seed=1
+                                , seed=NULL
                                 , ...
                                 ){
     
@@ -1108,7 +1108,7 @@ classifyXGBoostTree <- function(data
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed+1)
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed)
     data <- data_list$Data
     
     ####Set Defaults for Negative and Positive classes
@@ -1269,7 +1269,7 @@ classifyXGBoostTree <- function(data
      #     }
      # }
      
-     set.seed(seed)
+     if(!is.null(seed)){set.seed(seed)}
 
     #Begin parameter searching
     if(nrow(xgbGridPre)==1){
@@ -1661,7 +1661,7 @@ regressXGBoostTree <- function(data
                                , parallelMethod=NULL
                                , save_plots=FALSE
                                , scale=FALSE
-                               , seed=1
+                               , seed=NULL
                                , ...
                                ){
     
@@ -1670,7 +1670,7 @@ regressXGBoostTree <- function(data
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed+1)
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed)
     data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -1779,7 +1779,7 @@ regressXGBoostTree <- function(data
     data.training <- data.train[, !colnames(data.train) %in% "Sample"]
     dependent <- "Dependent"
 
-    set.seed(seed)
+    if(!is.null(seed)){set.seed(seed)}
 
     
     #Begin parameter searching
@@ -2178,7 +2178,7 @@ autoXGBoostTree <- function(data
                             , NegativeClass = NULL
                             , save_plots=FALSE
                             , scale=FALSE
-                            , seed=1
+                            , seed=NULL
                             , ...
                             ){
     
@@ -2315,7 +2315,7 @@ classifyXGBoostDart <- function(data
                                 , NegativeClass = NULL
                                 , save_plots=FALSE
                                 , scale=FALSE
-                                , seed=1
+                                , seed=NULL
                                 , ...
                                 ){
     
@@ -2324,7 +2324,7 @@ classifyXGBoostDart <- function(data
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed+1)
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed)
     data <- data_list$Data
     
     ####Set Defaults for Negative and Positive classes
@@ -2493,7 +2493,7 @@ classifyXGBoostDart <- function(data
      #     }
      # }
      
-     set.seed(seed)
+     if(!is.null(seed)){set.seed(seed)}
 
 
     #Begin parameter searching
@@ -2894,7 +2894,7 @@ regressXGBoostDart <- function(data
                                , parallelMethod=NULL
                                , save_plots=FALSE
                                , scale=FALSE
-                               , seed=1
+                               , seed=NULL
                                , ...
                                ){
     
@@ -2903,7 +2903,7 @@ regressXGBoostDart <- function(data
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed+1)
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed)
     data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -3019,7 +3019,7 @@ regressXGBoostDart <- function(data
     data.training <- data.train[, !colnames(data.train) %in% "Sample"]
     dependent <- "Dependent"
 
-    set.seed(seed)
+    if(!is.null(seed)){set.seed(seed)}
 
     
     #Begin parameter searching
@@ -3431,7 +3431,7 @@ autoXGBoostDart <- function(data
                             , NegativeClass = NULL
                             , save_plots=FALSE
                             , scale=FALSE
-                            , seed=1
+                            , seed=NULL
                             , ...
                             ){
     
@@ -3565,7 +3565,7 @@ classifyXGBoostLinear <- function(data
                                   , NegativeClass = NULL
                                   , save_plots=FALSE
                                   , scale=FALSE
-                                  , seed=1
+                                  , seed=NULL
                                   , ...
                                   ){
     
@@ -3574,7 +3574,7 @@ classifyXGBoostLinear <- function(data
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed+1)
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed)
     data <- data_list$Data
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
@@ -3734,7 +3734,7 @@ classifyXGBoostLinear <- function(data
      #   } 
      # }
 
-     set.seed(seed)
+     if(!is.null(seed)){set.seed(seed)}
 
     #Begin parameter searching
     if(nrow(xgbGridPre)==1){
@@ -4103,7 +4103,7 @@ regressXGBoostLinear <- function(data
                                  , parallelMethod=NULL
                                  , save_plots=FALSE
                                  , scale=FALSE
-                                 , seed=1
+                                 , seed=NULL
                                  , ...
                                  ){
     
@@ -4112,7 +4112,7 @@ regressXGBoostLinear <- function(data
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed+1)
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed)
     data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -4200,7 +4200,7 @@ regressXGBoostLinear <- function(data
     data.training <- data.train[, !colnames(data.train) %in% "Sample"]
     dependent <- "Dependent"
     
-    set.seed(seed)
+    if(!is.null(seed)){set.seed(seed)}
 
     #Begin parameter searching
     if(nrow(xgbGridPre)==1){
@@ -4575,7 +4575,7 @@ autoXGBoostLinear <- function(data
                               , NegativeClass = NULL
                               , save_plots=FALSE
                               , scale=FALSE
-                              , seed=1
+                              , seed=NULL
                               , ...
                               ){
     
@@ -4686,7 +4686,7 @@ classifyForest <- function(data
                            , NegativeClass = NULL
                            , save_plots=FALSE
                            , scale=FALSE
-                           , seed=1
+                           , seed=NULL
                            , ...
                            ){
     
@@ -4695,7 +4695,7 @@ classifyForest <- function(data
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed+1)
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed)
     data <- data_list$Data
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
@@ -4827,7 +4827,7 @@ classifyForest <- function(data
         )
     }
     
-    set.seed(seed)
+    if(!is.null(seed)){set.seed(seed)}
 
     #Same CPU instructions as before
     if(parallel_method!="linux"){
@@ -5009,7 +5009,7 @@ regressForest <- function(data
                           , parallelMethod=NULL
                           , save_plots=FALSE
                           , scale=FALSE
-                          , seed=1
+                          , seed=NULL
                           , ...
                           ){
     
@@ -5018,7 +5018,7 @@ regressForest <- function(data
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed+1)
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed)
     data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -5103,7 +5103,7 @@ regressForest <- function(data
         )
     }
     
-    set.seed(seed)
+    if(!is.null(seed)){set.seed(seed)}
 
     #Same CPU instructions as before
     if(parallel_method!="linux"){
@@ -5287,7 +5287,7 @@ autoForest<- function(data
                       , NegativeClass = NULL
                       , save_plots=FALSE
                       , scale=FALSE
-                      , seed=1
+                      , seed=NULL
                       , ...
                       ){
     
@@ -5390,7 +5390,7 @@ classifySVM <- function(data
                         , NegativeClass = NULL
                         , save_plots=FALSE
                         , scale=FALSE
-                        , seed=1
+                        , seed=NULL
                         , ...
                         ){
     
@@ -5400,7 +5400,7 @@ classifySVM <- function(data
         data <- data[, !colnames(data) %in% split_by_group]
     }
     data.hold <- data
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed+1)
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed)
     data <- data_list$Data
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
@@ -5616,7 +5616,7 @@ classifySVM <- function(data
            )
        }
        
-       set.seed(seed)
+       if(!is.null(seed)){set.seed(seed)}
 
 
                   if(parallel_method!="linux"){
@@ -5772,7 +5772,7 @@ regressSVM <- function(data
                        , parallelMethod=NULL
                        , save_plots=FALSE
                        , scale=scale
-                       , seed=1
+                       , seed=NULL
                        , ...
                        ){
     
@@ -5781,7 +5781,7 @@ regressSVM <- function(data
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed+1)
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed)
     data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -5921,7 +5921,7 @@ regressSVM <- function(data
         )
     }
     
-    set.seed(seed)
+    if(!is.null(seed)){set.seed(seed)}
 
     #Same CPU instructions as before
     if(parallel_method!="linux"){
@@ -6115,7 +6115,7 @@ autoSVM <- function(data
                     , NegativeClass = NULL
                     , save_plots=FALSE
                     , scale=FALSE
-                    , seed=1
+                    , seed=NULL
                     , ...
                     ){
     
@@ -6231,7 +6231,7 @@ classifyBayes <- function(data
                           , NegativeClass = NULL
                           , save_plots=FALSE
                           , scale=FALSE
-                          , seed=1
+                          , seed=NULL
                           , ...
                           ){
     
@@ -6241,7 +6241,7 @@ classifyBayes <- function(data
         data <- data[, !colnames(data) %in% split_by_group]
     }
     data.hold <- data
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed+1)
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed)
     data <- data_list$Data
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
@@ -6399,7 +6399,7 @@ classifyBayes <- function(data
            )
        }
        
-       set.seed(seed)
+       if(!is.null(seed)){set.seed(seed)}
 
        if(type=="bayesLinear"){
            if(parallel_method!="linux"){
@@ -6617,7 +6617,7 @@ regressBayes <- function(data
                          , parallelMethod=NULL
                          , save_plots=FALSE
                          , scale=FALSE
-                         , seed=1
+                         , seed=NULL
                          , ...
                          ){
     
@@ -6626,7 +6626,7 @@ regressBayes <- function(data
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed+1)
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed)
     data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -6740,7 +6740,7 @@ regressBayes <- function(data
         )
     }
     
-    set.seed(seed)
+    if(!is.null(seed)){set.seed(seed)}
 
     #Same CPU instructions as before
         if(type=="bayesLinear"){
@@ -6991,7 +6991,7 @@ autoBayes <- function(data
                       , NegativeClass = NULL
                       , save_plots=FALSE
                       , scale=FALSE
-                      , seed=1
+                      , seed=NULL
                       , ...
                       ){
     
@@ -7132,7 +7132,7 @@ autoMLTable <- function(data
                         , NegativeClass = NULL
                         , save_plots=FALSE
                         , scale=FALSE
-                        , seed=1
+                        , seed=NULL
                         , ...
                         ){
     
