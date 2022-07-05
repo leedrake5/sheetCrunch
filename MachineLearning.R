@@ -4281,12 +4281,11 @@ regressXGBoostLinear <- function(data
             y_train <- as.vector(data.training[,dependent])
             dtrain <- xgboost::xgb.DMatrix(x_train, label = y_train)
             cv_folds <- KFold(data.training$Dependent, nfolds = folds, stratified = TRUE)
-                      xgb_cv_bayes <- function(alpha, eta, lambda) {
+                      xgb_cv_bayes <- function(alpha, eta, lambda, nrounds) {
                           param <- list(booster = "gblinear"
                           , alpha = alpha
                           , eta=eta
                           , lambda=lambda
-                          , nrounds=nrounds
                           , objective = "reg:squarederror"
                           , eval_metric = metric.mod
                           )
