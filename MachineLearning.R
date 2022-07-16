@@ -7257,6 +7257,7 @@ autoMLTable <- function(data
                         , save_plots=FALSE
                         , scale=FALSE
                         , seed=NULL
+                        , additional_validation_frame=NULL
                         , ...
                         ){
     
@@ -7450,6 +7451,31 @@ autoMLTable <- function(data
                   , scale=scale
                   , seed=seed
         )
+        
+        if(is.null(additional_validation_frame)){
+          return(qualpart)
+        else if(!is.null(additional_validation_frame)){
+        
+        additional_data <- dataPrep(additional_validation_frame, variable=variable, predictors=predictors, scale=scale)
+        
+            y_predict <- predict(object=qualpart$Model, newdata=additional_data$Data[,colnames(additional_data$Data) %in% colnames(qualpart$Model$trainingData)], na.action = na.pass)
+              results.frame <- data.frame(Sample=additional_data$Data$Sample
+                                    , Known=additional_data$Data[,variable]
+                                    , Predicted=y_predict
+                                    )
+            if(!is.numeric(additional_data$Data[,variable])){  
+              if(is.null(PositiveClass)){
+                PositiveClass <- unique(sort(data[,variable]))[1]
+              }                       
+              accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
+            else if(is.numeric(additional_data$Data[,variable])){
+              accuracy.rate <- lm(Known~Predicted, data=results.frame)
+            }
+            
+            qualpart$additionalValidationSet <- results.frame
+            qualpart$additionalAccuracy <- accuracy.rate
+            return(qualpart)
+        } 
     }
     
     tryCatch(qualpart$Model$terms <- butcher::axe_env(qualpart$Model$terms), error=function(e) NULL)
