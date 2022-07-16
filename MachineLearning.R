@@ -11,7 +11,7 @@
 ## MISC CODE FOR MODELING
 #########################################################################################################################################
 #Check to see if needed packages exist, and automatically install them if needed
-list.of.packages <- c("caret", "xgboost", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm")
+list.of.packages <- c("caret", "xgboost", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm", "ParBayesianOptimization")
 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) lapply(new.packages, function(x) install.packages(x, repos="http://cran.rstudio.com/", dep = TRUE))
@@ -31,7 +31,8 @@ library(rBayesianOptimization)
 library(tidyverse)
 library(mlr)
 library(parallelMap)
-
+library(magrittr)
+library(ParBayesianOptimization)
 
 #################################################################
 # MISC Functions
@@ -242,6 +243,128 @@ metric_fun <- function(num_classes
 ## XGboost optimization functions
 ######################################
 # What does this fuction optimize?
+
+BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points = 0,
+    n_iter, acq = "ucb", kappa = 2.576, eps = 0, kernel = list(type = "exponential",
+        power = 2), verbose = TRUE, ...)
+{
+    DT_bounds <- data.table(Parameter = names(bounds), Lower = sapply(bounds,
+        extract2, 1), Upper = sapply(bounds, extract2, 2), Type = sapply(bounds,
+        class))
+    setDT(init_grid_dt)
+    if (nrow(init_grid_dt) != 0) {
+        if (identical(names(init_grid_dt), DT_bounds[, Parameter]) ==
+            TRUE) {
+            init_grid_dt[, `:=`(Value, -Inf)]
+        }
+        else if (identical(names(init_grid_dt), c(DT_bounds[,
+            Parameter], "Value")) == TRUE) {
+            paste(nrow(init_grid_dt), "points in hyperparameter space were pre-sampled\n",
+                sep = " ") %>% cat(.)
+        }
+        else {
+            stop("bounds and init_grid_dt should be compatible")
+        }
+    }
+    init_points_dt <- Matrix_runif(n = init_points, lower = DT_bounds[,
+        Lower], upper = DT_bounds[, Upper]) %>% data.table(.) %T>%
+        setnames(., old = names(.), new = DT_bounds[, Parameter]) %T>%
+        {
+            if (any(DT_bounds[, Type] == "integer")) {
+                set(., j = DT_bounds[Type == "integer", Parameter],
+                  value = round(extract(., j = DT_bounds[Type ==
+                    "integer", Parameter], with = FALSE)))
+            }
+            else {
+                .
+            }
+        } %T>% extract(., j = `:=`(Value, -Inf))
+    iter_points_dt <- data.table(matrix(-Inf, nrow = n_iter,
+        ncol = nrow(DT_bounds) + 1)) %>% setnames(., old = names(.),
+        new = c(DT_bounds[, Parameter], "Value"))
+    DT_history <- rbind(init_grid_dt, init_points_dt, iter_points_dt) %>%
+        cbind(data.table(Round = 1:nrow(.)), .)
+    Pred_list <- vector(mode = "list", length = nrow(DT_history))
+    for (i in 1:(nrow(init_grid_dt) + nrow(init_points_dt))) {
+        if (is.infinite(DT_history[i, Value]) == TRUE) {
+            This_Par <- DT_history[i, DT_bounds[, Parameter],
+                with = FALSE]
+        }
+        else {
+            next
+        }
+        This_Log <- utils::capture.output({
+            This_Time <- system.time({
+                This_Score_Pred <- do.call(what = FUN, args = as.list(This_Par))
+            })
+        })
+        data.table::set(DT_history, i = as.integer(i), j = "Value",
+            value = as.list(c(This_Score_Pred$Score)))
+        Pred_list[[i]] <- This_Score_Pred$Pred
+        if (verbose == TRUE) {
+            paste(c("elapsed", names(DT_history)), c(format(This_Time["elapsed"],
+                trim = FALSE, digits = NULL, nsmall = 2), format(DT_history[i,
+                "Round", with = FALSE], trim = FALSE, digits = NULL,
+                nsmall = 0), format(DT_history[i, -"Round", with = FALSE],
+                trim = FALSE, digits = NULL, nsmall = 4)), sep = " = ",
+                collapse = "\t") %>% cat(., "\n")
+        }
+    }
+    for (j in (nrow(init_grid_dt) + nrow(init_points_dt) + 1):nrow(DT_history)) {
+        if (nrow(iter_points_dt) == 0) {
+            next
+        }
+        Par_Mat <- Min_Max_Scale_Mat(as.matrix(DT_history[1:(j -
+            1), DT_bounds[, Parameter], with = FALSE]), lower = DT_bounds[,
+            Lower], upper = DT_bounds[, Upper])
+        Rounds_Unique <- setdiff(1:(j - 1), which(duplicated(Par_Mat) ==
+            TRUE))
+        Value_Vec <- DT_history[1:(j - 1), Value]
+        GP_Log <- utils::capture.output({
+            GP <- GPfit::GP_fit(X = Par_Mat[Rounds_Unique, ],
+                Y = Value_Vec[Rounds_Unique], corr = kernel,
+                ...)
+        })
+        Next_Par <- Utility_Max(DT_bounds, GP, acq = acq, y_max = max(DT_history[,
+            Value]), kappa = kappa, eps = eps) %>% Min_Max_Inverse_Scale_Vec(.,
+            lower = DT_bounds[, Lower], upper = DT_bounds[, Upper]) %>%
+            magrittr::set_names(., DT_bounds[, Parameter]) %>%
+            inset(., DT_bounds[Type == "integer", Parameter],
+                round(extract(., DT_bounds[Type == "integer",
+                  Parameter])))
+        Next_Log <- utils::capture.output({
+            Next_Time <- system.time({
+                Next_Score_Pred <- do.call(what = FUN, args = as.list(Next_Par))
+            })
+        })
+        data.table::set(DT_history, i = as.integer(j), j = c(DT_bounds[,
+            Parameter], "Value"), value = as.list(c(Next_Par,
+            Value = Next_Score_Pred$Score)))
+        Pred_list[[j]] <- Next_Score_Pred$Pred
+        if (verbose == TRUE) {
+            paste(c("elapsed", names(DT_history)), c(format(Next_Time["elapsed"],
+                trim = FALSE, digits = NULL, nsmall = 2), format(DT_history[j,
+                "Round", with = FALSE], trim = FALSE, digits = NULL,
+                nsmall = 0), format(DT_history[j, -"Round", with = FALSE],
+                trim = FALSE, digits = NULL, nsmall = 4)), sep = " = ",
+                collapse = "\t") %>% cat(., "\n")
+        }
+    }
+    Best_Par <- as.numeric(DT_history[which.max(Value), DT_bounds[,
+        Parameter], with = FALSE]) %>% magrittr::set_names(.,
+        DT_bounds[, Parameter])
+    Best_Value <- max(DT_history[, Value], na.rm = TRUE)
+    Pred_DT <- data.table::as.data.table(Pred_list)
+    Result <- list(Best_Par = Best_Par, Best_Value = Best_Value,
+        History = DT_history, Pred = Pred_DT)
+    cat("\n Best Parameters Found: \n")
+    paste(names(DT_history), c(format(DT_history[which.max(Value),
+        "Round", with = FALSE], trim = FALSE, digits = NULL,
+        nsmall = 0), format(DT_history[which.max(Value), -"Round",
+        with = FALSE], trim = FALSE, digits = NULL, nsmall = 4)),
+        sep = " = ", collapse = "\t") %>% cat(., "\n")
+    return(Result)
+}
 
  xgb_cv_opt_tree_exp <- function (data
                               , label
@@ -512,10 +635,10 @@ xgb_cv_opt_tree <- function (data
                          , nrounds = nrounds_opt
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
-                s <- max(cv$evaluation_log[, 4])
+                s <- max(cv$evaluation_log[, 4]*1000)
             }
             else {
-                s <- max(-(cv$evaluation_log[, 4]))
+                s <- max(-(cv$evaluation_log[, 4]*1000))
             }
             list(Score = s)
         }
@@ -684,10 +807,10 @@ xgb_cv_opt_dart <- function (data
                          , nrounds = nrounds_opt
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
-                s <- max(cv$evaluation_log[, 4])
+                s <- max(cv$evaluation_log[, 4]*1000)
             }
             else {
-                s <- max(-(cv$evaluation_log[, 4]))
+                s <- max(-(cv$evaluation_log[, 4]*1000))
             }
             list(Score = s)
         }
@@ -841,10 +964,10 @@ xgb_cv_opt_linear <- function (data
                          , nrounds = nrounds_opt
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
-                s <- max(cv$evaluation_log[, 4])
+                s <- max(cv$evaluation_log[, 4]*1000)
             }
             else {
-                s <- max(-(cv$evaluation_log[, 4]))
+                s <- max(-(cv$evaluation_log[, 4]*1000))
             }
             list(Score = s, Pred = cv$pred)
         }
@@ -880,10 +1003,10 @@ xgb_cv_opt_linear <- function (data
                          , nrounds = nrounds_opt
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
-                s <- max(cv$evaluation_log[, 4])
+                s <- max(cv$evaluation_log[, 4]*1000)
             }
             else {
-                s <- max(-(cv$evaluation_log[, 4]))
+                s <- max(-(cv$evaluation_log[, 4])*1000)
             }
             list(Score = s)
         }
@@ -1887,8 +2010,8 @@ regressXGBoostTree <- function(data
                           cv <- xgb.cv(params = param
                                        , data = dtrain
                                        , folds=cv_folds
-                                       , nrounds=nrounds
                                        , early_stopping_rounds = 50
+                                       , nrounds=nrounds
                                        , tree_method = tree_method
                                        , nthread=n_threads
                                        , maximize = TRUE
@@ -1897,13 +2020,15 @@ regressXGBoostTree <- function(data
                           
                           if(metric.mod=="rmse"){
                               tryCatch(list(Score = cv$evaluation_log$test_rmse_mean[cv$best_iteration]*-1
-                                            , Pred=cv$best_iteration*-1)
+                                            , Pred=cv$best_iteration)
                                        , error=function(e) list(Score=0, Pred=0))
                           } else if(metric.mod=="mae"){
                               tryCatch(list(Score = cv$evaluation_log$test_mae_mean[cv$best_iteration]*-1
-                                            , Pred=cv$best_iteration*-1)
+                                            , Pred=cv$best_iteration)
                                        , error=function(e) list(Score=0, Pred=0))
                           }
+                          
+                          
                       }
                       
             OPT_Res <- BayesianOptimization(xgb_cv_bayes,
@@ -3143,11 +3268,11 @@ regressXGBoostDart <- function(data
                           
                           if(metric.mod=="rmse"){
                               tryCatch(list(Score = cv$evaluation_log$test_rmse_mean[cv$best_iteration]*-1
-                                            , Pred=cv$best_iteration*-1)
+                                            , Pred=cv$best_iteration)
                                        , error=function(e) list(Score=0, Pred=0))
                           } else if(metric.mod=="mae"){
                               tryCatch(list(Score = cv$evaluation_log$test_mae_mean[cv$best_iteration]*-1
-                                            , Pred=cv$best_iteration*-1)
+                                            , Pred=cv$best_iteration)
                                        , error=function(e) list(Score=0, Pred=0))
                           }
                       }
@@ -4301,11 +4426,11 @@ regressXGBoostLinear <- function(data
                           
                           if(metric.mod=="rmse"){
                               tryCatch(list(Score = cv$evaluation_log$test_rmse_mean[cv$best_iteration]*-1
-                                            , Pred=cv$best_iteration*-1)
+                                            , Pred=cv$best_iteration)
                                        , error=function(e) list(Score=0, Pred=0))
                           } else if(metric.mod=="mae"){
                               tryCatch(list(Score = cv$evaluation_log$test_mae_mean[cv$best_iteration]*-1
-                                            , Pred=cv$best_iteration*-1)
+                                            , Pred=cv$best_iteration)
                                        , error=function(e) list(Score=0, Pred=0))
                           }
                       }
