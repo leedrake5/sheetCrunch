@@ -2150,7 +2150,7 @@ regressXGBoostTree <- function(data
         saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
     }
     
-    #Now that we have a final model, we can save it's perfoormance. Here we generate predictions based on the model on the data used to train it. 
+    #Now that we have a final model, we can save it's performance. Here we generate predictions based on the model on the data used to train it.
     # This will be used to asses trainAccuracy
     y_predict_train <- predict(object=xgb_model, newdata=x_train)
     if(scale==TRUE){
@@ -7451,31 +7451,51 @@ autoMLTable <- function(data
                   , scale=scale
                   , seed=seed
         )
+         
+    }
+    
+    if(is.null(additional_validation_frame)){
+      return(qualpart)
+    } else if(!is.null(additional_validation_frame)){
+    
+
+    additional_data <- dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
+    additional_data$Data <- additional_data$Data[order(additional_data$Data$Sample),]
+    
+    
+        y_predict <- predict(object=qualpart$Model, newdata=additional_data$Data[,colnames(additional_data$Data) %in% colnames(qualpart$Model$trainingData), drop=FALSE], na.action = na.pass)
+        if(scale==TRUE){
+            y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+            additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+        }
+          results.frame <- data.frame(Sample=additional_data$Data$Sample
+                                , Known=additional_data$Data[,variable]
+                                , Predicted=y_predict
+                                , Type="3. Additional"
+                                )
+                                
+        qualpart$additionalValidationSet <- results.frame
+        qualpart$mergedValidationSet <- as.data.frame(data.table::rbindlist(list(qualpart$ValidationSet, results.frame), use.names=T))
+
+                                
+        if(!is.numeric(additional_data$Data[,variable])){
+          if(is.null(PositiveClass)){
+            PositiveClass <- unique(sort(data[,variable]))[1]
+          }
+          accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
+          merged.accuracy.rate <- confusionMatrix(as.factor(qualpart$mergedValidationSet$Predicted), as.factor(qualpart$mergedValidationSet$Known), positive = PositiveClass)
+        } else if(is.numeric(additional_data$Data[,variable])){
+          accuracy.rate <- lm(Known~Predicted, data=results.frame)
+          merged.accuracy.rate <- lm(Known~Predicted, data=qualpart$mergedValidationSet)
+        }
         
-        if(is.null(additional_validation_frame)){
-          return(qualpart)
-        else if(!is.null(additional_validation_frame)){
+        qualpart$additionalAccuracy <- accuracy.rate
+        qualpart$mergedAccuracy <- merged.accuracy.rate
+
         
-        additional_data <- dataPrep(additional_validation_frame, variable=variable, predictors=predictors, scale=scale)
         
-            y_predict <- predict(object=qualpart$Model, newdata=additional_data$Data[,colnames(additional_data$Data) %in% colnames(qualpart$Model$trainingData)], na.action = na.pass)
-              results.frame <- data.frame(Sample=additional_data$Data$Sample
-                                    , Known=additional_data$Data[,variable]
-                                    , Predicted=y_predict
-                                    )
-            if(!is.numeric(additional_data$Data[,variable])){  
-              if(is.null(PositiveClass)){
-                PositiveClass <- unique(sort(data[,variable]))[1]
-              }                       
-              accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
-            else if(is.numeric(additional_data$Data[,variable])){
-              accuracy.rate <- lm(Known~Predicted, data=results.frame)
-            }
-            
-            qualpart$additionalValidationSet <- results.frame
-            qualpart$additionalAccuracy <- accuracy.rate
-            return(qualpart)
-        } 
+        
+        return(qualpart)
     }
     
     tryCatch(qualpart$Model$terms <- butcher::axe_env(qualpart$Model$terms), error=function(e) NULL)
