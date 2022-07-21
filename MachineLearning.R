@@ -807,10 +807,10 @@ xgb_cv_opt_dart <- function (data
                          , nrounds = nrounds_opt
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
-                s <- max(cv$evaluation_log[, 4]*1000)
+                s <- max(cv$evaluation_log[, 4])
             }
             else {
-                s <- max(-(cv$evaluation_log[, 4]*1000))
+                s <- max(-(cv$evaluation_log[, 4]))
             }
             list(Score = s)
         }
@@ -964,10 +964,10 @@ xgb_cv_opt_linear <- function (data
                          , nrounds = nrounds_opt
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
-                s <- max(cv$evaluation_log[, 4]*1000)
+                s <- max(cv$evaluation_log[, 4])
             }
             else {
-                s <- max(-(cv$evaluation_log[, 4]*1000))
+                s <- max(-(cv$evaluation_log[, 4]))
             }
             list(Score = s, Pred = cv$pred)
         }
