@@ -3774,13 +3774,8 @@ classifyXGBoostLinear <- function(data
         x_test <- data.test[, !colnames(data) %in% c("Sample", "Class")]
     }
     
-    #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
-    xgbGridPre <- expand.grid(
-        nrounds = test_nrounds,
-        alpha = seq(xgbalpha.vec[1], xgbalpha.vec[2], by=0.1),
-        eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1),
-        lambda=seq(xgblambda.vec[1], xgblambda.vec[2], by=0.1)
-    )
+    
+
     
     xgbGridPre <- if(Bayes==FALSE){
         expand.grid(
@@ -3792,9 +3787,9 @@ classifyXGBoostLinear <- function(data
     } else if(Bayes==TRUE){
         expand.grid(
            nrounds = test_nrounds,
-           alpha = seq(xgbalpha.vec[1], xgbalpha.vec[2]),
-           eta = seq(xgbeta.vec[1], xgbeta.vec[2]),
-           lambda=seq(xgblambda.vec[1], xgblambda.vec[2])
+           alpha = c(xgbalpha.vec[1], xgbalpha.vec[2]),
+           eta = c(xgbeta.vec[1], xgbeta.vec[2]),
+           lambda=c(xgblambda.vec[1], xgblambda.vec[2])
        )
     }
     
@@ -4310,12 +4305,22 @@ regressXGBoostLinear <- function(data
     
     
     #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
-    xgbGridPre <- expand.grid(
-        nrounds = test_nrounds
-        , alpha = seq(xgbalpha.vec[1], xgbalpha.vec[2], by=0.1)
-        , eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1)
-        , lambda=seq(xgblambda.vec[1], xgblambda.vec[2], by=0.1)
-    )
+    
+    xgbGridPre <- if(Bayes==FALSE){
+        expand.grid(
+           nrounds = test_nrounds,
+           alpha = c(xgbalpha.vec[1], xgbalpha.vec[2], by=0.1),
+           eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1),
+           lambda=seq(xgblambda.vec[1], xgblambda.vec[2], by=0.1)
+       )
+    } else if(Bayes==TRUE){
+        expand.grid(
+           nrounds = test_nrounds,
+           alpha = c(xgbalpha.vec[1], xgbalpha.vec[2]),
+           eta = c(xgbeta.vec[1], xgbeta.vec[2]),
+           lambda=c(xgblambda.vec[1], xgblambda.vec[2])
+       )
+    }
     
     #Boring x_train stuff for later
     x_train <- as.matrix(data.frame(x_train))
