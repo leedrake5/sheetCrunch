@@ -246,7 +246,7 @@ metric_fun <- function(num_classes
 
 BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points = 0,
     n_iter, acq = "ucb", kappa = 2.576, eps = 0, kernel = list(type = "exponential",
-        power = 2), verbose = TRUE)
+        power = 2), verbose = TRUE, ...)
 {
     DT_bounds <- data.table(Parameter = names(bounds), Lower = sapply(bounds,
         extract2, 1), Upper = sapply(bounds, extract2, 2), Type = sapply(bounds,
@@ -387,7 +387,7 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
                               , classes = NULL
                               , seed = 0
                               , nthread=-1
-                              
+                              , ...
                               )
  {
      
@@ -424,7 +424,7 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
                             , nrounds_opt
                             , subsample_opt
                             , bytree_opt
-                            
+                            , ...
                             ) {
              object_fun <- objectfun
              eval_met <- evalmetric
@@ -449,7 +449,7 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
                           , maximize = TRUE
                           , verbose = 0
                           , nrounds = nrounds_opt
-                          
+                          , ...
                           )
              if (eval_met %in% c("auc", "ndcg", "map")) {
                  s <- max(cv$evaluation_log[, 4])
@@ -470,7 +470,7 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
                             , nrounds_opt
                             , subsample_opt
                             , bytree_opt
-                            
+                            , ...
                             ) {
              object_fun <- objectfun
              eval_met <- evalmetric
@@ -497,7 +497,7 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
                           , maximize = FALSE
                           , verbose = 1
                           , nrounds = nrounds_opt
-                          
+                          , ...
                           )
              if (eval_met %in% c("auc", "ndcg", "map")) {
                  s <- max(cv$evaluation_log[, 4])
@@ -573,7 +573,7 @@ xgb_cv_opt_tree <- function (data
                              , classes = NULL
                              , seed = 0
                              , nthread=-1
-                             
+                             , ...
                              )
 {
     
@@ -616,7 +616,7 @@ xgb_cv_opt_tree <- function (data
                            , nrounds_opt
                            , subsample_opt
                            , bytree_opt
-                           
+                           , ...
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
@@ -642,7 +642,7 @@ xgb_cv_opt_tree <- function (data
                          , maximize = to_maximize
                          , verbose = 1
                          , nrounds = nrounds_opt
-                         
+                         , ...
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4]*1000)
@@ -663,7 +663,7 @@ xgb_cv_opt_tree <- function (data
                            , nrounds_opt
                            , subsample_opt
                            , bytree_opt
-                           
+                           , ...
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
@@ -692,7 +692,7 @@ xgb_cv_opt_tree <- function (data
                          , maximize = to_maximize
                          , verbose = 1
                          , nrounds = nrounds_opt
-                         
+                         , ...
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4])
@@ -720,7 +720,7 @@ xgb_cv_opt_tree <- function (data
                                     , eps
                                     , optkernel
                                     , verbose = TRUE
-                                    
+                                    , ...
                                     )
     return(opt_res)
 }
@@ -749,7 +749,7 @@ xgb_cv_opt_dart <- function (data
                              , classes = NULL
                              , seed = 0
                              , nthread=nthread
-                             
+                             , ...
                              )
 {
     
@@ -793,7 +793,9 @@ xgb_cv_opt_dart <- function (data
                            , skip_range_opt
                            , nrounds_opt
                            , subsample_opt
-                           , bytree_opt                           
+                           , bytree_opt
+                           , nthread=nthread
+                           , ...
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
@@ -812,7 +814,7 @@ xgb_cv_opt_dart <- function (data
                                        , colsample_bytree = bytree_opt
                                        , lambda = 1
                                        , alpha = 0
-                                       )
+                                       , ...)
                          , data = dtrain
                          , folds = cv_folds
                          , watchlist = xg_watchlist
@@ -845,7 +847,7 @@ xgb_cv_opt_dart <- function (data
                            , subsample_opt
                            , bytree_opt
                            , nthread
-                           
+                           , ...
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
@@ -866,7 +868,7 @@ xgb_cv_opt_dart <- function (data
                                        , colsample_bytree = bytree_opt
                                        , lambda = 1
                                        , alpha = 0
-                                       )
+                                       , ...)
                          , data = dtrain
                          , folds = cv_folds
                          , watchlist = xg_watchlist
@@ -906,7 +908,7 @@ xgb_cv_opt_dart <- function (data
                                     , eps
                                     , optkernel
                                     , verbose = TRUE
-                                    
+                                    , ...
                                     )
     return(opt_res)
 }
@@ -928,7 +930,7 @@ xgb_cv_opt_linear <- function (data
                                , classes = NULL
                                , seed = 0
                                , nthread=nthread
-                               
+                               , ...
                                )
 {
     to_maximize = if(evalmetric=="auc"){
@@ -976,7 +978,7 @@ xgb_cv_opt_linear <- function (data
                                        , alpha = alpha_opt
                                        , eta = eta_opt
                                        , lambda = lambda_opt
-                                       
+                                       , ...
                                        )
                          , data = dtrain
                          , folds = cv_folds
@@ -1004,7 +1006,7 @@ xgb_cv_opt_linear <- function (data
                            , eta_opt
                            , lambda_opt
                            , nrounds_opt
-                           
+                           , ...
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
@@ -1017,7 +1019,7 @@ xgb_cv_opt_linear <- function (data
                                        , alpha = alpha_opt
                                        , eta = eta_opt
                                        , lambda = lambda_opt
-                                       
+                                       , ...
                                        )
                          , data = dtrain
                          , folds = cv_folds
@@ -1052,7 +1054,7 @@ xgb_cv_opt_linear <- function (data
                                     , eps
                                     , optkernel
                                     , verbose = TRUE
-                                    
+                                    , ...
                                     )
     return(opt_res)
 }
@@ -1255,7 +1257,7 @@ classifyXGBoostTree <- function(data
                                 , scale=FALSE
                                 , seed=NULL
                                 , nthread=-1
-                                
+                                , ...
                                 ){
     
     ###Prepare the data
@@ -1504,7 +1506,7 @@ if(is.null(eval_metric)){
                              , num_class=num_classes
                              , na.action=na.omit
                              , nthread=nthread
-                             
+                             , ...
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -1517,7 +1519,7 @@ if(is.null(eval_metric)){
                              , objective = objective.mod
                              , na.action=na.omit
                              , nthread=nthread
-                             
+                             , ...
                              )
             }
         }
@@ -1553,7 +1555,7 @@ if(is.null(eval_metric)){
                    , init_points = init_points
                    , n_iter = n_iter
                    , nthread=nthread
-                   
+                   , ...
                    )
                    
         best_param <- list(
@@ -1826,7 +1828,7 @@ regressXGBoostTree <- function(data
                                , scale=FALSE
                                , seed=NULL
                                , nthread=-1
-                               
+                               , ...
                                ){
     
     ###Prepare the data
@@ -1986,7 +1988,7 @@ regressXGBoostTree <- function(data
                                           , tree_method = tree_method
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
-                                          
+                                          , ...
                                           )
             #Close the CPU sockets
             stopCluster(cl)
@@ -2002,7 +2004,7 @@ regressXGBoostTree <- function(data
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           , nthread=nthread
-                                          
+                                          , ...
                                           )
         }
         
@@ -2040,7 +2042,7 @@ regressXGBoostTree <- function(data
                                                , nrounds
                                                , gamma
                                                , colsample_bytree
-                                               ) {
+                                               , ...) {
                           param <- list(booster = "gbtree"
                                         , max_depth = max_depth
                                         , min_child_weight = min_child_weight
@@ -2060,7 +2062,7 @@ regressXGBoostTree <- function(data
                                        , nthread=nthread
                                        , maximize = TRUE
                                        , verbose = TRUE
-                                       
+                                       , ...
                                        )
                           
                           if(metric.mod=="rmse"){
@@ -2092,7 +2094,7 @@ regressXGBoostTree <- function(data
                                             , kappa = 2.576
                                             , eps = 0.0
                                             , verbose = TRUE
-                                            
+                                            , ...
                                             )
                        
             best_param <- list(
@@ -2186,7 +2188,7 @@ regressXGBoostTree <- function(data
                                   , objective = "reg:squarederror"
                                   , nthread=nthread
                                   , na.action=na.omit
-                                  
+                                  , ...
                                   )
     }
     
@@ -2353,7 +2355,7 @@ autoXGBoostTree <- function(data
                             , scale=FALSE
                             , seed=NULL
                             , nthread=-1
-                            
+                            , ...
                             ){
     
     if(is.null(save.name)){
@@ -2412,7 +2414,7 @@ autoXGBoostTree <- function(data
                             , scale=scale
                             , seed=seed
                             , nthread=nthread
-                            
+                            , ...
                             )
     } else if(is.numeric(data[,variable])){
         regressXGBoostTree(data=data
@@ -2446,7 +2448,7 @@ autoXGBoostTree <- function(data
                            , scale=scale
                            , seed=seed
                            , nthread=nthread
-                           
+                           , ...
                            )
     }
     
@@ -2497,7 +2499,7 @@ classifyXGBoostDart <- function(data
                                 , scale=FALSE
                                 , seed=NULL
                                 , nthread=-1
-                                
+                                , ...
                                 ){
     
     ###Prepare the data
@@ -2726,7 +2728,7 @@ if(is.null(eval_metric)){
                              , objective = objective.mod
                              , num_class=num_classes
                              , na.action=na.omit
-                             
+                             , ...
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -2738,7 +2740,7 @@ if(is.null(eval_metric)){
                              , tree_method = tree_method
                              , objective = objective.mod
                              , na.action=na.omit
-                             
+                             , ...
                              )
             }
             #Close the CPU sockets
@@ -2756,7 +2758,7 @@ if(is.null(eval_metric)){
                              , num_class=num_classes
                              , na.action=na.omit
                              , nthread=nthread
-                             
+                             , ...
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -2768,7 +2770,7 @@ if(is.null(eval_metric)){
                              , objective = objective.mod
                              , na.action=na.omit
                              , nthread=nthread
-                             
+                             , ...
                              )
             }
         }
@@ -2808,7 +2810,7 @@ if(is.null(eval_metric)){
                    , init_points = init_points
                    , n_iter = n_iter
                    , nthread=nthread
-                   
+                   , ...
                    )
                    
         best_param <- list(
@@ -2931,7 +2933,7 @@ if(is.null(eval_metric)){
                          , num_class=num_classes
                          , nthread=nthread
                          , na.action=na.omit
-                         
+                         , ...
                          )
         } else if(num_classes==2){
             caret::train(Class~.
@@ -2944,7 +2946,7 @@ if(is.null(eval_metric)){
                          , objective = objective.mod
                          , nthread=nthread
                          , na.action=na.omit
-                         
+                         , ...
                          )
         }
     }
@@ -3087,7 +3089,7 @@ regressXGBoostDart <- function(data
                                , scale=FALSE
                                , seed=NULL
                                , nthread=-1
-                               
+                               , ...
                                ){
     
     ###Prepare the data
@@ -3269,7 +3271,7 @@ regressXGBoostDart <- function(data
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           , nthread=nthread
-                                          
+                                          , ...
                                           )
         }
         
@@ -3311,7 +3313,7 @@ regressXGBoostDart <- function(data
                                                , nrounds
                                                , gamma
                                                , colsample_bytree
-                                               ) {
+                                               , ...) {
                           param <- list(booster = "dart"
                                         , max_depth = max_depth
                                         , rate_drop = rate_drop
@@ -3333,7 +3335,7 @@ regressXGBoostDart <- function(data
                                        , nthread=nthread
                                        , maximize = TRUE
                                        , verbose = TRUE
-                                       
+                                       , ...
                                        )
                           
                           if(metric.mod=="rmse"){
@@ -3364,7 +3366,7 @@ regressXGBoostDart <- function(data
                                             , kappa = 2.576
                                             , eps = 0.0
                                             , verbose = TRUE
-                                            
+                                            , ...
                                             )
                        
             best_param <- list(
@@ -3462,7 +3464,7 @@ regressXGBoostDart <- function(data
                                   , objective = "reg:squarederror"
                                   , na.action=na.omit
                                   , nthread=nthread
-                                  
+                                  , ...
                                   )
     }
     
@@ -3631,7 +3633,7 @@ autoXGBoostDart <- function(data
                             , scale=FALSE
                             , seed=NULL
                             , nthread=-1
-                            
+                            , ...
                             ){
     
     if(is.null(save.name)){
@@ -3692,7 +3694,7 @@ autoXGBoostDart <- function(data
                             , scale=scale
                             , seed=seed
                             , nthread=nthread
-                            
+                            , ...
                             )
     } else if(is.numeric(data[,variable])){
         regressXGBoostDart(data=data
@@ -3728,7 +3730,7 @@ autoXGBoostDart <- function(data
                            , scale=scale
                            , seed=seed
                            , nthread=nthread
-                           
+                           , ...
                            )
     }
     
@@ -3772,7 +3774,7 @@ classifyXGBoostLinear <- function(data
                                   , scale=FALSE
                                   , seed=NULL
                                   , nthread=-1
-                                  
+                                  , ...
                                   ){
     
     ###Prepare the data
@@ -4012,7 +4014,7 @@ if(is.null(eval_metric)){
                              , num_class=num_classes
                              , na.action=na.omit
                              , nthread=nthread
-                             
+                             , ...
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -4024,7 +4026,7 @@ if(is.null(eval_metric)){
                              , objective = objective.mod
                              , na.action=na.omit
                              , nthread=nthread
-                             
+                             , ...
                              )
             }
         }
@@ -4054,7 +4056,7 @@ if(is.null(eval_metric)){
                    , init_points = init_points
                    , n_iter = n_iter
                    , nthread=nthread
-                   
+                   , ...
                    )
                    
         best_param <- list(
@@ -4165,7 +4167,7 @@ if(is.null(eval_metric)){
                          , num_class=num_classes
                          , nthread=nthread
                          , na.action=na.omit
-                         
+                         , ...
                          )
         } else if(num_classes==2){
             caret::train(Class~.
@@ -4177,7 +4179,7 @@ if(is.null(eval_metric)){
                          , objective = objective.mod
                          , nthread=nthread
                          , na.action=na.omit
-                         
+                         , ...
                          )
         }
     }
@@ -4314,7 +4316,7 @@ regressXGBoostLinear <- function(data
                                  , scale=FALSE
                                  , seed=NULL
                                  , nthread=nthread
-                                 
+                                 , ...
                                  ){
     
     ###Prepare the data
@@ -4475,7 +4477,7 @@ regressXGBoostLinear <- function(data
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           , nthread=nthread
-                                          
+                                          , ...
                                           )
         }
         
@@ -4515,10 +4517,10 @@ regressXGBoostLinear <- function(data
                                        , folds=cv_folds
                                        , nround = nrounds
                                        , early_stopping_rounds = 50
-                                       , nthread=nthread
+                                       , nthread=n_threads
                                        , maximize = FALSE
                                        , verbose = TRUE
-                                       
+                                       , ...
                                        )
                           
                           if(metric.mod=="rmse"){
@@ -4630,7 +4632,7 @@ regressXGBoostLinear <- function(data
                                   , objective = "reg:squarederror"
                                   , nthread=nthread
                                   , na.action=na.omit
-                                  
+                                  , ...
                                   )
     }
     
@@ -4799,7 +4801,7 @@ autoXGBoostLinear <- function(data
                               , scale=FALSE
                               , seed=NULL
                               , nthread=-1
-                              
+                              , ...
                               ){
     
     if(is.null(save.name)){
@@ -4853,7 +4855,7 @@ autoXGBoostLinear <- function(data
                               , scale=scale
                               , seed=seed
                               , nthread=nthread
-                              
+                              , ...
                               )
     } else if(is.numeric(data[,variable])){
         regressXGBoostLinear(data=data
@@ -4883,7 +4885,7 @@ autoXGBoostLinear <- function(data
                              , scale=scale
                              , seed=seed
                              , nthread=nthread
-                             
+                             , ...
                              )
     }
     
@@ -4914,7 +4916,7 @@ classifyForest <- function(data
                            , save_plots=FALSE
                            , scale=FALSE
                            , seed=NULL
-                           
+                           , ...
                            ){
     
     ###Prepare the data
@@ -5237,7 +5239,7 @@ regressForest <- function(data
                           , save_plots=FALSE
                           , scale=FALSE
                           , seed=NULL
-                          
+                          , ...
                           ){
     
     ###Prepare the data
@@ -5515,7 +5517,7 @@ autoForest<- function(data
                       , save_plots=FALSE
                       , scale=FALSE
                       , seed=NULL
-                      
+                      , ...
                       ){
     
     if(is.null(save.name)){
@@ -5618,7 +5620,7 @@ classifySVM <- function(data
                         , save_plots=FALSE
                         , scale=FALSE
                         , seed=NULL
-                        
+                        , ...
                         ){
     
     ###Prepare the data
@@ -6000,7 +6002,7 @@ regressSVM <- function(data
                        , save_plots=FALSE
                        , scale=scale
                        , seed=NULL
-                       
+                       , ...
                        ){
     
     ###Prepare the data
@@ -6343,7 +6345,7 @@ autoSVM <- function(data
                     , save_plots=FALSE
                     , scale=FALSE
                     , seed=NULL
-                    
+                    , ...
                     ){
     
     if(is.null(save.name)){
@@ -6459,7 +6461,7 @@ classifyBayes <- function(data
                           , save_plots=FALSE
                           , scale=FALSE
                           , seed=NULL
-                          
+                          , ...
                           ){
     
     ###Prepare the data
@@ -6845,7 +6847,7 @@ regressBayes <- function(data
                          , save_plots=FALSE
                          , scale=FALSE
                          , seed=NULL
-                         
+                         , ...
                          ){
     
     ###Prepare the data
@@ -7219,7 +7221,7 @@ autoBayes <- function(data
                       , save_plots=FALSE
                       , scale=FALSE
                       , seed=NULL
-                      
+                      , ...
                       ){
     
     if(is.null(save.name)){
@@ -7363,7 +7365,7 @@ autoMLTable <- function(data
                         , seed=NULL
                         , additional_validation_frame=NULL
                         , nthread=-1
-                        
+                        , ...
                         ){
     
     
@@ -7404,7 +7406,7 @@ autoMLTable <- function(data
                         , scale=scale
                         , seed=seed
                         , nthread=nthread
-                        
+                        , ...
                         )
     } else if(type=="xgbDart"){
     #mistake
@@ -7445,7 +7447,7 @@ autoMLTable <- function(data
                         , scale=scale
                         , seed=seed
                         , nthread=nthread
-                        
+                        , ...
                         )
     } else if(type=="xgbLinear"){
         autoXGBoostLinear(data=data
@@ -7479,7 +7481,7 @@ autoMLTable <- function(data
                           , scale=scale
                           , seed=seed
                           , nthread=nthread
-                          
+                          , ...
                           )
     } else if(type=="Forest"){
         autoForest(data=data
