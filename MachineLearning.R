@@ -245,11 +245,11 @@ metric_fun <- function(num_classes
 # What does this fuction optimize?
 
 BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points = 0,
-    n_iter, acq = "ucb", kappa = 2.576, eps = 0, kernel = list(type = "exponential",
+    n_iter, acq = "ei", kappa = 2.576, eps = 0, kernel = list(type = "exponential",
         power = 2), verbose = TRUE, ...)
 {
     DT_bounds <- data.table(Parameter = names(bounds), Lower = sapply(bounds,
-        extract2, 1), Upper = sapply(bounds, extract2, 2), Type = sapply(bounds,
+    magrittr::extract2, 1), Upper = sapply(bounds, magrittr::extract2, 2), Type = sapply(bounds,
         class))
     setDT(init_grid_dt)
     if (nrow(init_grid_dt) != 0) {
@@ -322,8 +322,7 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
         Value_Vec <- DT_history[1:(j - 1), Value]
         GP_Log <- utils::capture.output({
             GP <- GPfit::GP_fit(X = Par_Mat[Rounds_Unique, ],
-                Y = Value_Vec[Rounds_Unique], corr = kernel,
-                ...)
+                Y = Value_Vec[Rounds_Unique], corr = kernel)
         })
         Next_Par <- Utility_Max(DT_bounds, GP, acq = acq, y_max = max(DT_history[,
             Value]), kappa = kappa, eps = eps) %>% Min_Max_Inverse_Scale_Vec(.,
@@ -645,10 +644,10 @@ xgb_cv_opt_tree <- function (data
                          , ...
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
-                s <- max(cv$evaluation_log[, 4]*1000)
+                s <- max(cv$evaluation_log[, 4])
             }
             else {
-                s <- max(-(cv$evaluation_log[, 4]*1000))
+                s <- max(-(cv$evaluation_log[, 4]))
             }
             list(Score = s)
         }
@@ -748,7 +747,7 @@ xgb_cv_opt_dart <- function (data
                              , optkernel = list(type = "exponential", power = 2)
                              , classes = NULL
                              , seed = 0
-                             , nthread=nthread
+                             , nthread=-1
                              , ...
                              )
 {
@@ -764,17 +763,14 @@ xgb_cv_opt_dart <- function (data
         xg_watchlist <- list(msr = dtrain)
         cv_folds <- KFold(label, nfolds = n_folds, stratified = TRUE,
             seed = seed)
-    }
-    else {
+    } else {
         #quolabel <- enquo(label)
         #datalabel <- (data %>% select(!!quolabel))[[1]]
         datalabel <- data$Class
         mx <- Matrix::sparse.model.matrix(datalabel ~ ., data[,!colnames(data) %in% "Class"])
         if (class(datalabel) == "factor") {
             dtrain <- xgb.DMatrix(mx, label = as.integer(datalabel) -
-                1)
-        }
-        else {
+                1)} else {
             dtrain <- xgb.DMatrix(mx, label = datalabel)
         }
         xg_watchlist <- list(msr = dtrain)
@@ -794,13 +790,12 @@ xgb_cv_opt_dart <- function (data
                            , nrounds_opt
                            , subsample_opt
                            , bytree_opt
-                           , nthread=nthread
+                           , nthread
                            , ...
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
             cv <- xgb.cv(params = list(booster = "dart"
-                                       , nthread=nthread
                                        , objective = object_fun
                                        , eval_metric = eval_met
                                        , tree_method = tree_method
@@ -815,6 +810,7 @@ xgb_cv_opt_dart <- function (data
                                        , lambda = 1
                                        , alpha = 0
                                        , ...)
+                         , nthread=-1
                          , data = dtrain
                          , folds = cv_folds
                          , watchlist = xg_watchlist
@@ -853,7 +849,6 @@ xgb_cv_opt_dart <- function (data
             eval_met <- evalmetric
             num_classes <- classes
             cv <- xgb.cv(params = list(booster = "dart"
-                                       , nthread=nthread
                                        , objective = object_fun
                                        , num_class = num_classes
                                        , eval_metric = eval_met
@@ -869,6 +864,7 @@ xgb_cv_opt_dart <- function (data
                                        , lambda = 1
                                        , alpha = 0
                                        , ...)
+                         , nthread=-1
                          , data = dtrain
                          , folds = cv_folds
                          , watchlist = xg_watchlist
@@ -898,7 +894,6 @@ xgb_cv_opt_dart <- function (data
                                                     , nrounds_opt = nrounds_range
                                                     , subsample_opt = subsample_range
                                                     , bytree_opt = bytree_range
-                                                    , nthread=nthread
                                                     )
                                     , init_points
                                     , init_grid_dt = NULL
@@ -1032,10 +1027,10 @@ xgb_cv_opt_linear <- function (data
                          , nrounds = nrounds_opt
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
-                s <- max(cv$evaluation_log[, 4]*1000)
+                s <- max(cv$evaluation_log[, 4])
             }
             else {
-                s <- max(-(cv$evaluation_log[, 4])*1000)
+                s <- max(-(cv$evaluation_log[, 4]))
             }
             list(Score = s)
         }
@@ -1118,7 +1113,7 @@ scaleDecode <- function(values, y_min, y_max){
 
 # Prepare the data for machine learning. Data is the imported data, variable is the name of the variable you want to analyize. 
 # This function will automatically prepare qualitative data for analysis if needed.
-dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, seed=NULL){
+dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE, seed=NULL){
     
     ###Remove any columns that don't have more than one value
     data <- data[,sapply(data, function(x) length(unique(x))>1)]
@@ -1164,7 +1159,12 @@ dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, seed=NULL){
         if(scale==TRUE){
             mins <- apply(quant.fish, 2, my.min)
             maxes <- apply(quant.fish, 2, my.max)
-            quant.fish %>% scaleTransform
+            if(reduce==FALSE){
+                quant.fish <- quant.fish %>% scaleTransform
+            } else if(reduce==TRUE){
+                quant.fish <- quant.fish %>% scaleTransform %>% round(digits=2)
+            }
+            
             
             #mean <- apply(quant.fish, 2, mean)
             #std <- apply(quant.fish, 2, sd)
@@ -2507,7 +2507,7 @@ classifyXGBoostDart <- function(data
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed)
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, reduce=FALSE, seed=seed)
     data <- data_list$Data
     
     ####Set Defaults for Negative and Positive classes
@@ -3097,7 +3097,7 @@ regressXGBoostDart <- function(data
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed)
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, reduce=FALSE, seed=seed)
     data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -4052,7 +4052,7 @@ if(is.null(eval_metric)){
                    , objectfun = objective.mod
                    , evalmetric = eval_metric
                    , n_folds = folds
-                   , acq = "ucb"
+                   , acq = "ei"
                    , init_points = init_points
                    , n_iter = n_iter
                    , nthread=nthread
