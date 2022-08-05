@@ -1551,7 +1551,7 @@ if(is.null(eval_metric)){
                    , evalmetric = eval_metric
                    , tree_method = tree_method
                    , n_folds = folds
-                   , acq = "poi"
+                   , acq = "ei"
                    , init_points = init_points
                    , n_iter = n_iter
                    , nthread=nthread
@@ -2806,7 +2806,7 @@ if(is.null(eval_metric)){
                    , evalmetric = eval_metric
                    , tree_method = tree_method
                    , n_folds = folds
-                   , acq = "poi"
+                   , acq = "ei"
                    , init_points = init_points
                    , n_iter = n_iter
                    , nthread=nthread
