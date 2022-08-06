@@ -4326,7 +4326,7 @@ regressXGBoostLinear <- function(data
                                  , save_plots=FALSE
                                  , scale=FALSE
                                  , seed=NULL
-                                 , nthread=nthread
+                                 , nthread=-1
                                  , ...
                                  ){
     
@@ -4641,9 +4641,8 @@ regressXGBoostLinear <- function(data
                                   , metric=metric
                                   , method = "xgbLinear"
                                   , objective = "reg:squarederror"
-                                  , nthread=nthread
+                                  , nthread=-1
                                   , na.action=na.omit
-                                  , ...
                                   )
     }
     
