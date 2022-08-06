@@ -3874,7 +3874,7 @@ classifyXGBoostLinear <- function(data
     xgbGridPre <- if(Bayes==FALSE){
         expand.grid(
            nrounds = test_nrounds,
-           alpha = c(xgbalpha.vec[1], xgbalpha.vec[2], by=0.1),
+           alpha = seq(xgbalpha.vec[1], xgbalpha.vec[2], by=0.1),
            eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1),
            lambda=seq(xgblambda.vec[1], xgblambda.vec[2], by=0.1)
        )
@@ -4412,7 +4412,7 @@ regressXGBoostLinear <- function(data
     xgbGridPre <- if(Bayes==FALSE){
         expand.grid(
            nrounds = test_nrounds,
-           alpha = c(xgbalpha.vec[1], xgbalpha.vec[2], by=0.1),
+           alpha = seq(xgbalpha.vec[1], xgbalpha.vec[2], by=0.1),
            eta = seq(xgbeta.vec[1], xgbeta.vec[2], by=0.1),
            lambda=seq(xgblambda.vec[1], xgblambda.vec[2], by=0.1)
        )
