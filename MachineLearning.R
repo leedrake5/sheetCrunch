@@ -1113,7 +1113,7 @@ scaleDecode <- function(values, y_min, y_max){
 
 # Prepare the data for machine learning. Data is the imported data, variable is the name of the variable you want to analyize. 
 # This function will automatically prepare qualitative data for analysis if needed.
-dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE, seed=NULL){
+dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE, seed=NULL, split_by_group=NULL){
     
     ###Remove any columns that don't have more than one value
     data <- data[,sapply(data, function(x) length(unique(x))>1)]
@@ -1125,6 +1125,11 @@ dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE,
         data$Sample <- make.names(seq(1, nrow(data), 1), unique=T)
     } else if("Sample" %in% colnames(data)){
         data$Sample <- make.names(data$Sample, unique=T)
+    }
+    
+    if(!is.null(split_by_group)){
+        group_frame <- data[,c("Sample", split_by_group)]
+        data <- data[,!colnames(data) %in% split_by_group]
     }
     
     if(!is.null(predictors)){
@@ -1208,6 +1213,11 @@ dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE,
     results.final[,variable] <- as.vector(results.final[,variable])
     results.final <- results.final[!duplicated(results.final),]
     
+    if(!is.null(split_by_group)){
+        results.final <- merge(results.final, group_frame, by="Sample")
+        results.final <- results.final[!duplicated(results.final),]
+    }
+    
     if(!is.null(seed)){set.seed(seed)}
     results.final$RandXXX <- rnorm(nrow(results.final), 1, 0.2)
     results.final <- results.final[order(results.final$RandXXX),!colnames(results.final) %in% "RandXXX"]
@@ -1261,12 +1271,12 @@ classifyXGBoostTree <- function(data
                                 ){
     
     ###Prepare the data
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed)
-    data <- data_list$Data
     
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
@@ -1832,12 +1842,12 @@ regressXGBoostTree <- function(data
                                ){
     
     ###Prepare the data
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed)
-    data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
         parallelMethod
@@ -1896,6 +1906,7 @@ regressXGBoostTree <- function(data
     }
     
     if(!is.null(split_by_group)){
+        
         a <- !split_string %in% the_group
         data.train <- data[a,]
         data.test <- data[!a,]
@@ -2503,12 +2514,12 @@ classifyXGBoostDart <- function(data
                                 ){
     
     ###Prepare the data
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, reduce=FALSE, seed=seed)
-    data <- data_list$Data
     
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
@@ -3093,12 +3104,12 @@ regressXGBoostDart <- function(data
                                ){
     
     ###Prepare the data
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, reduce=FALSE, seed=seed)
-    data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
         parallelMethod
@@ -3778,12 +3789,12 @@ classifyXGBoostLinear <- function(data
                                   ){
     
     ###Prepare the data
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed)
-    data <- data_list$Data
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
         PositiveClass <- unique(sort(data[,class]))[1]
@@ -4320,12 +4331,12 @@ regressXGBoostLinear <- function(data
                                  ){
     
     ###Prepare the data
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed)
-    data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
         parallelMethod
@@ -4920,12 +4931,12 @@ classifyForest <- function(data
                            ){
     
     ###Prepare the data
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed)
-    data <- data_list$Data
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
         PositiveClass <- unique(sort(data[,class]))[1]
@@ -5243,12 +5254,12 @@ regressForest <- function(data
                           ){
     
     ###Prepare the data
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed)
-    data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
         parallelMethod
@@ -5624,13 +5635,12 @@ classifySVM <- function(data
                         ){
     
     ###Prepare the data
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data.hold <- data
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed)
-    data <- data_list$Data
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
         PositiveClass <- unique(sort(data[,class]))[1]
@@ -6006,12 +6016,12 @@ regressSVM <- function(data
                        ){
     
     ###Prepare the data
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed)
-    data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
         parallelMethod
@@ -6465,12 +6475,12 @@ classifyBayes <- function(data
                           ){
     
     ###Prepare the data
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data.hold <- data
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed)
     data <- data_list$Data
     ####Set Defaults for Negative and Positive classes
     if(is.null(PositiveClass)){
@@ -6851,12 +6861,12 @@ regressBayes <- function(data
                          ){
     
     ###Prepare the data
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
         data <- data[, !colnames(data) %in% split_by_group]
     }
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed)
-    data <- data_list$Data
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
         parallelMethod
