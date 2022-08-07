@@ -620,7 +620,6 @@ xgb_cv_opt_tree <- function (data
             object_fun <- objectfun
             eval_met <- evalmetric
             cv <- xgb.cv(params = list(booster = "gbtree"
-                                       , nthread=nthread
                                        , objective = object_fun
                                        , eval_metric = eval_met
                                        , tree_method = tree_method
@@ -641,6 +640,7 @@ xgb_cv_opt_tree <- function (data
                          , maximize = to_maximize
                          , verbose = 1
                          , nrounds = nrounds_opt
+                         , nthread=nthread
                          , ...
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
@@ -668,7 +668,6 @@ xgb_cv_opt_tree <- function (data
             eval_met <- evalmetric
             num_classes <- classes
             cv <- xgb.cv(params = list(booster = "gbtree"
-                                       , nthread=nthread
                                        , objective = object_fun
                                        , num_class = num_classes
                                        , eval_metric = eval_met
@@ -691,6 +690,7 @@ xgb_cv_opt_tree <- function (data
                          , maximize = to_maximize
                          , verbose = 1
                          , nrounds = nrounds_opt
+                         , nthread=nthread
                          , ...
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
