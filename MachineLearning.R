@@ -1684,7 +1684,7 @@ if(is.null(eval_metric)){
                          , num_class=num_classes
                          , nthread=nthread
                          , na.action=na.omit
-                         , single_precision_histogram=True
+                         , ...
                          )
         } else if(num_classes==2){
             caret::train(Class~.
@@ -1697,7 +1697,7 @@ if(is.null(eval_metric)){
                          , objective = objective.mod
                          , nthread=nthread
                          , na.action=na.omit
-                         , single_precision_histogram=True
+                         , ...
                          )
         }
     }
