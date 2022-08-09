@@ -246,7 +246,7 @@ metric_fun <- function(num_classes
 
 BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points = 0,
     n_iter, acq = "ei", kappa = 2.576, eps = 0, kernel = list(type = "exponential",
-        power = 2), verbose = TRUE, ...)
+        power = 2), verbose = TRUE)
 {
     DT_bounds <- data.table(Parameter = names(bounds), Lower = sapply(bounds,
     magrittr::extract2, 1), Upper = sapply(bounds, magrittr::extract2, 2), Type = sapply(bounds,
@@ -386,7 +386,8 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
                               , classes = NULL
                               , seed = 0
                               , nthread=-1
-                              , ...
+                              , tree_method = tree_method
+                              , single_precision_histogram = single_precision_histogram
                               )
  {
      
@@ -423,7 +424,8 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
                             , nrounds_opt
                             , subsample_opt
                             , bytree_opt
-                            , ...
+                            , tree_method
+                            , single_precision_histogram
                             ) {
              object_fun <- objectfun
              eval_met <- evalmetric
@@ -448,7 +450,8 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
                           , maximize = TRUE
                           , verbose = 0
                           , nrounds = nrounds_opt
-                          , ...
+                          , tree_method = tree_method
+                          , single_precision_histogram = single_precision_histogram
                           )
              if (eval_met %in% c("auc", "ndcg", "map")) {
                  s <- max(cv$evaluation_log[, 4])
@@ -469,7 +472,8 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
                             , nrounds_opt
                             , subsample_opt
                             , bytree_opt
-                            , ...
+                            , tree_method
+                            , single_precision_histogram
                             ) {
              object_fun <- objectfun
              eval_met <- evalmetric
@@ -496,7 +500,8 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
                           , maximize = FALSE
                           , verbose = 1
                           , nrounds = nrounds_opt
-                          , ...
+                          , tree_method = tree_method
+                          , single_precision_histogram = single_precision_histogram
                           )
              if (eval_met %in% c("auc", "ndcg", "map")) {
                  s <- max(cv$evaluation_log[, 4])
@@ -555,6 +560,7 @@ xgb_cv_opt_tree <- function (data
                              , objectfun
                              , evalmetric
                              , tree_method="hist"
+                             , single_precision_histogram = FALSE
                              , n_folds
                              , eta_range = c(0.1, 1L)
                              , max_depth_range = c(4L, 6L)
@@ -572,7 +578,6 @@ xgb_cv_opt_tree <- function (data
                              , classes = NULL
                              , seed = 0
                              , nthread=-1
-                             , ...
                              )
 {
     
@@ -615,14 +620,12 @@ xgb_cv_opt_tree <- function (data
                            , nrounds_opt
                            , subsample_opt
                            , bytree_opt
-                           , ...
+                           , tree_method=tree_method
+                           , single_precision_histogram=single_precision_histogram
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
-            cv <- xgb.cv(params = list(booster = "gbtree"
-                                       , objective = object_fun
-                                       , eval_metric = eval_met
-                                       , tree_method = tree_method
+            cv <- xgb.cv(params = list(
                                        , gamma = gamma_opt
                                        , min_child_weight = minchild_opt
                                        , eta = eta_opt
@@ -631,6 +634,9 @@ xgb_cv_opt_tree <- function (data
                                        , colsample_bytree = bytree_opt
                                        , lambda = 1
                                        , alpha = 0)
+                         , booster = "gbtree"
+                         , objective = object_fun
+                         , eval_metric = eval_met
                          , data = dtrain
                          , folds = cv_folds
                          , watchlist = xg_watchlist
@@ -641,7 +647,8 @@ xgb_cv_opt_tree <- function (data
                          , verbose = 1
                          , nrounds = nrounds_opt
                          , nthread=nthread
-                         , ...
+                         , tree_method=tree_method
+                         , single_precision_histogram=single_precision_histogram
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4])
@@ -662,16 +669,13 @@ xgb_cv_opt_tree <- function (data
                            , nrounds_opt
                            , subsample_opt
                            , bytree_opt
-                           , ...
+                           , tree_method=tree_method
+                           , single_precision_histogram=single_precision_histogram
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
             num_classes <- classes
-            cv <- xgb.cv(params = list(booster = "gbtree"
-                                       , objective = object_fun
-                                       , num_class = num_classes
-                                       , eval_metric = eval_met
-                                       , tree_method = tree_method
+            cv <- xgb.cv(params = list(
                                        , gamma = gamma_opt
                                        , min_child_weight = minchild_opt
                                        , eta = eta_opt
@@ -681,6 +685,12 @@ xgb_cv_opt_tree <- function (data
                                        , lambda = 1
                                        , alpha = 0
                                        )
+                         , booster = "gbtree"
+                         , objective = object_fun
+                         , num_class = num_classes
+                         , eval_metric = eval_met
+                         , tree_method = tree_method
+                         , single_precision_histogram = single_precision_histogram
                          , data = dtrain
                          , folds = cv_folds
                          , watchlist = xg_watchlist
@@ -691,7 +701,7 @@ xgb_cv_opt_tree <- function (data
                          , verbose = 1
                          , nrounds = nrounds_opt
                          , nthread=nthread
-                         , ...
+                         
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4])
@@ -719,7 +729,8 @@ xgb_cv_opt_tree <- function (data
                                     , eps
                                     , optkernel
                                     , verbose = TRUE
-                                    , ...
+                                    , tree_method = tree_method
+                                    , single_precision_histogram = single_precision_histogram
                                     )
     return(opt_res)
 }
@@ -729,6 +740,7 @@ xgb_cv_opt_dart <- function (data
                              , objectfun
                              , evalmetric
                              , tree_method = 'hist'
+                             , single_precision_histogram = FALSE
                              , n_folds
                              , eta_range = c(0.1, 1L)
                              , max_depth_range = c(4L, 6L)
@@ -748,7 +760,6 @@ xgb_cv_opt_dart <- function (data
                              , classes = NULL
                              , seed = 0
                              , nthread=-1
-                             , ...
                              )
 {
     
@@ -791,14 +802,12 @@ xgb_cv_opt_dart <- function (data
                            , subsample_opt
                            , bytree_opt
                            , nthread
-                           , ...
+                           , tree_method=tree_method
+                           , single_precision_histogram=single_precision_histogram
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
-            cv <- xgb.cv(params = list(booster = "dart"
-                                       , objective = object_fun
-                                       , eval_metric = eval_met
-                                       , tree_method = tree_method
+            cv <- xgb.cv(params = list(
                                        , gamma = gamma_opt
                                        , min_child_weight = minchild_opt
                                        , eta = eta_opt
@@ -809,7 +818,12 @@ xgb_cv_opt_dart <- function (data
                                        , colsample_bytree = bytree_opt
                                        , lambda = 1
                                        , alpha = 0
-                                       , ...)
+                                       )
+                         , booster = "dart"
+                         , objective = object_fun
+                         , eval_metric = eval_met
+                         , tree_method = tree_method
+                         , single_precision_histogram = single_precision_histogram
                          , nthread=-1
                          , data = dtrain
                          , folds = cv_folds
@@ -843,16 +857,13 @@ xgb_cv_opt_dart <- function (data
                            , subsample_opt
                            , bytree_opt
                            , nthread
-                           , ...
+                           , tree_method=tree_method
+                           , single_precision_histogram=single_precision_histogram
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
             num_classes <- classes
-            cv <- xgb.cv(params = list(booster = "dart"
-                                       , objective = object_fun
-                                       , num_class = num_classes
-                                       , eval_metric = eval_met
-                                       , tree_method = tree_method
+            cv <- xgb.cv(params = list(
                                        , gamma = gamma_opt
                                        , min_child_weight = minchild_opt
                                        , eta = eta_opt
@@ -863,7 +874,13 @@ xgb_cv_opt_dart <- function (data
                                        , colsample_bytree = bytree_opt
                                        , lambda = 1
                                        , alpha = 0
-                                       , ...)
+                                       )
+                         , booster = "dart"
+                         , objective = object_fun
+                         , num_class = num_classes
+                         , eval_metric = eval_met
+                         , tree_method = tree_method
+                         , single_precision_histogram = single_precision_histogram
                          , nthread=-1
                          , data = dtrain
                          , folds = cv_folds
@@ -903,7 +920,7 @@ xgb_cv_opt_dart <- function (data
                                     , eps
                                     , optkernel
                                     , verbose = TRUE
-                                    , ...
+                                    
                                     )
     return(opt_res)
 }
@@ -925,7 +942,7 @@ xgb_cv_opt_linear <- function (data
                                , classes = NULL
                                , seed = 0
                                , nthread=nthread
-                               , ...
+                               
                                )
 {
     to_maximize = if(evalmetric=="auc"){
@@ -966,15 +983,16 @@ xgb_cv_opt_linear <- function (data
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
-            cv <- xgb.cv(params = list(booster = "gblinear"
-                                       , nthread=-1
-                                       , objective = object_fun
-                                       , eval_metric = eval_met
+            cv <- xgb.cv(params = list(
                                        , alpha = alpha_opt
                                        , eta = eta_opt
                                        , lambda = lambda_opt
-                                       , ...
+                                       
                                        )
+                         , booster = "gblinear"
+                         , nthread=-1
+                         , objective = object_fun
+                         , eval_metric = eval_met
                          , data = dtrain
                          , folds = cv_folds
                          , watchlist = xg_watchlist
@@ -1001,21 +1019,21 @@ xgb_cv_opt_linear <- function (data
                            , eta_opt
                            , lambda_opt
                            , nrounds_opt
-                           , ...
+                           
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
             num_classes <- classes
-            cv <- xgb.cv(params = list(booster = "gblinear"
-                                       , nthread=nthread
-                                       , objective = object_fun
-                                       , num_class = num_classes
-                                       , eval_metric = eval_met
+            cv <- xgb.cv(params = list(
                                        , alpha = alpha_opt
                                        , eta = eta_opt
                                        , lambda = lambda_opt
-                                       , ...
                                        )
+                         , booster = "gblinear"
+                         , nthread=nthread
+                         , objective = object_fun
+                         , num_class = num_classes
+                         , eval_metric = eval_met
                          , data = dtrain
                          , folds = cv_folds
                          , watchlist = xg_watchlist
@@ -1049,7 +1067,7 @@ xgb_cv_opt_linear <- function (data
                                     , eps
                                     , optkernel
                                     , verbose = TRUE
-                                    , ...
+                                    
                                     )
     return(opt_res)
 }
@@ -1239,7 +1257,8 @@ classifyXGBoostTree <- function(data
                                 , split=NULL
                                 , split_by_group=NULL
                                 , the_group=NULL
-                                , tree_method="hist" 
+                                , tree_method="hist"
+                                , single_precision_histogram = FALSE
                                 , treedepth="5-5"
                                 , xgbgamma="0-0"
                                 , xgbeta="0.1-0.1"
@@ -1267,7 +1286,7 @@ classifyXGBoostTree <- function(data
                                 , scale=FALSE
                                 , seed=NULL
                                 , nthread=-1
-                                , ...
+                                
                                 ){
     
     ###Prepare the data
@@ -1512,11 +1531,12 @@ if(is.null(eval_metric)){
                              , metric=metric
                              , method = "xgbTree"
                              , tree_method = tree_method
+                             , single_precision_histogram = single_precision_histogram
                              , objective = objective.mod
                              , num_class=num_classes
                              , na.action=na.omit
                              , nthread=nthread
-                             , ...
+                             
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -1525,11 +1545,12 @@ if(is.null(eval_metric)){
                              , tuneGrid = xgbGridPre
                              , metric=metric
                              , method = "xgbTree"
-                             , tree_method = tree_method
+                             , tree_method = tree_method\
+                             , single_precision_histogram = single_precision_histogram
                              , objective = objective.mod
                              , na.action=na.omit
                              , nthread=nthread
-                             , ...
+                             
                              )
             }
         }
@@ -1560,12 +1581,12 @@ if(is.null(eval_metric)){
                    , objectfun = objective.mod
                    , evalmetric = eval_metric
                    , tree_method = tree_method
+                   , single_precision_histogram = single_precision_histogram
                    , n_folds = folds
                    , acq = "ei"
                    , init_points = init_points
                    , n_iter = n_iter
                    , nthread=nthread
-                   , ...
                    )
                    
         best_param <- list(
@@ -1680,11 +1701,12 @@ if(is.null(eval_metric)){
                          , metric=metric
                          , method = "xgbTree"
                          , tree_method = tree_method
+                         , single_precision_histogram = single_precision_histogram
                          , objective = objective.mod
                          , num_class=num_classes
                          , nthread=nthread
                          , na.action=na.omit
-                         , ...
+                         
                          )
         } else if(num_classes==2){
             caret::train(Class~.
@@ -1694,10 +1716,11 @@ if(is.null(eval_metric)){
                          , metric=metric
                          , method = "xgbTree"
                          , tree_method = tree_method
+                         , single_precision_histogram = single_precision_histogram
                          , objective = objective.mod
                          , nthread=nthread
                          , na.action=na.omit
-                         , ...
+                         
                          )
         }
     }
@@ -1815,6 +1838,7 @@ regressXGBoostTree <- function(data
                                , split_by_group=NULL
                                , the_group=NULL
                                , tree_method="hist"
+                               , single_precision_histogram=FALSE
                                , treedepth="5-5"
                                , xgbgamma="0-0"
                                , xgbeta="0.1-0.1"
@@ -1838,7 +1862,7 @@ regressXGBoostTree <- function(data
                                , scale=FALSE
                                , seed=NULL
                                , nthread=-1
-                               , ...
+                               
                                ){
     
     ###Prepare the data
@@ -1999,7 +2023,7 @@ regressXGBoostTree <- function(data
                                           , tree_method = tree_method
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
-                                          , ...
+                                          
                                           )
             #Close the CPU sockets
             stopCluster(cl)
@@ -2012,10 +2036,10 @@ regressXGBoostTree <- function(data
                                           , metric=metric
                                           , method = "xgbTree"
                                           , tree_method = tree_method
+                                          , single_precision_histogram = single_precision_histogram
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           , nthread=nthread
-                                          , ...
                                           )
         }
         
@@ -2053,7 +2077,9 @@ regressXGBoostTree <- function(data
                                                , nrounds
                                                , gamma
                                                , colsample_bytree
-                                               , ...) {
+                                               , tree_method=tree_method
+                                               , single_precision_histogram=single_precision_histogram
+                                               ) {
                           param <- list(booster = "gbtree"
                                         , max_depth = max_depth
                                         , min_child_weight = min_child_weight
@@ -2070,10 +2096,11 @@ regressXGBoostTree <- function(data
                                        , early_stopping_rounds = 50
                                        , nrounds=nrounds
                                        , tree_method = tree_method
+                                       , single_precision_histogram= single_precision_histogram
                                        , nthread=nthread
                                        , maximize = TRUE
                                        , verbose = TRUE
-                                       , ...
+                                       
                                        )
                           
                           if(metric.mod=="rmse"){
@@ -2105,7 +2132,7 @@ regressXGBoostTree <- function(data
                                             , kappa = 2.576
                                             , eps = 0.0
                                             , verbose = TRUE
-                                            , ...
+                                            
                                             )
                        
             best_param <- list(
@@ -2196,10 +2223,10 @@ regressXGBoostTree <- function(data
                                   , metric=metric
                                   , method = "xgbTree"
                                   , tree_method = tree_method
+                                  , single_precision_histogram = single_precision_histogram
                                   , objective = "reg:squarederror"
                                   , nthread=nthread
                                   , na.action=na.omit
-                                  , ...
                                   )
     }
     
@@ -2339,6 +2366,7 @@ autoXGBoostTree <- function(data
                             , split_by_group=NULL
                             , the_group=NULL
                             , tree_method="hist"
+                            , single_precision_histogram=FALSE
                             , treedepth="5-5"
                             , xgbgamma="0-0"
                             , xgbeta="0.1-0.1"
@@ -2366,7 +2394,7 @@ autoXGBoostTree <- function(data
                             , scale=FALSE
                             , seed=NULL
                             , nthread=-1
-                            , ...
+                            
                             ){
     
     if(is.null(save.name)){
@@ -2398,6 +2426,7 @@ autoXGBoostTree <- function(data
                             , split_by_group=split_by_group
                             , the_group=the_group
                             , tree_method=tree_method
+                            , single_precision_histogram=single_precision_histogram
                             , treedepth=treedepth
                             , xgbgamma=xgbgamma
                             , xgbeta=xgbeta
@@ -2425,7 +2454,7 @@ autoXGBoostTree <- function(data
                             , scale=scale
                             , seed=seed
                             , nthread=nthread
-                            , ...
+                            
                             )
     } else if(is.numeric(data[,variable])){
         regressXGBoostTree(data=data
@@ -2436,6 +2465,7 @@ autoXGBoostTree <- function(data
                            , split_by_group=split_by_group
                            , the_group=the_group
                            , tree_method=tree_method
+                           , single_precision_histogram=single_precision_histogram
                            , treedepth=treedepth
                            , xgbgamma=xgbgamma
                            , xgbeta=xgbeta
@@ -2459,7 +2489,7 @@ autoXGBoostTree <- function(data
                            , scale=scale
                            , seed=seed
                            , nthread=nthread
-                           , ...
+                           
                            )
     }
     
@@ -2480,7 +2510,8 @@ classifyXGBoostDart <- function(data
                                 , split=NULL
                                 , split_by_group=NULL
                                 , the_group=NULL
-                                , tree_method=tree_method
+                                , tree_method="hist"
+                                , single_precision_histogram=FALSE
                                 , treedepth="5-5"
                                 , treedrop="0.3-0.3"
                                 , skipdrop="0.3-0.3"
@@ -2510,7 +2541,7 @@ classifyXGBoostDart <- function(data
                                 , scale=FALSE
                                 , seed=NULL
                                 , nthread=-1
-                                , ...
+                                
                                 ){
     
     ###Prepare the data
@@ -2739,7 +2770,7 @@ if(is.null(eval_metric)){
                              , objective = objective.mod
                              , num_class=num_classes
                              , na.action=na.omit
-                             , ...
+                             
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -2751,7 +2782,7 @@ if(is.null(eval_metric)){
                              , tree_method = tree_method
                              , objective = objective.mod
                              , na.action=na.omit
-                             , ...
+                             
                              )
             }
             #Close the CPU sockets
@@ -2769,7 +2800,8 @@ if(is.null(eval_metric)){
                              , num_class=num_classes
                              , na.action=na.omit
                              , nthread=nthread
-                             , ...
+                             , tree_method=tree_method
+                             , single_precision_histogram=single_precision_histogram
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -2781,7 +2813,8 @@ if(is.null(eval_metric)){
                              , objective = objective.mod
                              , na.action=na.omit
                              , nthread=nthread
-                             , ...
+                             , tree_method=tree_method
+                             , single_precision_histogram=single_precision_histogram
                              )
             }
         }
@@ -2816,12 +2849,12 @@ if(is.null(eval_metric)){
                    , objectfun = objective.mod
                    , evalmetric = eval_metric
                    , tree_method = tree_method
+                   , single_precision_histogram = single_precision_histogram
                    , n_folds = folds
                    , acq = "ei"
                    , init_points = init_points
                    , n_iter = n_iter
                    , nthread=nthread
-                   , ...
                    )
                    
         best_param <- list(
@@ -2940,11 +2973,12 @@ if(is.null(eval_metric)){
                          , metric=metric
                          , method = "xgbDART"
                          , tree_method = tree_method
+                         , single_precision_histogram = single_precision_histogram
                          , objective = objective.mod
                          , num_class=num_classes
                          , nthread=nthread
                          , na.action=na.omit
-                         , ...
+                         
                          )
         } else if(num_classes==2){
             caret::train(Class~.
@@ -2954,10 +2988,11 @@ if(is.null(eval_metric)){
                          , metric=metric
                          , method = "xgbDART"
                          , tree_method = tree_method
+                         , single_precision_histogram = single_precision_histogram
                          , objective = objective.mod
                          , nthread=nthread
                          , na.action=na.omit
-                         , ...
+                         
                          )
         }
     }
@@ -3075,6 +3110,7 @@ regressXGBoostDart <- function(data
                                , split_by_group=NULL
                                , the_group=NULL
                                , tree_method="hist"
+                               , single_precision_histogram=FALSE
                                , treedepth="5-5"
                                , treedrop="0.3-0.3"
                                , skipdrop="0.3-0.3"
@@ -3100,7 +3136,7 @@ regressXGBoostDart <- function(data
                                , scale=FALSE
                                , seed=NULL
                                , nthread=-1
-                               , ...
+                               
                                ){
     
     ###Prepare the data
@@ -3279,10 +3315,10 @@ regressXGBoostDart <- function(data
                                           , metric=metric
                                           , method = "xgbTree"
                                           , tree_method = tree_method
+                                          , single_precision_histogram = single_precision_histogram
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           , nthread=nthread
-                                          , ...
                                           )
         }
         
@@ -3324,7 +3360,9 @@ regressXGBoostDart <- function(data
                                                , nrounds
                                                , gamma
                                                , colsample_bytree
-                                               , ...) {
+                                               , tree_method=tree_method
+                                               , single_precision_histogram=single_precision_histogram
+                                               ) {
                           param <- list(booster = "dart"
                                         , max_depth = max_depth
                                         , rate_drop = rate_drop
@@ -3343,10 +3381,10 @@ regressXGBoostDart <- function(data
                                        , nrounds=nrounds
                                        , early_stopping_rounds = 50
                                        , tree_method = tree_method
+                                       , single_precision_histogram = single_precision_histogram
                                        , nthread=nthread
                                        , maximize = TRUE
                                        , verbose = TRUE
-                                       , ...
                                        )
                           
                           if(metric.mod=="rmse"){
@@ -3377,7 +3415,7 @@ regressXGBoostDart <- function(data
                                             , kappa = 2.576
                                             , eps = 0.0
                                             , verbose = TRUE
-                                            , ...
+                                            
                                             )
                        
             best_param <- list(
@@ -3472,10 +3510,10 @@ regressXGBoostDart <- function(data
                                   , metric=metric
                                   , method = "xgbDART"
                                   , tree_method = tree_method
+                                  , single_precision_histogram = single_precision_histogram
                                   , objective = "reg:squarederror"
                                   , na.action=na.omit
                                   , nthread=nthread
-                                  , ...
                                   )
     }
     
@@ -3615,6 +3653,7 @@ autoXGBoostDart <- function(data
                             , split_by_group=NULL
                             , the_group=NULL
                             , tree_method="hist"
+                            , single_precision_histogram=FALSE
                             , treedepth="5-5"
                             , treedrop="0.3-0.3"
                             , skipdrop="0.3-0.3"  
@@ -3644,7 +3683,7 @@ autoXGBoostDart <- function(data
                             , scale=FALSE
                             , seed=NULL
                             , nthread=-1
-                            , ...
+                            
                             ){
     
     if(is.null(save.name)){
@@ -3676,6 +3715,7 @@ autoXGBoostDart <- function(data
                             , split_by_group=split_by_group
                             , the_group=the_group
                             , tree_method=tree_method
+                            , single_precision_histogram = single_precision_histogram
                             , treedepth=treedepth
                             , treedrop=treedrop
                             , skipdrop=skipdrop
@@ -3705,7 +3745,7 @@ autoXGBoostDart <- function(data
                             , scale=scale
                             , seed=seed
                             , nthread=nthread
-                            , ...
+                            
                             )
     } else if(is.numeric(data[,variable])){
         regressXGBoostDart(data=data
@@ -3716,6 +3756,7 @@ autoXGBoostDart <- function(data
                            , split_by_group=split_by_group
                            , the_group=the_group
                            , tree_method=tree_method
+                           , single_precision_histogram = single_precision_histogram
                            , treedepth=treedepth
                            , treedrop=treedrop
                            , skipdrop=skipdrop 
@@ -3741,7 +3782,7 @@ autoXGBoostDart <- function(data
                            , scale=scale
                            , seed=seed
                            , nthread=nthread
-                           , ...
+                           
                            )
     }
     
@@ -3785,7 +3826,7 @@ classifyXGBoostLinear <- function(data
                                   , scale=FALSE
                                   , seed=NULL
                                   , nthread=-1
-                                  , ...
+                                  
                                   ){
     
     ###Prepare the data
@@ -4025,7 +4066,7 @@ if(is.null(eval_metric)){
                              , num_class=num_classes
                              , na.action=na.omit
                              , nthread=nthread
-                             , ...
+                             
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -4037,7 +4078,7 @@ if(is.null(eval_metric)){
                              , objective = objective.mod
                              , na.action=na.omit
                              , nthread=nthread
-                             , ...
+                             
                              )
             }
         }
@@ -4067,7 +4108,7 @@ if(is.null(eval_metric)){
                    , init_points = init_points
                    , n_iter = n_iter
                    , nthread=nthread
-                   , ...
+                   
                    )
                    
         best_param <- list(
@@ -4178,7 +4219,7 @@ if(is.null(eval_metric)){
                          , num_class=num_classes
                          , nthread=nthread
                          , na.action=na.omit
-                         , ...
+                         
                          )
         } else if(num_classes==2){
             caret::train(Class~.
@@ -4190,7 +4231,7 @@ if(is.null(eval_metric)){
                          , objective = objective.mod
                          , nthread=nthread
                          , na.action=na.omit
-                         , ...
+                         
                          )
         }
     }
@@ -4327,7 +4368,7 @@ regressXGBoostLinear <- function(data
                                  , scale=FALSE
                                  , seed=NULL
                                  , nthread=-1
-                                 , ...
+                                 
                                  ){
     
     ###Prepare the data
@@ -4488,7 +4529,7 @@ regressXGBoostLinear <- function(data
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           , nthread=nthread
-                                          , ...
+                                          
                                           )
         }
         
@@ -4531,7 +4572,7 @@ regressXGBoostLinear <- function(data
                                        , nthread=n_threads
                                        , maximize = FALSE
                                        , verbose = TRUE
-                                       , ...
+                                       
                                        )
                           
                           if(metric.mod=="rmse"){
@@ -4811,7 +4852,7 @@ autoXGBoostLinear <- function(data
                               , scale=FALSE
                               , seed=NULL
                               , nthread=-1
-                              , ...
+                              
                               ){
     
     if(is.null(save.name)){
@@ -4865,7 +4906,7 @@ autoXGBoostLinear <- function(data
                               , scale=scale
                               , seed=seed
                               , nthread=nthread
-                              , ...
+                              
                               )
     } else if(is.numeric(data[,variable])){
         regressXGBoostLinear(data=data
@@ -4895,7 +4936,7 @@ autoXGBoostLinear <- function(data
                              , scale=scale
                              , seed=seed
                              , nthread=nthread
-                             , ...
+                             
                              )
     }
     
@@ -4926,7 +4967,7 @@ classifyForest <- function(data
                            , save_plots=FALSE
                            , scale=FALSE
                            , seed=NULL
-                           , ...
+                           
                            ){
     
     ###Prepare the data
@@ -5249,7 +5290,7 @@ regressForest <- function(data
                           , save_plots=FALSE
                           , scale=FALSE
                           , seed=NULL
-                          , ...
+                          
                           ){
     
     ###Prepare the data
@@ -5527,7 +5568,7 @@ autoForest<- function(data
                       , save_plots=FALSE
                       , scale=FALSE
                       , seed=NULL
-                      , ...
+                      
                       ){
     
     if(is.null(save.name)){
@@ -5630,7 +5671,7 @@ classifySVM <- function(data
                         , save_plots=FALSE
                         , scale=FALSE
                         , seed=NULL
-                        , ...
+                        
                         ){
     
     ###Prepare the data
@@ -6011,7 +6052,7 @@ regressSVM <- function(data
                        , save_plots=FALSE
                        , scale=scale
                        , seed=NULL
-                       , ...
+                       
                        ){
     
     ###Prepare the data
@@ -6354,7 +6395,7 @@ autoSVM <- function(data
                     , save_plots=FALSE
                     , scale=FALSE
                     , seed=NULL
-                    , ...
+                    
                     ){
     
     if(is.null(save.name)){
@@ -6470,7 +6511,7 @@ classifyBayes <- function(data
                           , save_plots=FALSE
                           , scale=FALSE
                           , seed=NULL
-                          , ...
+                          
                           ){
     
     ###Prepare the data
@@ -6856,7 +6897,7 @@ regressBayes <- function(data
                          , save_plots=FALSE
                          , scale=FALSE
                          , seed=NULL
-                         , ...
+                         
                          ){
     
     ###Prepare the data
@@ -7230,7 +7271,7 @@ autoBayes <- function(data
                       , save_plots=FALSE
                       , scale=FALSE
                       , seed=NULL
-                      , ...
+                      
                       ){
     
     if(is.null(save.name)){
@@ -7327,6 +7368,7 @@ autoMLTable <- function(data
                         , the_group=NULL
                         , type="XGBLinear"
                         , tree_method="hist"
+                        , single_precision_histogram=FALSE
                         , treedepth="2-2"
                         , treedrop="0.3-0.3"
                         , skipdrop="0.3-0.3" 
@@ -7374,7 +7416,6 @@ autoMLTable <- function(data
                         , seed=NULL
                         , additional_validation_frame=NULL
                         , nthread=-1
-                        , ...
                         ){
     
     
@@ -7388,6 +7429,7 @@ autoMLTable <- function(data
                         , split_by_group=split_by_group
                         , the_group=the_group
                         , tree_method=tree_method
+                        , single_precision_histogram=single_precision_histogram
                         , treedepth=treedepth
                         , xgbgamma=xgbgamma
                         , xgbeta=xgbeta
@@ -7415,7 +7457,7 @@ autoMLTable <- function(data
                         , scale=scale
                         , seed=seed
                         , nthread=nthread
-                        , ...
+                        
                         )
     } else if(type=="xgbDart"){
     #mistake
@@ -7427,6 +7469,7 @@ autoMLTable <- function(data
                         , split_by_group=split_by_group
                         , the_group=the_group
                         , tree_method=tree_method
+                        , single_precision_histogram=single_precision_histogram
                         , treedepth=treedepth
                         , treedrop=treedrop
                         , skipdrop=skipdrop
@@ -7456,7 +7499,7 @@ autoMLTable <- function(data
                         , scale=scale
                         , seed=seed
                         , nthread=nthread
-                        , ...
+                        
                         )
     } else if(type=="xgbLinear"){
         autoXGBoostLinear(data=data
@@ -7490,7 +7533,7 @@ autoMLTable <- function(data
                           , scale=scale
                           , seed=seed
                           , nthread=nthread
-                          , ...
+                          
                           )
     } else if(type=="Forest"){
         autoForest(data=data
