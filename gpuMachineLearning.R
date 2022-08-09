@@ -4506,12 +4506,23 @@ xgbTreeNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, spli
     
     data_list <- keras_results$Data
     data.train <- keras_results$ModelData$DataTrain
-    x_train <- keras_results$intermediateOutput_train
+    x_train <- as.data.frame(keras_results$intermediateOutput_train)
     y_train <- keras_results$y_train
     if(!is.null(split) | !is.null(split_by_group)){
-        x_test <- keras_results$intermediateOutput_test
+        x_test <- as.data.frame(keras_results$intermediateOutput_test)
         y_test <- keras_results$y_test
         data.test <- keras_results$ModelData$DataTest
+    }
+    
+    if(is.null(split) & is.null(split_by_group)){
+        x_train <- x_train[,colSums(x_train) > 0]
+    } else if(!is.null(split) | !is.null(split_by_group)){
+        x_train$Type <- "Train"
+        x_test$Type <- "Test"
+        x_all <- as.data.frame(data.table::rbindlist(list(x_train, x_test), fill=TRUE, use.names=TRUE))
+        x_all <- x_all[,c(colSums(x_all[!colnames(x_all) %in% "Type"]) > 0, TRUE)]
+        x_train <- x_all[x_all$Type %in% "Train", !colnames(x_all) %in% "Type"]
+        x_test <- x_all[x_all$Type %in% "Test", !colnames(x_all) %in% "Type"]
     }
 
     ####Set Defaults for Negative and Positive classes
@@ -4978,12 +4989,23 @@ xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
     
     data_list <- keras_results$Data
     data.train <- keras_results$ModelData$DataTrain
-    x_train <- keras_results$intermediateOutput_train
+    x_train <- as.data.frame(keras_results$intermediateOutput_train)
     y_train <- keras_results$y_train
     if(!is.null(split) | !is.null(split_by_group)){
-        x_test <- keras_results$intermediateOutput_test
+        x_test <- as.data.frame(keras_results$intermediateOutput_test)
         y_test <- keras_results$y_test
         data.test <- keras_results$ModelData$DataTest
+    }
+    
+    if(is.null(split) & is.null(split_by_group)){
+        x_train <- x_train[,colSums(x_train) > 0]
+    } else if(!is.null(split) | !is.null(split_by_group)){
+        x_train$Type <- "Train"
+        x_test$Type <- "Test"
+        x_all <- as.data.frame(data.table::rbindlist(list(x_train, x_test), fill=TRUE, use.names=TRUE))
+        x_all <- x_all[,c(colSums(x_all[!colnames(x_all) %in% "Type"]) > 0, TRUE)]
+        x_train <- x_all[x_all$Type %in% "Train", !colnames(x_all) %in% "Type"]
+        x_test <- x_all[x_all$Type %in% "Test", !colnames(x_all) %in% "Type"]
     }
     
         #Use operating system as default if not manually set
@@ -5125,17 +5147,18 @@ xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
                                                , gamma
                                                , colsample_bytree
                                                ) {
-                          param <- list(booster = "gbtree"
-                                        , max_depth = max_depth
+                          param <- list(
+                                        max_depth = max_depth
                                         , min_child_weight = min_child_weight
                                         , eta=eta
                                         , gamma=gamma
                                         , subsample = subsample
                                         , colsample_bytree = colsample_bytree
-                                        , objective = "reg:squarederror"
-                                        , eval_metric = metric.mod
                                         )
                           cv <- xgb.cv(params = param
+                                       , booster = "gbtree"
+                                       , objective = "reg:squarederror"
+                                       , eval_metric = metric.mod
                                        , data = dtrain
                                        , folds=cv_folds
                                        , early_stopping_rounds = 50
@@ -5510,10 +5533,10 @@ xgbDartNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, spli
     
     data_list <- keras_results$Data
     data.train <- keras_results$ModelData$DataTrain
-    x_train <- keras_results$intermediateOutput_train
+    x_train <- as.data.frame(keras_results$intermediateOutput_train)
     y_train <- keras_results$y_train
     if(!is.null(split) | !is.null(split_by_group)){
-        x_test <- keras_results$intermediateOutput_test
+        x_test <- as.data.frame(keras_results$intermediateOutput_test)
         y_test <- keras_results$y_test
         data.test <- keras_results$ModelData$DataTest
     } 
@@ -5585,6 +5608,17 @@ xgbDartNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, spli
             , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
             , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
         )
+    }
+    
+    if(is.null(split) & is.null(split_by_group)){
+        x_train <- x_train[,colSums(x_train) > 0]
+    } else if(!is.null(split) | !is.null(split_by_group)){
+        x_train$Type <- "Train"
+        x_test$Type <- "Test"
+        x_all <- as.data.frame(data.table::rbindlist(list(x_train, x_test), fill=TRUE, use.names=TRUE))
+        x_all <- x_all[,c(colSums(x_all[!colnames(x_all) %in% "Type"]) > 0, TRUE)]
+        x_train <- x_all[x_all$Type %in% "Train", !colnames(x_all) %in% "Type"]
+        x_test <- x_all[x_all$Type %in% "Test", !colnames(x_all) %in% "Type"]
     }
     
      num_classes <- as.numeric(length(unique(data.training$Class)))
@@ -5999,13 +6033,24 @@ xgbDartNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
     
     data_list <- keras_results$Data
     data.train <- keras_results$ModelData$DataTrain
-    x_train <- keras_results$intermediateOutput_train
+    x_train <- as.data.frame(keras_results$intermediateOutput_train)
     y_train <- keras_results$y_train
     if(!is.null(split) | !is.null(split_by_group)){
-        x_test <- keras_results$intermediateOutput_test
+        x_test <- as.data.frame(keras_results$intermediateOutput_test)
         y_test <- keras_results$y_test
         data.test <- keras_results$ModelData$DataTest
-    } 
+    }
+    
+    if(is.null(split) & is.null(split_by_group)){
+        x_train <- x_train[,colSums(x_train) > 0]
+    } else if(!is.null(split) | !is.null(split_by_group)){
+        x_train$Type <- "Train"
+        x_test$Type <- "Test"
+        x_all <- as.data.frame(data.table::rbindlist(list(x_train, x_test), fill=TRUE, use.names=TRUE))
+        x_all <- x_all[,c(colSums(x_all[!colnames(x_all) %in% "Type"]) > 0, TRUE)]
+        x_train <- x_all[x_all$Type %in% "Train", !colnames(x_all) %in% "Type"]
+        x_test <- x_all[x_all$Type %in% "Test", !colnames(x_all) %in% "Type"]
+    }
     
     #Use operating system as default if not manually set
     parallel_method <- if(!is.null(parallelMethod)){
@@ -6549,10 +6594,10 @@ xgbLinearNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, sp
     
     data_list <- keras_results$Data
     data.train <- keras_results$ModelData$DataTrain
-    x_train <- keras_results$intermediateOutput_train
+    x_train <- as.data.frame(keras_results$intermediateOutput_train)
     y_train <- keras_results$y_train
     if(!is.null(split) | !is.null(split_by_group)){
-        x_test <- keras_results$intermediateOutput_test
+        x_test <- as.data.frame(keras_results$intermediateOutput_test)
         y_test <- keras_results$y_test
         data.test <- keras_results$ModelData$DataTest
     } 
@@ -6994,11 +7039,10 @@ xgbLinearNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5,
     } else if(!is.null(split) | !is.null(split_by_group)){
         x_train$Type <- "Train"
         x_test$Type <- "Test"
-        x_all <- as.data.frame(data.table::rbindlist(list(x_train, x_test)))
+        x_all <- as.data.frame(data.table::rbindlist(list(x_train, x_test), fill=TRUE, use.names=TRUE))
         x_all <- x_all[,c(colSums(x_all[!colnames(x_all) %in% "Type"]) > 0, TRUE)]
         x_train <- x_all[x_all$Type %in% "Train", !colnames(x_all) %in% "Type"]
         x_test <- x_all[x_all$Type %in% "Test", !colnames(x_all) %in% "Type"]
-
     }
     
     
