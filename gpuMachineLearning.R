@@ -5124,8 +5124,6 @@ xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
                                                , nrounds
                                                , gamma
                                                , colsample_bytree
-                                               , tree_method
-                                               , single_precision_histogram
                                                ) {
                           param <- list(booster = "gbtree"
                                         , max_depth = max_depth
@@ -5178,8 +5176,6 @@ xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
                                             , kappa = 2.576
                                             , eps = 0.0
                                             , verbose = TRUE
-                                            , tree_method = tree_method
-                                            , single_precision_histogram = single_precision_histogram
                                             )
                        
             best_param <- list(
@@ -6159,8 +6155,6 @@ xgbDartNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
                                                , nrounds
                                                , gamma
                                                , colsample_bytree
-                                               , tree_method
-                                               , single_precision_histogram
                                                ) {
                           param <- list(booster = "dart"
                                         , max_depth = max_depth
@@ -6214,8 +6208,6 @@ xgbDartNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
                                             , kappa = 2.576
                                             , eps = 0.0
                                             , verbose = TRUE
-                                            , tree_method=tree_method
-                                            , single_precision_histogram=single_precision_histogram
                                             )
                        
             best_param <- list(

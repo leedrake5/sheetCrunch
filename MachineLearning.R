@@ -620,8 +620,6 @@ xgb_cv_opt_tree <- function (data
                            , nrounds_opt
                            , subsample_opt
                            , bytree_opt
-                           , tree_method=tree_method
-                           , single_precision_histogram=single_precision_histogram
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
@@ -669,8 +667,6 @@ xgb_cv_opt_tree <- function (data
                            , nrounds_opt
                            , subsample_opt
                            , bytree_opt
-                           , tree_method=tree_method
-                           , single_precision_histogram=single_precision_histogram
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
@@ -802,8 +798,6 @@ xgb_cv_opt_dart <- function (data
                            , subsample_opt
                            , bytree_opt
                            , nthread
-                           , tree_method=tree_method
-                           , single_precision_histogram=single_precision_histogram
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
@@ -857,8 +851,6 @@ xgb_cv_opt_dart <- function (data
                            , subsample_opt
                            , bytree_opt
                            , nthread
-                           , tree_method=tree_method
-                           , single_precision_histogram=single_precision_histogram
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
@@ -2077,8 +2069,6 @@ regressXGBoostTree <- function(data
                                                , nrounds
                                                , gamma
                                                , colsample_bytree
-                                               , tree_method=tree_method
-                                               , single_precision_histogram=single_precision_histogram
                                                ) {
                           param <- list(booster = "gbtree"
                                         , max_depth = max_depth
@@ -2132,7 +2122,6 @@ regressXGBoostTree <- function(data
                                             , kappa = 2.576
                                             , eps = 0.0
                                             , verbose = TRUE
-                                            
                                             )
                        
             best_param <- list(
@@ -3360,8 +3349,6 @@ regressXGBoostDart <- function(data
                                                , nrounds
                                                , gamma
                                                , colsample_bytree
-                                               , tree_method=tree_method
-                                               , single_precision_histogram=single_precision_histogram
                                                ) {
                           param <- list(booster = "dart"
                                         , max_depth = max_depth
