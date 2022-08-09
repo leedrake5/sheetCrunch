@@ -1,4 +1,4 @@
-tryCatch(source("MachineLearning.R"), error=function(e) NULL)
+source("MachineLearning.R")
 
 list.of.packages <- c("keras", "iml", "lime", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm", "listarrays", "funModeling")
 
@@ -2881,6 +2881,8 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
     return(results)
     
 }
+
+
 kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss=NULL, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previou.model=NULL, eager=FALSE, importance=TRUE){
     use_implementation("tensorflow")
     library(tensorflow)
@@ -6116,7 +6118,7 @@ xgbDartNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
                                           , single_precision_histogram = single_precision_histogram
                                           , objective = "reg:squarederror"
                                           , nthread=nthread
-                                          )                                          )
+                                          )
         }
         
         #Now create a new tuning grid for the final model based on the best parameters following grid searching

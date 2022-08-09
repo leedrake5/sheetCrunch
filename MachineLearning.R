@@ -1545,7 +1545,7 @@ if(is.null(eval_metric)){
                              , tuneGrid = xgbGridPre
                              , metric=metric
                              , method = "xgbTree"
-                             , tree_method = tree_method\
+                             , tree_method = tree_method
                              , single_precision_histogram = single_precision_histogram
                              , objective = objective.mod
                              , na.action=na.omit
