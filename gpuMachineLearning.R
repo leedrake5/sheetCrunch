@@ -4503,6 +4503,7 @@ autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, spli
 xgbTreeNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
 
     keras_results <- autoKeras(data=data, variable=class, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
+    gc()
     
     data_list <- keras_results$Data
     data.train <- keras_results$ModelData$DataTrain
@@ -4778,6 +4779,7 @@ if(is.null(xgb_eval_metric)){
         )
         xgbGridPre <- NULL
     }
+    gc()
     
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
@@ -4986,6 +4988,7 @@ if(is.null(xgb_eval_metric)){
 xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, save_plots=FALSE){
 
     keras_results <- autoKeras(data=data, variable=dependent, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
+    gc()
     
     data_list <- keras_results$Data
     data.train <- keras_results$ModelData$DataTrain
@@ -5228,6 +5231,8 @@ xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
             )
             xgbGridPre <- NULL
         }
+        gc()
+
         
             #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
@@ -5530,6 +5535,7 @@ xgbTreeNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
 xgbDartNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
 
     keras_results <- autoKeras(data=data, variable=class, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
+    gc()
     
     data_list <- keras_results$Data
     data.train <- keras_results$ModelData$DataTrain
@@ -5821,6 +5827,7 @@ if(is.null(xgb_eval_metric)){
         )
         xgbGridPre <- NULL
     }
+    gc()
     
         #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
@@ -6030,6 +6037,7 @@ if(is.null(xgb_eval_metric)){
 xgbDartNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, save_plots=FALSE){
 
     keras_results <- autoKeras(data=data, variable=dependent, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
+    gc()
     
     data_list <- keras_results$Data
     data.train <- keras_results$ModelData$DataTrain
@@ -6286,6 +6294,7 @@ xgbDartNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
             )
             xgbGridPre <- NULL
         }
+        gc()
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
     tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
         caret::trainControl(

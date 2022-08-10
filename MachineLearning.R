@@ -310,8 +310,8 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
                 collapse = "\t") %>% cat(., "\n")
         }
     }
-    for (j in (nrow(init_grid_dt) + nrow(init_points_dt) + 1):nrow(DT_history)) {
-        if (nrow(iter_points_dt) == 0) {
+   for (j in (nrow(init_grid_dt) + nrow(init_points_dt) + 1):nrow(DT_history)) {
+       tryCatch({if (nrow(iter_points_dt) == 0) {
             next
         }
         Par_Mat <- Min_Max_Scale_Mat(as.matrix(DT_history[1:(j -
@@ -347,7 +347,7 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
                 nsmall = 0), format(DT_history[j, -"Round", with = FALSE],
                 trim = FALSE, digits = NULL, nsmall = 4)), sep = " = ",
                 collapse = "\t") %>% cat(., "\n")
-        }
+        }, error=function(e) NULL})
     }
     Best_Par <- as.numeric(DT_history[which.max(Value), DT_bounds[,
         Parameter], with = FALSE]) %>% magrittr::set_names(.,
