@@ -11,10 +11,14 @@
 ## MISC CODE FOR MODELING
 #########################################################################################################################################
 #Check to see if needed packages exist, and automatically install them if needed
-list.of.packages <- c("caret", "xgboost", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm", "ParBayesianOptimization")
+list.of.packages <- c("devtools", "xgboost", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm", "ParBayesianOptimization")
 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) lapply(new.packages, function(x) install.packages(x, repos="http://cran.rstudio.com/", dep = TRUE))
+
+if(!"caret" %in% installed.packages()[,"Package"]){
+    devtools::install_github("leedrake5/caret/pkg/caret")
+}
 
 
 library(caret)
@@ -244,7 +248,7 @@ metric_fun <- function(num_classes
 ######################################
 # What does this fuction optimize?
 
-generate_grid <- function(bounds, init_points, init_grid_dt = NULL){
+generate_grid_multi <- function(bounds, init_points, init_grid_dt = NULL){
     DT_bounds <- data.table(Parameter = names(bounds), Lower = sapply(bounds,
     magrittr::extract2, 1), Upper = sapply(bounds, magrittr::extract2, 2), Type = sapply(bounds,
         class))
@@ -278,6 +282,16 @@ generate_grid <- function(bounds, init_points, init_grid_dt = NULL){
         } %T>% extract(., j = `:=`(Value, -Inf))
         
         return(init_points_dt)
+}
+
+generate_grid_single <- function(bounds){
+    as.data.frame(bounds)[1,]
+}
+
+generate_grid <- function(bounds, init_points, init_grid_dt = NULL){
+    
+    tryCatch(generate_grid_multi(bounds=bounds, init_points=init_points, init_grid_dt=init_grid_dt), error=function(e) generate_grid_single(bounds))
+    
 }
 
 BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points = 0,
@@ -347,7 +361,7 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
         }
     }
    for (j in (nrow(init_grid_dt) + nrow(init_points_dt) + 1):nrow(DT_history)) {
-       tryCatch({if (nrow(iter_points_dt) == 0) {
+       if (nrow(iter_points_dt) == 0) {
             next
         }
         Par_Mat <- Min_Max_Scale_Mat(as.matrix(DT_history[1:(j -
@@ -383,7 +397,7 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
                 nsmall = 0), format(DT_history[j, -"Round", with = FALSE],
                 trim = FALSE, digits = NULL, nsmall = 4)), sep = " = ",
                 collapse = "\t") %>% cat(., "\n")
-        }, error=function(e) NULL})
+        }#, error=function(e) NULL})
     }
     Best_Par <- as.numeric(DT_history[which.max(Value), DT_bounds[,
         Parameter], with = FALSE]) %>% magrittr::set_names(.,
@@ -605,7 +619,7 @@ xgb_cv_opt_tree <- function (data
                              , bytree_range = c(0.4, 1L)
                              , min_child_range=c(1L, 3L)
                              , gamma_range=c(0L, 10L)
-                             , max_delta_step_range=c(0L, 10L),
+                             , max_delta_step_range=c(0L, 10L)
                              , alpha_range=c(0, 10)
                              , lambda_range=c(0, 100)
                              , scale_pos_weight_range=c(0, 10)
@@ -617,7 +631,8 @@ xgb_cv_opt_tree <- function (data
                              , optkernel = list(type = "exponential", power = 2)
                              , classes = NULL
                              , seed = 0
-                             , nthread=-1
+                             , nthread = -1
+                             , verbose = 1
                              )
 {
     
@@ -688,7 +703,7 @@ xgb_cv_opt_tree <- function (data
                          , showsd = TRUE
                          , early_stopping_rounds = 100
                          , maximize = to_maximize
-                         , verbose = 1
+                         , verbose = verbose
                          , nrounds = nrounds_opt
                          , nthread=nthread
                          , tree_method=tree_method
@@ -746,7 +761,7 @@ xgb_cv_opt_tree <- function (data
                          , showsd = TRUE
                          , early_stopping_rounds = 100
                          , maximize = to_maximize
-                         , verbose = 1
+                         , verbose = verbose
                          , nrounds = nrounds_opt
                          , nthread=nthread
                          
@@ -780,7 +795,7 @@ xgb_cv_opt_tree <- function (data
                                     , kappa
                                     , eps
                                     , optkernel
-                                    , verbose = TRUE
+                                    , verbose = verbose
                                     , tree_method = tree_method
                                     , single_precision_histogram = single_precision_histogram
                                     )
@@ -803,7 +818,7 @@ xgb_cv_opt_dart <- function (data
                              , bytree_range = c(0.4, 1L)
                              , min_child_range=c(1L, 3L)
                              , gamma_range=c(0L, 1L)
-                             , max_delta_step_range=c(0L, 10L),
+                             , max_delta_step_range=c(0L, 10L)
                              , alpha_range=c(0, 10)
                              , lambda=c(0, 100)
                              , scale_pos_weight_range=c(0, 10)
@@ -815,7 +830,8 @@ xgb_cv_opt_dart <- function (data
                              , optkernel = list(type = "exponential", power = 2)
                              , classes = NULL
                              , seed = 0
-                             , nthread=-1
+                             , nthread = -1
+                             , verbose = 1
                              )
 {
     
@@ -892,7 +908,7 @@ xgb_cv_opt_dart <- function (data
                          , showsd = TRUE
                          , early_stopping_rounds = 100
                          , maximize = to_maximize
-                         , verbose = 1
+                         , verbose = verbose
                          , nrounds = nrounds_opt
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
@@ -953,7 +969,7 @@ xgb_cv_opt_dart <- function (data
                          , showsd = TRUE
                          , early_stopping_rounds = 100
                          , maximize = to_maximize
-                         , verbose = 1
+                         , verbose = verbose
                          , nrounds = nrounds_opt
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
@@ -987,7 +1003,7 @@ xgb_cv_opt_dart <- function (data
                                     , kappa
                                     , eps
                                     , optkernel
-                                    , verbose = TRUE
+                                    , verbose = verbose
                                     
                                     )
     return(opt_res)
@@ -1010,7 +1026,7 @@ xgb_cv_opt_linear <- function (data
                                , classes = NULL
                                , seed = 0
                                , nthread=nthread
-                               
+                               , verose = 1
                                )
 {
     to_maximize = if(evalmetric=="auc"){
@@ -1068,7 +1084,7 @@ xgb_cv_opt_linear <- function (data
                          , showsd = TRUE
                          , early_stopping_rounds = 100
                          , maximize = to_maximize
-                         , verbose = 1
+                         , verbose = verbose
                          , nrounds = nrounds_opt
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
@@ -1109,7 +1125,7 @@ xgb_cv_opt_linear <- function (data
                          , showsd = TRUE
                          , early_stopping_rounds = 100
                          , maximize = to_maximize
-                         , verbose = 1
+                         , verbose = verbose
                          , nrounds = nrounds_opt
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
@@ -1134,7 +1150,7 @@ xgb_cv_opt_linear <- function (data
                                     , kappa
                                     , eps
                                     , optkernel
-                                    , verbose = TRUE
+                                    , verbose = verbose
                                     
                                     )
     return(opt_res)
@@ -1333,8 +1349,8 @@ classifyXGBoostTree <- function(data
                                 , xgbcolsample="0.7-0.7"
                                 , xgbsubsample="0.7-0.7"
                                 , xgbminchild="1-3"
-                                , lambda = "0-100"
-                                , alpha = "0-10"
+                                , xgblambda = "0-100"
+                                , xgbalpha = "0-10"
                                 , maxdeltastep = "0-10"
                                 , scaleposweight = "0-10"
                                 , nrounds=500
@@ -1357,8 +1373,8 @@ classifyXGBoostTree <- function(data
                                 , save_plots=FALSE
                                 , scale=FALSE
                                 , seed=NULL
-                                , nthread=-1
-                                
+                                , nthread = -1
+                                , verbose = 1
                                 ){
     
     ###Prepare the data
@@ -1457,8 +1473,8 @@ classifyXGBoostTree <- function(data
     xgbGridPre <- if(Bayes==FALSE){
         generate_grid(bounds=list(
             nrounds = test_nrounds
-            , max_depth = c(tree.depth.vec[1], tree.depth.vec[2], by=5)
-            , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1)
+            , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
+            , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
             , alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
             , lambda=c(xgblambda.vec[1], xgblambda.vec[2])
@@ -1563,7 +1579,7 @@ if(is.null(eval_metric)){
             , classProbs = TRUE
             , number = 1
             , summaryFunction = summary_function
-            , verboseIter = TRUE
+            , verboseIter = FALSE
             , allowParallel=TRUE
             )
         } else if(parallel_method=="linux"){
@@ -1572,7 +1588,7 @@ if(is.null(eval_metric)){
             , classProbs = TRUE
             , number = 1
             , summaryFunction = summary_function
-            , verboseIter = TRUE
+            , verboseIter = FALSE
             )
         }
         
@@ -1597,6 +1613,7 @@ if(is.null(eval_metric)){
                              , objective = objective.mod
                              , num_class=num_classes
                              , na.action=na.omit
+                             , verbose=verbose
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -1608,6 +1625,7 @@ if(is.null(eval_metric)){
                              , tree_method = tree_method
                              , objective = objective.mod
                              , na.action=na.omit
+                             , verbose=verbose
                              )
             }
             #Close the CPU sockets
@@ -1627,7 +1645,7 @@ if(is.null(eval_metric)){
                              , num_class=num_classes
                              , na.action=na.omit
                              , nthread=nthread
-                             
+                             , verbose=verbose
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -1641,7 +1659,7 @@ if(is.null(eval_metric)){
                              , objective = objective.mod
                              , na.action=na.omit
                              , nthread=nthread
-                             
+                             , verbose=verbose
                              )
             }
         }
@@ -1686,6 +1704,7 @@ if(is.null(eval_metric)){
                    , init_points = init_points
                    , n_iter = n_iter
                    , nthread=nthread
+                   , verbose=verbose
                    )
                    
         best_param <- list(
@@ -1730,7 +1749,7 @@ if(is.null(eval_metric)){
         , summaryFunction = summary_function
         , method = train
         , number = number
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         , allowParallel = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method!="linux"){
@@ -1740,7 +1759,7 @@ if(is.null(eval_metric)){
         , method = train
         , number = number
         , repeats = cvrepeats
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         , allowParallel = TRUE
         )
     } else if(train!="repeatedcv" && parallel_method=="linux"){
@@ -1749,7 +1768,7 @@ if(is.null(eval_metric)){
         , summaryFunction = summary_function
         , method = train
         , number = number
-        , verboseIter = TRUE
+        , verboseIter = FLASE
         )
     } else if(train=="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
@@ -1758,7 +1777,7 @@ if(is.null(eval_metric)){
         , method = train
         , number = number
         , repeats = cvrepeats
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         )
     }
     
@@ -1783,6 +1802,7 @@ if(is.null(eval_metric)){
                          , objective = objective.mod
                          , num_class=num_classes
                          , na.action=na.omit
+                         , verbose=verbose
                          )
         } else if(num_classes==2){
             caret::train(Class~.
@@ -1794,6 +1814,7 @@ if(is.null(eval_metric)){
                          , tree_method = tree_method
                          , objective = objective.mod
                          , na.action=na.omit
+                         , verbose=verbose
                          )
         }
 
@@ -1814,7 +1835,7 @@ if(is.null(eval_metric)){
                          , num_class=num_classes
                          , nthread=nthread
                          , na.action=na.omit
-                         
+                         , verbose=verbose
                          )
         } else if(num_classes==2){
             caret::train(Class~.
@@ -1828,7 +1849,7 @@ if(is.null(eval_metric)){
                          , objective = objective.mod
                          , nthread=nthread
                          , na.action=na.omit
-                         
+                         , verbose=verbose
                          )
         }
     }
@@ -1953,8 +1974,8 @@ regressXGBoostTree <- function(data
                                , xgbcolsample="0.7-0.7"
                                , xgbsubsample="0.7-0.7"
                                , xgbminchild="1-3"
-                               , lambda = "0-100"
-                               , alpha = "0-10"
+                               , xgblambda = "0-100"
+                               , xgbalpha = "0-10"
                                , maxdeltastep = "0-10"
                                , scaleposweight = "0-10"
                                , nrounds=500
@@ -1974,7 +1995,7 @@ regressXGBoostTree <- function(data
                                , scale=FALSE
                                , seed=NULL
                                , nthread=-1
-                               
+                               , verbose=1
                                ){
     
     ###Prepare the data
@@ -2073,8 +2094,8 @@ regressXGBoostTree <- function(data
     xgbGridPre <- if(Bayes==FALSE){
         generate_grid(bounds=list(
             nrounds = test_nrounds
-            , max_depth = c(tree.depth.vec[1], tree.depth.vec[2], by=5)
-            , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1)
+            , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
+            , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
             , alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
             , lambda=c(xgblambda.vec[1], xgblambda.vec[2])
@@ -2122,14 +2143,14 @@ regressXGBoostTree <- function(data
             caret::trainControl(
             method = "optimism_boot",
             number = 1,
-            verboseIter = TRUE,
+            verboseIter = FALSE,
             allowParallel=TRUE
             )
         } else if(parallel_method=="linux"){
             caret::trainControl(
             method = "optimism_boot",
             number = 1,
-            verboseIter = TRUE
+            verboseIter = FALSE
             )
         }
         
@@ -2151,7 +2172,7 @@ regressXGBoostTree <- function(data
                                           , tree_method = tree_method
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
-                                          
+                                          , verbose=verbose
                                           )
             #Close the CPU sockets
             stopCluster(cl)
@@ -2168,6 +2189,7 @@ regressXGBoostTree <- function(data
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           , nthread=nthread
+                                          , verbose=verbose
                                           )
         }
         
@@ -2237,7 +2259,7 @@ regressXGBoostTree <- function(data
                                        , single_precision_histogram= single_precision_histogram
                                        , nthread=nthread
                                        , maximize = TRUE
-                                       , verbose = TRUE
+                                       , verbose = verbose
                                        
                                        )
                           
@@ -2273,7 +2295,7 @@ regressXGBoostTree <- function(data
                                             , acq = "ei"
                                             , kappa = 2.576
                                             , eps = 0.0
-                                            , verbose = TRUE
+                                            , verbose = verbose
                                             )
                        
             best_param <- list(
@@ -2316,7 +2338,7 @@ regressXGBoostTree <- function(data
         caret::trainControl(
         method = train
         , number = number
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         , allowParallel = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method!="linux"){
@@ -2324,21 +2346,21 @@ regressXGBoostTree <- function(data
         method = train
         , number = number
         , repeats = cvrepeats
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         , allowParallel = TRUE
         )
     } else if(train!="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
         method = train
         , number = number
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         )
     } else if(train=="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
         method = train
         , number = number
         , repeats = cvrepeats
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         )
     }
     
@@ -2361,6 +2383,7 @@ regressXGBoostTree <- function(data
                                   , tree_method = tree_method
                                   , objective = "reg:squarederror"
                                   , na.action=na.omit
+                                  , verbose=verbose
                                   )
 
         stopCluster(cl)
@@ -2376,6 +2399,7 @@ regressXGBoostTree <- function(data
                                   , objective = "reg:squarederror"
                                   , nthread=nthread
                                   , na.action=na.omit
+                                  , verbose=verbose
                                   )
     }
     
@@ -2522,8 +2546,8 @@ autoXGBoostTree <- function(data
                             , xgbcolsample="0.7-0.7"
                             , xgbsubsample="0.7-0.7"
                             , xgbminchild="1-3"
-                            , lambda = "0-100"
-                            , alpha = "0-10"
+                            , xgblambda = "0-100"
+                            , xgbalpha = "0-10"
                             , maxdeltastep = "0-10"
                             , scaleposweight = "0-10"
                             , nrounds=500
@@ -2547,7 +2571,7 @@ autoXGBoostTree <- function(data
                             , scale=FALSE
                             , seed=NULL
                             , nthread=-1
-                            
+                            , verbose=1
                             ){
     
     if(is.null(save.name)){
@@ -2611,7 +2635,7 @@ autoXGBoostTree <- function(data
                             , scale=scale
                             , seed=seed
                             , nthread=nthread
-                            
+                            , verbose=verbose
                             )
     } else if(is.numeric(data[,variable])){
         regressXGBoostTree(data=data
@@ -2650,7 +2674,7 @@ autoXGBoostTree <- function(data
                            , scale=scale
                            , seed=seed
                            , nthread=nthread
-                           
+                           , verbose=verbose
                            )
     }
     
@@ -2681,8 +2705,8 @@ classifyXGBoostDart <- function(data
                                 , xgbcolsample="0.7-0.7"
                                 , xgbsubsample="0.7-0.7"
                                 , xgbminchild="1-3"
-                                , lambda = "0-100"
-                                , alpha = "0-10"
+                                , xgblambda = "0-100"
+                                , xgbalpha = "0-10"
                                 , maxdeltastep = "0-10"
                                 , scaleposweight = "0-10"
                                 , nrounds=500
@@ -2706,7 +2730,7 @@ classifyXGBoostDart <- function(data
                                 , scale=FALSE
                                 , seed=NULL
                                 , nthread=-1
-                                
+                                , verbose=1
                                 ){
     
     ###Prepare the data
@@ -2804,21 +2828,21 @@ classifyXGBoostDart <- function(data
     
     #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
     xgbGridPre <- if(Bayes==FALSE){
-        expand.grid(
+        generate_grid(bounds=list(
             nrounds = test_nrounds
-            , max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5)
-            , rate_drop = seq(drop.tree.vec[1], drop.tree.vec[2], by=0.1)
-            , skip_drop = seq(skip.drop.vec[1], skip.drop.vec[2], by=0.1)
-            , colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1)
+            , max_depth = seq(tree.depth.vec[1], tree.depth.vec[2])
+            , rate_drop = seq(drop.tree.vec[1], drop.tree.vec[2])
+            , skip_drop = seq(skip.drop.vec[1], skip.drop.vec[2],)
+            , colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2])
             , alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
             , lambda=c(xgblambda.vec[1], xgblambda.vec[2])
-            , gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1)
-            , min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2], 1)
-            , subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1)
+            , gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2])
+            , min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2])
+            , subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2])
             , max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
             , scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
-        )
+            ), init_points=init_points)
     } else if(Bayes==TRUE){
         expand.grid(
             nrounds = test_nrounds
@@ -2917,7 +2941,7 @@ if(is.null(eval_metric)){
             , classProbs = TRUE
             , number = 1
             , summaryFunction = summary_function
-            , verboseIter = TRUE
+            , verboseIter = FALSE
             , allowParallel=TRUE
             )
         } else if(parallel_method=="linux"){
@@ -2926,7 +2950,7 @@ if(is.null(eval_metric)){
             , classProbs = TRUE
             , number = 1
             , summaryFunction = summary_function
-            , verboseIter = TRUE
+            , verboseIter = FALSE
             )
         }
         
@@ -2951,7 +2975,7 @@ if(is.null(eval_metric)){
                              , objective = objective.mod
                              , num_class=num_classes
                              , na.action=na.omit
-                             
+                             , verbose=verbose
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -2963,7 +2987,7 @@ if(is.null(eval_metric)){
                              , tree_method = tree_method
                              , objective = objective.mod
                              , na.action=na.omit
-                             
+                             , verbose=verbose
                              )
             }
             #Close the CPU sockets
@@ -2983,6 +3007,7 @@ if(is.null(eval_metric)){
                              , nthread=nthread
                              , tree_method=tree_method
                              , single_precision_histogram=single_precision_histogram
+                             , verbose=verbose
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -2996,6 +3021,7 @@ if(is.null(eval_metric)){
                              , nthread=nthread
                              , tree_method=tree_method
                              , single_precision_histogram=single_precision_histogram
+                             , verbose=verbose
                              )
             }
         }
@@ -3044,6 +3070,7 @@ if(is.null(eval_metric)){
                    , init_points = init_points
                    , n_iter = n_iter
                    , nthread=nthread
+                   , verbose=verbose
                    )
                    
         best_param <- list(
@@ -3092,7 +3119,7 @@ if(is.null(eval_metric)){
         , summaryFunction = summary_function
         , method = train
         , number = number
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         , allowParallel = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method!="linux"){
@@ -3102,7 +3129,7 @@ if(is.null(eval_metric)){
         , method = train
         , number = number
         , repeats = cvrepeats
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         , allowParallel = TRUE
         )
     } else if(train!="repeatedcv" && parallel_method=="linux"){
@@ -3111,7 +3138,7 @@ if(is.null(eval_metric)){
         , summaryFunction = summary_function
         , method = train
         , number = number
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         )
     } else if(train=="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
@@ -3120,7 +3147,7 @@ if(is.null(eval_metric)){
         , method = train
         , number = number
         , repeats = cvrepeats
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         )
     }
     
@@ -3145,6 +3172,7 @@ if(is.null(eval_metric)){
                          , objective = objective.mod
                          , num_class=num_classes
                          , na.action=na.omit
+                         , verbose=verbose
                          )
         } else if(num_classes==2){
             caret::train(Class~.
@@ -3156,6 +3184,7 @@ if(is.null(eval_metric)){
                          , tree_method = tree_method
                          , objective = objective.mod
                          , na.action=na.omit
+                         , verbose=verbose
                          )
         }
 
@@ -3176,7 +3205,7 @@ if(is.null(eval_metric)){
                          , num_class=num_classes
                          , nthread=nthread
                          , na.action=na.omit
-                         
+                         , verbose=verbose
                          )
         } else if(num_classes==2){
             caret::train(Class~.
@@ -3190,7 +3219,7 @@ if(is.null(eval_metric)){
                          , objective = objective.mod
                          , nthread=nthread
                          , na.action=na.omit
-                         
+                         , verbose=verbose
                          )
         }
     }
@@ -3317,8 +3346,8 @@ regressXGBoostDart <- function(data
                                , xgbcolsample="0.7-0.7"
                                , xgbsubsample="0.7-0.7"
                                , xgbminchild="1-3"
-                               , lambda = "0-100"
-                               , alpha = "0-10"
+                               , xgblambda = "0-100"
+                               , xgbalpha = "0-10"
                                , maxdeltastep = "0-10"
                                , scaleposweight = "0-10"
                                , nrounds=500
@@ -3338,7 +3367,7 @@ regressXGBoostDart <- function(data
                                , scale=FALSE
                                , seed=NULL
                                , nthread=-1
-                               
+                               , verbose=1
                                ){
     
     ###Prepare the data
@@ -3438,21 +3467,21 @@ regressXGBoostDart <- function(data
     
     #Generate a first tuning grid based on the ranges of all the paramters. This will create a row for each unique combination of parameters
     xgbGridPre <- if(Bayes==FALSE){
-        expand.grid(
+        generate_grid(bounds=list(
             nrounds = test_nrounds
-            , max_depth = seq(tree.depth.vec[1], tree.depth.vec[2], by=5)
-            , rate_drop = seq(drop.tree.vec[1], drop.tree.vec[2], by=0.1)
-            , skip_drop = seq(skip.drop.vec[1], skip.drop.vec[2], by=0.1)
-            , colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2], by=0.1)
+            , max_depth = seq(tree.depth.vec[1], tree.depth.vec[2])
+            , rate_drop = seq(drop.tree.vec[1], drop.tree.vec[2])
+            , skip_drop = seq(skip.drop.vec[1], skip.drop.vec[2],)
+            , colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2])
             , alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
             , lambda=c(xgblambda.vec[1], xgblambda.vec[2])
-            , gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2], by=0.1)
-            , min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2], 1)
-            , subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2], by=0.1)
+            , gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2])
+            , min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2])
+            , subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2])
             , max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
             , scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
-        )
+            ), init_points=init_points)
     } else if(Bayes==TRUE){
         expand.grid(
             nrounds = test_nrounds
@@ -3492,14 +3521,14 @@ regressXGBoostDart <- function(data
             caret::trainControl(
             method = "optimism_boot",
             number = 1,
-            verboseIter = TRUE,
+            verboseIter = FALSE,
             allowParallel=TRUE
             )
         } else if(parallel_method=="linux"){
             caret::trainControl(
             method = "optimism_boot",
             number = 1,
-            verboseIter = TRUE
+            verboseIter = FALSE
             )
         }
         
@@ -3521,6 +3550,7 @@ regressXGBoostDart <- function(data
                                           , tree_method = tree_method
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
+                                          , verbose=verbose
                                           )
             #Close the CPU sockets
             stopCluster(cl)
@@ -3537,6 +3567,7 @@ regressXGBoostDart <- function(data
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           , nthread=nthread
+                                          , verbose=verbose
                                           )
         }
         
@@ -3612,7 +3643,7 @@ regressXGBoostDart <- function(data
                                        , single_precision_histogram = single_precision_histogram
                                        , nthread=nthread
                                        , maximize = TRUE
-                                       , verbose = TRUE
+                                       , verbose = verbose
                                        )
                           
                           if(metric.mod=="rmse"){
@@ -3647,8 +3678,7 @@ regressXGBoostDart <- function(data
                                             , acq = "ei"
                                             , kappa = 2.576
                                             , eps = 0.0
-                                            , verbose = TRUE
-                                            
+                                            , verbose = verbose
                                             )
                        
             best_param <- list(
@@ -3691,7 +3721,7 @@ regressXGBoostDart <- function(data
         caret::trainControl(
         method = train
         , number = number
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         , allowParallel = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method!="linux"){
@@ -3699,21 +3729,21 @@ regressXGBoostDart <- function(data
         method = train
         , number = number
         , repeats = cvrepeats
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         , allowParallel = TRUE
         )
     } else if(train!="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
         method = train
         , number = number
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         )
     } else if(train=="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
         method = train
         , number = number
         , repeats = cvrepeats
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         )
     }
     
@@ -3736,6 +3766,7 @@ regressXGBoostDart <- function(data
                                   , tree_method = tree_method
                                   , objective = "reg:squarederror"
                                   , na.action=na.omit
+                                  , verbose=verbose
                                   )
 
         stopCluster(cl)
@@ -3751,6 +3782,7 @@ regressXGBoostDart <- function(data
                                   , objective = "reg:squarederror"
                                   , na.action=na.omit
                                   , nthread=nthread
+                                  , verbose=verbose
                                   )
     }
     
@@ -3899,8 +3931,8 @@ autoXGBoostDart <- function(data
                             , xgbcolsample="0.7-0.7"
                             , xgbsubsample="0.7-0.7"
                             , xgbminchild="1-3"
-                            , lambda = "0-100"
-                            , alpha = "0-10"
+                            , xgblambda = "0-100"
+                            , xgbalpha = "0-10"
                             , maxdeltastep = "0-10"
                             , scaleposweight = "0-10"
                             , nrounds=500
@@ -3924,7 +3956,7 @@ autoXGBoostDart <- function(data
                             , scale=FALSE
                             , seed=NULL
                             , nthread=-1
-                            
+                            , verbose=1
                             ){
     
     if(is.null(save.name)){
@@ -3990,7 +4022,7 @@ autoXGBoostDart <- function(data
                             , scale=scale
                             , seed=seed
                             , nthread=nthread
-                            
+                            , verbose=verbose
                             )
     } else if(is.numeric(data[,variable])){
         regressXGBoostDart(data=data
@@ -4031,7 +4063,7 @@ autoXGBoostDart <- function(data
                            , scale=scale
                            , seed=seed
                            , nthread=nthread
-                           
+                           , verbose=verbose
                            )
     }
     
@@ -4075,7 +4107,7 @@ classifyXGBoostLinear <- function(data
                                   , scale=FALSE
                                   , seed=NULL
                                   , nthread=-1
-                                  
+                                  , verbose=1
                                   ){
     
     ###Prepare the data
@@ -4255,7 +4287,7 @@ if(is.null(eval_metric)){
             , classProbs = TRUE
             , number = 1
             , summaryFunction = summary_function
-            , verboseIter = TRUE
+            , verboseIter = FALSE
             , allowParallel=TRUE
             )
         } else if(parallel_method=="linux"){
@@ -4264,7 +4296,7 @@ if(is.null(eval_metric)){
             , classProbs = TRUE
             , number = 1
             , summaryFunction = summary_function
-            , verboseIter = TRUE
+            , verboseIter = FALSE
             )
         }
         
@@ -4288,6 +4320,7 @@ if(is.null(eval_metric)){
                              , objective = objective.mod
                              , num_class=num_classes
                              , na.action=na.omit
+                             , verbose=verbose
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -4298,6 +4331,7 @@ if(is.null(eval_metric)){
                              , method = "xgbLinear"
                              , objective = objective.mod
                              , na.action=na.omit
+                             , verbose=verbose
                              )
             }
             #Close the CPU sockets
@@ -4315,7 +4349,7 @@ if(is.null(eval_metric)){
                              , num_class=num_classes
                              , na.action=na.omit
                              , nthread=nthread
-                             
+                             , verbose=verbose
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -4327,7 +4361,7 @@ if(is.null(eval_metric)){
                              , objective = objective.mod
                              , na.action=na.omit
                              , nthread=nthread
-                             
+                             , verbose=verbose
                              )
             }
         }
@@ -4357,7 +4391,7 @@ if(is.null(eval_metric)){
                    , init_points = init_points
                    , n_iter = n_iter
                    , nthread=nthread
-                   
+                   , verbose=verbose
                    )
                    
         best_param <- list(
@@ -4388,7 +4422,7 @@ if(is.null(eval_metric)){
         , summaryFunction = summary_function
         , method = train
         , number = number
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         , allowParallel = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method!="linux"){
@@ -4398,7 +4432,7 @@ if(is.null(eval_metric)){
         , method = train
         , number = number
         , repeats = cvrepeats
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         , allowParallel = TRUE
         )
     } else if(train!="repeatedcv" && parallel_method=="linux"){
@@ -4407,7 +4441,7 @@ if(is.null(eval_metric)){
         , summaryFunction = summary_function
         , method = train
         , number = number
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         )
     } else if(train=="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
@@ -4416,7 +4450,7 @@ if(is.null(eval_metric)){
         , method = train
         , number = number
         , repeats = cvrepeats
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         )
     }
     
@@ -4440,6 +4474,7 @@ if(is.null(eval_metric)){
                              , objective = objective.mod
                              , num_class=num_classes
                              , na.action=na.omit
+                             , verbose=verbose
                              )
             } else if(num_classes==2){
                 caret::train(Class~.
@@ -4450,6 +4485,7 @@ if(is.null(eval_metric)){
                              , method = "xgbLinear"
                              , objective = objective.mod
                              , na.action=na.omit
+                             , verbose=verbose
                              )
             }
         stopCluster(cl)
@@ -4468,7 +4504,7 @@ if(is.null(eval_metric)){
                          , num_class=num_classes
                          , nthread=nthread
                          , na.action=na.omit
-                         
+                         , verbose=verbose
                          )
         } else if(num_classes==2){
             caret::train(Class~.
@@ -4480,7 +4516,7 @@ if(is.null(eval_metric)){
                          , objective = objective.mod
                          , nthread=nthread
                          , na.action=na.omit
-                         
+                         , verbose=verbose
                          )
         }
     }
@@ -4617,7 +4653,7 @@ regressXGBoostLinear <- function(data
                                  , scale=FALSE
                                  , seed=NULL
                                  , nthread=-1
-                                 
+                                 , verbose=1
                                  ){
     
     ###Prepare the data
@@ -4736,14 +4772,14 @@ regressXGBoostLinear <- function(data
             caret::trainControl(
             method = "optimism_boot"
             , number = 1
-            , verboseIter = TRUE
+            , verboseIter = FALSE
             , allowParallel=TRUE
             )
         } else if(parallel_method=="linux"){
             caret::trainControl(
             method = "optimism_boot"
             , number = 1
-            , verboseIter = TRUE
+            , verboseIter = FALSE
             )
         }
         
@@ -4764,6 +4800,7 @@ regressXGBoostLinear <- function(data
                                           , method = "xgbLinear"
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
+                                          , verbose=verbose
                                           )
             #Close the CPU sockets
             stopCluster(cl)
@@ -4778,7 +4815,7 @@ regressXGBoostLinear <- function(data
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           , nthread=nthread
-                                          
+                                          , verbose=verbose
                                           )
         }
         
@@ -4820,7 +4857,7 @@ regressXGBoostLinear <- function(data
                                        , early_stopping_rounds = 50
                                        , nthread=n_threads
                                        , maximize = FALSE
-                                       , verbose = TRUE
+                                       , verbose = verbose
                                        
                                        )
                           
@@ -4848,7 +4885,7 @@ regressXGBoostLinear <- function(data
                        , acq = "ei"
                        , kappa = 2.576
                        , eps = 0.0
-                       , verbose = TRUE
+                       , verbose = verbose
               )
                        
             best_param <- list(
@@ -4876,7 +4913,7 @@ regressXGBoostLinear <- function(data
         caret::trainControl(
         method = train
         , number = number
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         , allowParallel = TRUE
         )
     } else if(train=="repeatedcv" && parallel_method!="linux"){
@@ -4884,21 +4921,21 @@ regressXGBoostLinear <- function(data
         method = train
         , number = number
         , repeats = cvrepeats
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         , allowParallel = TRUE
         )
     } else if(train!="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
         method = train
         , number = number
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         )
     } else if(train=="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
         method = train
         , number = number
         , repeats = cvrepeats
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         )
     }
     
@@ -4920,6 +4957,7 @@ regressXGBoostLinear <- function(data
                                   , method = "xgbLinear"
                                   , objective = "reg:squarederror"
                                   , na.action=na.omit
+                                  , verbose=verbose
                                   )
 
         stopCluster(cl)
@@ -4933,6 +4971,7 @@ regressXGBoostLinear <- function(data
                                   , objective = "reg:squarederror"
                                   , nthread=-1
                                   , na.action=na.omit
+                                  , verbose=verbose
                                   )
     }
     
@@ -5101,7 +5140,7 @@ autoXGBoostLinear <- function(data
                               , scale=FALSE
                               , seed=NULL
                               , nthread=-1
-                              
+                              , verbose=1
                               ){
     
     if(is.null(save.name)){
@@ -5155,7 +5194,7 @@ autoXGBoostLinear <- function(data
                               , scale=scale
                               , seed=seed
                               , nthread=nthread
-                              
+                              , verbose=verbose
                               )
     } else if(is.numeric(data[,variable])){
         regressXGBoostLinear(data=data
@@ -5185,7 +5224,7 @@ autoXGBoostLinear <- function(data
                              , scale=scale
                              , seed=seed
                              , nthread=nthread
-                             
+                             , verbose=verbose
                              )
     }
     
@@ -5314,7 +5353,7 @@ classifyForest <- function(data
      #     }
      # }
 
-       forestGrid <-  expand.grid(.mtry=try)
+     forestGrid <- as.data.frame(generate_grid(bounds=list(mtry=c(1, try)), init_points=init_points))
 
     
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
@@ -5597,7 +5636,7 @@ regressForest <- function(data
     data.training <- data.train[, !colnames(data.train) %in% "Sample"]
     data.testing <- data.test[, !colnames(data.test) %in% "Sample"]
 
-    forestGrid <-  expand.grid(.mtry=try)
+    forestGrid <- as.data.frame(generate_grid(bounds=list(mtry=c(1, try)), init_points=init_points))
     dependent <- "Dependent"
 
     
@@ -5920,7 +5959,7 @@ classifySVM <- function(data
                         , save_plots=FALSE
                         , scale=FALSE
                         , seed=NULL
-                        
+                        , init_points=100
                         ){
     
     ###Prepare the data
@@ -6062,18 +6101,21 @@ classifySVM <- function(data
      # }
 
        svmGrid <- if(type=="svmLinear"){
-           expand.grid(
-               C = seq(svmc.vec[1], svmc.vec[2], 1))
+           as.data.frame(generate_grid(bounds=list(
+                C = c(svmc.vec[1], svmc.vec[2]),
+            ), init_points=init_points))
        } else if(type=="svmPoly"){
-           expand.grid(
-               C = seq(svmc.vec[1], svmc.vec[2], 1),
-               scale=seq(svmscale.vec[1], svmscale.vec[2], 1),
-               degree=seq(svmdegree.vec[1], svmdegree.vec[2], 1))
+           as.data.frame(generate_grid(bounds=list(
+                C = c(svmc.vec[1], svmc.vec[2]),
+                scale = c(svmscale.vec[1], svmscale.vec[2]),
+                degree = c(svmdegree.vec[1], svmdegree.vec[2])
+            ), init_points=init_points))
        } else if(type=="svmRadial"){
            if(is.null(svmgammavector)){
-               expand.grid(
-               C = seq(svmc.vec[1], svmc.vec[2], 1),
-               sigma=seq(svmsigma.vec[1], svmsigma.vec[2], 1))
+               as.data.frame(generate_grid(bounds=list(
+                    C = c(svmc.vec[1], svmc.vec[2]),
+                    sigma = c(svmsigma.vec[1], svmsigma.vec[2])
+                ), init_points=init_points))
            } else if(!is.null(svmgammavector)){
                expand.grid(
                C = seq(svmc.vec[1], svmc.vec[2], 1),
@@ -6084,26 +6126,30 @@ classifySVM <- function(data
                C = seq(svmc.vec[1], svmc.vec[2], 1))
        } else if(type=="svmRadialSigma"){
            if(is.null(svmgammavector)){
-               expand.grid(
-               C = seq(svmc.vec[1], svmc.vec[2], 1),
-               sigma=seq(svmsigma.vec[1], svmsigma.vec[2], 1))
+               as.data.frame(generate_grid(bounds=list(
+                    C = c(svmc.vec[1], svmc.vec[2]),
+                    sigma = c(svmsigma.vec[1], svmsigma.vec[2])
+                ), init_points=init_points))
            } else if(!is.null(svmgammavector)){
                expand.grid(
                C = seq(svmc.vec[1], svmc.vec[2], 1),
                sigma=svmgammavector)
            }
        } else if(type=="svmBoundrangeString"){
-           expand.grid(
-               C = seq(svmc.vec[1], svmc.vec[2], 1),
-               length=seq(svmlength.vec[1], svmlength.vec[2], 1))
+           as.data.frame(generate_grid(bounds=list(
+                C = c(svmc.vec[1], svmc.vec[2]),
+                length = c(svmlength.vec[1], svmlength.vec[2])
+            ), init_points=init_points))
        } else if(type=="svmExpoString"){
-           expand.grid(
-               C = seq(svmc.vec[1], svmc.vec[2], 1),
-               lambda=seq(xgblambda.vec[1], xgblambda.vec[2], 1))
+           as.data.frame(generate_grid(bounds=list(
+                C = c(svmc.vec[1], svmc.vec[2]),
+                lambda = c(xgblambda.vec[1], xgblambda.vec[2])
+            ), init_points=init_points))
        } else if(type=="svmSpectrumString"){
-           expand.grid(
-               C = seq(svmc.vec[1], svmc.vec[2], 1),
-               lambda=seq(xgblambda.vec[1], xgblambda.vec[2], 1))
+           as.data.frame(generate_grid(bounds=list(
+                C = c(svmc.vec[1], svmc.vec[2]),
+                lambda = c(xgblambda.vec[1], xgblambda.vec[2])
+            ), init_points=init_points))
        }
        
 
@@ -6301,7 +6347,7 @@ regressSVM <- function(data
                        , save_plots=FALSE
                        , scale=scale
                        , seed=NULL
-                       
+                       , init_points=100
                        ){
     
     ###Prepare the data
@@ -6371,18 +6417,21 @@ regressSVM <- function(data
     
     
     svmGrid <- if(type=="svmLinear"){
-        expand.grid(
-            C = seq(svmc.vec[1], svmc.vec[2], 1))
+        as.data.frame(generate_grid(bounds=list(
+             C = c(svmc.vec[1], svmc.vec[2]),
+         ), init_points=init_points))
     } else if(type=="svmPoly"){
-        expand.grid(
-            C = seq(svmc.vec[1], svmc.vec[2], 1),
-            scale=seq(svmscale.vec[1], svmscale.vec[2], 1),
-            degree=seq(svmdegree.vec[1], svmdegree.vec[2], 1))
+        as.data.frame(generate_grid(bounds=list(
+             C = c(svmc.vec[1], svmc.vec[2]),
+             scale = c(svmscale.vec[1], svmscale.vec[2]),
+             degree = c(svmdegree.vec[1], svmdegree.vec[2])
+         ), init_points=init_points))
     } else if(type=="svmRadial"){
         if(is.null(svmgammavector)){
-            expand.grid(
-            C = seq(svmc.vec[1], svmc.vec[2], 1),
-            sigma=seq(svmsigma.vec[1], svmsigma.vec[2], 1))
+            as.data.frame(generate_grid(bounds=list(
+                 C = c(svmc.vec[1], svmc.vec[2]),
+                 sigma = c(svmsigma.vec[1], svmsigma.vec[2])
+             ), init_points=init_points))
         } else if(!is.null(svmgammavector)){
             expand.grid(
             C = seq(svmc.vec[1], svmc.vec[2], 1),
@@ -6393,26 +6442,30 @@ regressSVM <- function(data
             C = seq(svmc.vec[1], svmc.vec[2], 1))
     } else if(type=="svmRadialSigma"){
         if(is.null(svmgammavector)){
-            expand.grid(
-            C = seq(svmc.vec[1], svmc.vec[2], 1),
-            sigma=seq(svmsigma.vec[1], svmsigma.vec[2], 1))
+            as.data.frame(generate_grid(bounds=list(
+                 C = c(svmc.vec[1], svmc.vec[2]),
+                 sigma = c(svmsigma.vec[1], svmsigma.vec[2])
+             ), init_points=init_points))
         } else if(!is.null(svmgammavector)){
             expand.grid(
             C = seq(svmc.vec[1], svmc.vec[2], 1),
             sigma=svmgammavector)
         }
     } else if(type=="svmBoundrangeString"){
-        expand.grid(
-            C = seq(svmc.vec[1], svmc.vec[2], 1),
-            length=seq(svmlength.vec[1], svmlength.vec[2], 1))
+        as.data.frame(generate_grid(bounds=list(
+             C = c(svmc.vec[1], svmc.vec[2]),
+             length = c(svmlength.vec[1], svmlength.vec[2])
+         ), init_points=init_points))
     } else if(type=="svmExpoString"){
-        expand.grid(
-            C = seq(svmc.vec[1], svmc.vec[2], 1),
-            lambda=seq(xgblambda.vec[1], xgblambda.vec[2], 1))
+        as.data.frame(generate_grid(bounds=list(
+             C = c(svmc.vec[1], svmc.vec[2]),
+             lambda = c(xgblambda.vec[1], xgblambda.vec[2])
+         ), init_points=init_points))
     } else if(type=="svmSpectrumString"){
-        expand.grid(
-            C = seq(svmc.vec[1], svmc.vec[2], 1),
-            lambda=seq(xgblambda.vec[1], xgblambda.vec[2], 1))
+        as.data.frame(generate_grid(bounds=list(
+             C = c(svmc.vec[1], svmc.vec[2]),
+             lambda = c(xgblambda.vec[1], xgblambda.vec[2])
+         ), init_points=init_points))
     }
     
     dependent <- "Dependent"
@@ -6644,7 +6697,7 @@ autoSVM <- function(data
                     , save_plots=FALSE
                     , scale=FALSE
                     , seed=NULL
-                    
+                    , init_points=100
                     ){
     
     if(is.null(save.name)){
@@ -6696,6 +6749,7 @@ autoSVM <- function(data
                     , save_plots=save_plots
                     , scale=scale
                     , seed=seed
+                    , init_points=init_points
                     )
     } else if(is.numeric(data[,variable])){
         regressSVM(data=data
@@ -6723,6 +6777,7 @@ autoSVM <- function(data
                    , save_plots=save_plots
                    , scale=scale
                    , seed=seed
+                   , init_points=init_points
                    )
     }
     
@@ -6760,7 +6815,7 @@ classifyBayes <- function(data
                           , save_plots=FALSE
                           , scale=FALSE
                           , seed=NULL
-                          
+                          , init_points=100
                           ){
     
     ###Prepare the data
@@ -6871,16 +6926,18 @@ classifyBayes <- function(data
      # }
        
        bayesGrid <- if(type=="bayesNeuralNet"){
-           expand.grid(neurons = seq(neuralhiddenunits.vec[1], neuralhiddenunits.vec[2], 1))
+           as.data.frame(generate_grid(bounds=list(
+                neurons = c(as.integer(neuralhiddenunits.vec[1]), as.integer(neuralhiddenunits.vec[2])),
+            ), init_points=init_points))
        } else if(type=="bayesTree"){
-           expand.grid(
-               num_trees=trees,
-               alpha=seq(xgbalpha.vec[1], xgbalpha.vec[2], by=0.1),
-               k = seq(bartk.vec[1], bartk.vec[2], 1),
-               beta=seq(bartbeta.vec[1], bartbeta.vec[2], 1),
-               nu=seq(bartnu.vec[1], bartnu.vec[2], 1))
-       }
-       
+           as.data.frame(generate_grid(bounds=list(
+                trees = c(5L, as.integer(trees)),
+                alpha = c(xgbalpha.vec[1], xgbalpha.vec[2]),
+                beta = c(bartbeta.vec[1], bartbeta.vec[2]),
+                nu = c(bartnu.vec[1], bartnu.vec[2]),
+                k = c(bartk.vec[1], bartk.vec[2]),
+            ), init_points=init_points))
+        }
        bayes_type <- if(type=="bayesLinear"){
            "bayesglm"
        } else if(type=="bayesTree"){
@@ -7146,7 +7203,7 @@ regressBayes <- function(data
                          , save_plots=FALSE
                          , scale=FALSE
                          , seed=NULL
-                         
+                         , init_points=100
                          ){
     
     ###Prepare the data
@@ -7217,15 +7274,18 @@ regressBayes <- function(data
     bartnu.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(bartnu), "-"))), error=function(x) "1-2")
     
     bayesGrid <- if(type=="bayesNeuralNet"){
-        expand.grid(neurons = seq(neuralhiddenunits.vec[1], neuralhiddenunits.vec[2], 1))
+        as.data.frame(generate_grid(bounds=list(
+             neurons = c(as.integer(neuralhiddenunits.vec[1]), as.integer(neuralhiddenunits.vec[2])),
+         ), init_points=init_points))
     } else if(type=="bayesTree"){
-        expand.grid(
-            num_trees=trees,
-            alpha=seq(xgbalpha.vec[1], xgbalpha.vec[2], by=0.1),
-            k = seq(bartk.vec[1], bartk.vec[2], 1),
-            beta=seq(bartbeta.vec[1], bartbeta.vec[2], 1),
-            nu=seq(bartnu.vec[1], bartnu.vec[2], 1))
-    }
+        as.data.frame(generate_grid(bounds=list(
+             trees = c(5L, as.integer(trees)),
+             alpha = c(xgbalpha.vec[1], xgbalpha.vec[2]),
+             beta = c(bartbeta.vec[1], bartbeta.vec[2]),
+             nu = c(bartnu.vec[1], bartnu.vec[2]),
+             k = c(bartk.vec[1], bartk.vec[2]),
+         ), init_points=init_points))
+     }
     
     bayes_type <- if(type=="bayesLinear"){
         "bayesglm"
@@ -7520,7 +7580,7 @@ autoBayes <- function(data
                       , save_plots=FALSE
                       , scale=FALSE
                       , seed=NULL
-                      
+                      , init_points=100
                       ){
     
     if(is.null(save.name)){
@@ -7572,6 +7632,7 @@ autoBayes <- function(data
                       , save_plots=save_plots
                       , scale=scale
                       , seed=seed
+                      , init_points=init_points
                       )
     } else if(is.numeric(data[,variable])){
         regressBayes(data=data
@@ -7599,6 +7660,7 @@ autoBayes <- function(data
                      , save_plots=save_plots
                      , scale=scale
                      , seed=seed
+                     , init_points=init_points
                      )
     }
 
@@ -7667,6 +7729,7 @@ autoMLTable <- function(data
                         , seed=NULL
                         , additional_validation_frame=NULL
                         , nthread=-1
+                        , verbose=1
                         ){
     
     
@@ -7710,7 +7773,7 @@ autoMLTable <- function(data
                         , scale=scale
                         , seed=seed
                         , nthread=nthread
-                        
+                        , verbose=verbose
                         )
     } else if(type=="xgbDart"){
     #mistake
@@ -7754,7 +7817,7 @@ autoMLTable <- function(data
                         , scale=scale
                         , seed=seed
                         , nthread=nthread
-                        
+                        , verbose=verbose
                         )
     } else if(type=="xgbLinear"){
         autoXGBoostLinear(data=data
@@ -7788,7 +7851,7 @@ autoMLTable <- function(data
                           , scale=scale
                           , seed=seed
                           , nthread=nthread
-                          
+                          , verbose=verbose
                           )
     } else if(type=="Forest"){
         autoForest(data=data
@@ -7813,6 +7876,7 @@ autoMLTable <- function(data
                    , save_plots=save_plots
                    , scale=scale
                    , seed=seed
+                   , init_points=init_points
                    )
     } else if(type=="svmLinear" | type=="svmPoly" | type=="svmRadial" | type=="svmRadialCost" | type=="svmRadialSigma" | type=="svmBoundrangeString" | type=="svmExpoString" | type=="svmSpectrumString"){
         autoSVM(data=data,
@@ -7843,6 +7907,7 @@ autoMLTable <- function(data
                 , save_plots=save_plots
                 , scale=scale
                 , seed=seed
+                , init_points=init_points
                 )
     } else if(type=="bayesLinear" | type=="bayesTree" | type=="bayesNeuralNet"){
         autoBayes(data=data
@@ -7873,6 +7938,7 @@ autoMLTable <- function(data
                   , save_plots=save_plots
                   , scale=scale
                   , seed=seed
+                  , init_points=init_points
         )
          
     }
