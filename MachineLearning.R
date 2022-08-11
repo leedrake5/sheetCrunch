@@ -1606,7 +1606,7 @@ if(is.null(eval_metric)){
                 caret::train(Class~.
                              , data=data.training
                              , trControl = tune_control_pre
-                             , tuneGrid = xgbGridPre
+                             , tuneGrid = as.data.frame(xgbGridPre)
                              , metric=metric
                              , method = "xgbTree"
                              , tree_method = tree_method
@@ -1619,7 +1619,7 @@ if(is.null(eval_metric)){
                 caret::train(Class~.
                              , data=data.training
                              , trControl = tune_control_pre
-                             , tuneGrid = xgbGridPre
+                             , tuneGrid = as.data.frame(xgbGridPre)
                              , metric=metric
                              , method = "xgbTree"
                              , tree_method = tree_method
@@ -1636,7 +1636,7 @@ if(is.null(eval_metric)){
                 caret::train(Class~.
                              , data=data.training
                              , trControl = tune_control_pre
-                             , tuneGrid = xgbGridPre
+                             , tuneGrid = as.data.frame(xgbGridPre)
                              , metric=metric
                              , method = "xgbTree"
                              , tree_method = tree_method
@@ -1651,7 +1651,7 @@ if(is.null(eval_metric)){
                 caret::train(Class~.
                              , data=data.training
                              , trControl = tune_control_pre
-                             , tuneGrid = xgbGridPre
+                             , tuneGrid = as.data.frame(xgbGridPre)
                              , metric=metric
                              , method = "xgbTree"
                              , tree_method = tree_method
@@ -1795,7 +1795,7 @@ if(is.null(eval_metric)){
             caret::train(Class~.
                          , data=data.training
                          , trControl = tune_control
-                         , tuneGrid = xgbGrid
+                         , tuneGrid = as.data.frame(xgbGrid)
                          , metric=metric
                          , method = "xgbTree"
                          , tree_method = tree_method
@@ -1808,7 +1808,7 @@ if(is.null(eval_metric)){
             caret::train(Class~.
                          , data=data.training
                          , trControl = tune_control
-                         , tuneGrid = xgbGrid
+                         , tuneGrid = as.data.frame(xgbGrid)
                          , metric=metric
                          , method = "xgbTree"
                          , tree_method = tree_method
@@ -1826,7 +1826,7 @@ if(is.null(eval_metric)){
             caret::train(Class~.
                          , data=data.training
                          , trControl = tune_control
-                         , tuneGrid = xgbGrid
+                         , tuneGrid = as.data.frame(xgbGrid)
                          , metric=metric
                          , method = "xgbTree"
                          , tree_method = tree_method
@@ -1841,7 +1841,7 @@ if(is.null(eval_metric)){
             caret::train(Class~.
                          , data=data.training
                          , trControl = tune_control
-                         , tuneGrid = xgbGrid
+                         , tuneGrid = as.data.frame(xgbGrid)
                          , metric=metric
                          , method = "xgbTree"
                          , tree_method = tree_method
@@ -2166,7 +2166,7 @@ regressXGBoostTree <- function(data
             xgb_model_pre <- caret::train(Dependent~.
                                           , data=data.training
                                           , trControl = tune_control_pre
-                                          , tuneGrid = xgbGridPre
+                                          , tuneGrid = as.data.frame(xgbGridPre)
                                           , metric=metric
                                           , method = "xgbTree"
                                           , tree_method = tree_method
@@ -2181,7 +2181,7 @@ regressXGBoostTree <- function(data
             xgb_model_pre <- caret::train(Dependent~.
                                           , data=data.training
                                           , trControl = tune_control_pre
-                                          , tuneGrid = xgbGridPre
+                                          , tuneGrid = as.data.frame(xgbGridPre)
                                           , metric=metric
                                           , method = "xgbTree"
                                           , tree_method = tree_method
@@ -2377,7 +2377,7 @@ regressXGBoostTree <- function(data
         xgb_model <- caret::train(Dependent~.
                                   , data=data.training
                                   , trControl = tune_control
-                                  , tuneGrid = xgbGrid
+                                  , tuneGrid = as.data.frame(xgbGrid)
                                   , metric=metric
                                   , method = "xgbTree"
                                   , tree_method = tree_method
@@ -2391,7 +2391,7 @@ regressXGBoostTree <- function(data
         xgb_model <- caret::train(Dependent~.
                                   , data=data.training
                                   , trControl = tune_control
-                                  , tuneGrid = xgbGrid
+                                  , tuneGrid = as.data.frame(xgbGrid)
                                   , metric=metric
                                   , method = "xgbTree"
                                   , tree_method = tree_method
@@ -2968,7 +2968,7 @@ if(is.null(eval_metric)){
                 caret::train(Class~.
                              , data=data.training
                              , trControl = tune_control_pre
-                             , tuneGrid = xgbGridPre
+                             , tuneGrid = as.data.frame(xgbGridPre)
                              , metric=metric
                              , method = "xgbTree"
                              , tree_method = tree_method
@@ -2981,7 +2981,7 @@ if(is.null(eval_metric)){
                 caret::train(Class~.
                              , data=data.training
                              , trControl = tune_control_pre
-                             , tuneGrid = xgbGridPre
+                             , tuneGrid = as.data.frame(xgbGridPre)
                              , metric=metric
                              , method = "xgbTree"
                              , tree_method = tree_method
@@ -2998,7 +2998,7 @@ if(is.null(eval_metric)){
                 caret::train(Class~.
                              , data=data.training
                              , trControl = tune_control_pre
-                             , tuneGrid = xgbGridPre
+                             , tuneGrid = as.data.frame(xgbGridPre)
                              , metric=metric
                              , method = "xgbTree"
                              , objective = objective.mod
@@ -3013,7 +3013,7 @@ if(is.null(eval_metric)){
                 caret::train(Class~.
                              , data=data.training
                              , trControl = tune_control_pre
-                             , tuneGrid = xgbGridPre
+                             , tuneGrid = as.data.frame(xgbGridPre)
                              , metric=metric
                              , method = "xgbTree"
                              , objective = objective.mod
@@ -3165,7 +3165,7 @@ if(is.null(eval_metric)){
             caret::train(Class~.
                          , data=data.training
                          , trControl = tune_control
-                         , tuneGrid = xgbGrid
+                         , tuneGrid = as.data.frame(xgbGrid)
                          , metric=metric
                          , method = "xgbDart"
                          , tree_method = tree_method
@@ -3178,7 +3178,7 @@ if(is.null(eval_metric)){
             caret::train(Class~.
                          , data=data.training
                          , trControl = tune_control
-                         , tuneGrid = xgbGrid
+                         , tuneGrid = as.data.frame(xgbGrid)
                          , metric=metric
                          , method = "xgbDart"
                          , tree_method = tree_method
@@ -3196,7 +3196,7 @@ if(is.null(eval_metric)){
             caret::train(Class~.
                          , data=data.training
                          , trControl = tune_control
-                         , tuneGrid = xgbGrid
+                         , tuneGrid = as.data.frame(xgbGrid)
                          , metric=metric
                          , method = "xgbDART"
                          , tree_method = tree_method
@@ -3211,7 +3211,7 @@ if(is.null(eval_metric)){
             caret::train(Class~.
                          , data=data.training
                          , trControl = tune_control
-                         , tuneGrid = xgbGrid
+                         , tuneGrid = as.data.frame(xgbGrid)
                          , metric=metric
                          , method = "xgbDART"
                          , tree_method = tree_method
@@ -3544,7 +3544,7 @@ regressXGBoostDart <- function(data
             xgb_model_pre <- caret::train(Dependent~.
                                           , data=data.training
                                           , trControl = tune_control_pre
-                                          , tuneGrid = xgbGridPre
+                                          , tuneGrid = as.data.frame(xgbGridPre)
                                           , metric=metric
                                           , method = "xgbTree"
                                           , tree_method = tree_method
@@ -3559,7 +3559,7 @@ regressXGBoostDart <- function(data
             xgb_model_pre <- caret::train(Dependent~.
                                           , data=data.training
                                           , trControl = tune_control_pre
-                                          , tuneGrid = xgbGridPre
+                                          , tuneGrid = as.data.frame(xgbGridPre)
                                           , metric=metric
                                           , method = "xgbTree"
                                           , tree_method = tree_method
@@ -3760,7 +3760,7 @@ regressXGBoostDart <- function(data
         xgb_model <- caret::train(Dependent~.
                                   , data=data.training
                                   , trControl = tune_control
-                                  , tuneGrid = xgbGrid
+                                  , tuneGrid = as.data.frame(xgbGrid)
                                   , metric=metric
                                   , method = "xgbDART"
                                   , tree_method = tree_method
@@ -3774,7 +3774,7 @@ regressXGBoostDart <- function(data
         xgb_model <- caret::train(Dependent~.
                                   , data=data.training
                                   , trControl = tune_control
-                                  , tuneGrid = xgbGrid
+                                  , tuneGrid = as.data.frame(xgbGrid)
                                   , metric=metric
                                   , method = "xgbDART"
                                   , tree_method = tree_method
@@ -4314,7 +4314,7 @@ if(is.null(eval_metric)){
                 caret::train(Class~.
                              , data=data.training
                              , trControl = tune_control_pre
-                             , tuneGrid = xgbGridPre
+                             , tuneGrid = as.data.frame(xgbGridPre)
                              , metric=metric
                              , method = "xgbLinear"
                              , objective = objective.mod
@@ -4326,7 +4326,7 @@ if(is.null(eval_metric)){
                 caret::train(Class~.
                              , data=data.training
                              , trControl = tune_control_pre
-                             , tuneGrid = xgbGridPre
+                             , tuneGrid = as.data.frame(xgbGridPre)
                              , metric= metric 
                              , method = "xgbLinear"
                              , objective = objective.mod
@@ -4342,7 +4342,7 @@ if(is.null(eval_metric)){
                 caret::train(Class~.
                              , data=data.training
                              , trControl = tune_control_pre
-                             , tuneGrid = xgbGridPre
+                             , tuneGrid = as.data.frame(xgbGridPre)
                              , metric=metric
                              , method = "xgbLinear"
                              , objective = objective.mod
@@ -4355,7 +4355,7 @@ if(is.null(eval_metric)){
                 caret::train(Class~.
                              , data=data.training
                              , trControl = tune_control_pre
-                             , tuneGrid = xgbGridPre
+                             , tuneGrid = as.data.frame(xgbGridPre)
                              , metric=metric
                              , method = "xgbLinear"
                              , objective = objective.mod
@@ -4468,7 +4468,7 @@ if(is.null(eval_metric)){
                 caret::train(Class~.
                              , data=data.training
                              , trControl = tune_control
-                             , tuneGrid = xgbGrid
+                             , tuneGrid = as.data.frame(xgbGrid)
                              , metric=metric
                              , method = "xgbLinear"
                              , objective = objective.mod
@@ -4480,7 +4480,7 @@ if(is.null(eval_metric)){
                 caret::train(Class~.
                              , data=data.training
                              , trControl = tune_control
-                             , tuneGrid = xgbGrid
+                             , tuneGrid = as.data.frame(xgbGrid)
                              , metric=metric
                              , method = "xgbLinear"
                              , objective = objective.mod
@@ -4497,7 +4497,7 @@ if(is.null(eval_metric)){
             caret::train(Class~.
                          , data=data.training
                          , trControl = tune_control
-                         , tuneGrid = xgbGrid
+                         , tuneGrid = as.data.frame(xgbGrid)
                          , metric=metric
                          , method = "xgbLinear"
                          , objective = objective.mod
@@ -4510,7 +4510,7 @@ if(is.null(eval_metric)){
             caret::train(Class~.
                          , data=data.training
                          , trControl = tune_control
-                         , tuneGrid = xgbGrid
+                         , tuneGrid = as.data.frame(xgbGrid)
                          , metric=metric
                          , method = "xgbLinear"
                          , objective = objective.mod
@@ -4795,7 +4795,7 @@ regressXGBoostLinear <- function(data
             xgb_model_pre <- caret::train(Dependent~.
                                           , data=data.training
                                           , trControl = tune_control_pre
-                                          , tuneGrid = xgbGridPre
+                                          , tuneGrid = as.data.frame(xgbGridPre)
                                           , metric=metric
                                           , method = "xgbLinear"
                                           , objective = "reg:squarederror"
@@ -4809,7 +4809,7 @@ regressXGBoostLinear <- function(data
             xgb_model_pre <- caret::train(Dependent~.
                                           , data=data.training
                                           , trControl = tune_control_pre
-                                          , tuneGrid = xgbGridPre
+                                          , tuneGrid = as.data.frame(xgbGridPre)
                                           , metric=metric
                                           , method = "xgbLinear"
                                           , objective = "reg:squarederror"
@@ -4952,7 +4952,7 @@ regressXGBoostLinear <- function(data
         xgb_model <- caret::train(Dependent~.
                                   , data=data.training
                                   , trControl = tune_control
-                                  , tuneGrid = xgbGrid
+                                  , tuneGrid = as.data.frame(xgbGrid)
                                   , metric=metric
                                   , method = "xgbLinear"
                                   , objective = "reg:squarederror"
@@ -4965,7 +4965,7 @@ regressXGBoostLinear <- function(data
         xgb_model <- caret::train(Dependent~.
                                   , data=data.training
                                   , trControl = tune_control
-                                  , tuneGrid = xgbGrid
+                                  , tuneGrid = as.data.frame(xgbGrid)
                                   , metric=metric
                                   , method = "xgbLinear"
                                   , objective = "reg:squarederror"
@@ -6337,10 +6337,6 @@ regressSVM <- function(data
                        , train="repeatedcv"
                        , cvrepeats=5
                        , number=100
-                       , Bayes=FALSE
-                       , folds=15
-                       , init_points=100
-                       , n_iter=5
                        , save.directory=NULL
                        , save.name=NULL
                        , parallelMethod=NULL
@@ -7193,10 +7189,6 @@ regressBayes <- function(data
                          , cvrepeats=5
                          , number=100
                          , missing=FALSE
-                         , Bayes=FALSE
-                         , folds=15
-                         , init_points=100
-                         , n_iter=5
                          , save.directory=NULL
                          , save.name=NULL
                          , parallelMethod=NULL
