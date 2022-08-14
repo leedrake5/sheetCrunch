@@ -1919,8 +1919,13 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
         #layer_dropout(rate=0.5) %>%
         layer_conv_1d(filters = 32, kernel_size = c(2), activation = activation,
         input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
+        layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
+        #layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.6, 0), activation = activation) %>%
         layer_max_pooling_1d(pool_size = c(2)) %>%
-        #bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
+        bidirectional(layer_lstm(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
+        bidirectional(layer_lstm(units=256, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
+        layer_dense(256, activation=activation) %>%
+        layer_dropout(rate = dropout) %>%
         layer_dropout(rate = 0.25) %>%
         layer_flatten() %>%
         layer_dense(units = 128, activation = activation) %>%
@@ -2011,7 +2016,7 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
     } else if(optimizer=="nadam"){
         optimizer_nadam(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="sgd"){
-        optimizer_sgd(lr=learning.rate, clipvalue=0.5)
+        optimizer_sgd(lr=learning.rate, nesterov=TRUE, momentum=0.9, clipvalue=0.5)
     }
     
     #parallel_model <- multi_gpu_model(model, gpus=4)
