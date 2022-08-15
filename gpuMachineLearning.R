@@ -1920,10 +1920,11 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
         layer_conv_1d(filters = 32, kernel_size = c(2), activation = activation,
         input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
         layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
-        #layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.6, 0), activation = activation) %>%
+        layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.6, 0), activation = activation) %>%
         layer_max_pooling_1d(pool_size = c(2)) %>%
-        bidirectional(layer_lstm(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
-        bidirectional(layer_lstm(units=256, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
+        bidirectional(layer_lstm(units=128, return_sequences=TRUE, dropout=0.2, recurrent_dropout=0, activation="tanh", recurrent_activation="sigmoid", unroll=FALSE, use_bias=TRUE)) %>%
+        bidirectional(layer_lstm(units=128, return_sequences=TRUE,  dropout=0.2, recurrent_dropout=0, activation="tanh", recurrent_activation="sigmoid", unroll=FALSE, use_bias=TRUE)) %>%
+        bidirectional(layer_lstm(units=128, return_sequences=TRUE,  dropout=0.2, recurrent_dropout=0, activation="tanh", recurrent_activation="sigmoid", unroll=FALSE, use_bias=TRUE)) %>%
         layer_dense(256, activation=activation) %>%
         layer_dropout(rate = dropout) %>%
         layer_dropout(rate = 0.25) %>%
