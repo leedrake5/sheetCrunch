@@ -683,7 +683,7 @@ xgb_cv_opt_tree <- function (data
             object_fun <- objectfun
             eval_met <- evalmetric
             cv <- xgb.cv(params = list(
-                                       , gamma = gamma_opt
+                                       gamma = gamma_opt
                                        , min_child_weight = minchild_opt
                                        , eta = eta_opt
                                        , max_depth = max_depth_opt
@@ -737,7 +737,7 @@ xgb_cv_opt_tree <- function (data
             eval_met <- evalmetric
             num_classes <- classes
             cv <- xgb.cv(params = list(
-                                       , gamma = gamma_opt
+                                       gamma = gamma_opt
                                        , min_child_weight = minchild_opt
                                        , eta = eta_opt
                                        , max_depth = max_depth_opt
@@ -820,7 +820,7 @@ xgb_cv_opt_dart <- function (data
                              , gamma_range=c(0L, 1L)
                              , max_delta_step_range=c(0L, 10L)
                              , alpha_range=c(0, 10)
-                             , lambda=c(0, 100)
+                             , lambda_range=c(0, 100)
                              , scale_pos_weight_range=c(0, 10)
                              , init_points = 4
                              , n_iter = 10
@@ -882,7 +882,7 @@ xgb_cv_opt_dart <- function (data
             object_fun <- objectfun
             eval_met <- evalmetric
             cv <- xgb.cv(params = list(
-                                       , gamma = gamma_opt
+                                       gamma = gamma_opt
                                        , min_child_weight = minchild_opt
                                        , eta = eta_opt
                                        , max_depth = max_depth_opt
@@ -890,10 +890,10 @@ xgb_cv_opt_dart <- function (data
                                        , skip_drop = skip_range_opt
                                        , subsample = subsample_opt
                                        , colsample_bytree = bytree_opt
-                                       , lambda_opt = lambda
-                                       , alpha_opt = alpha
-                                       , max_delta_step_opt = max_delta_step
-                                       , scale_pos_weight_opt = scale_pos_weight
+                                       , lambda = lambda_opt
+                                       , alpha = alpha_opt
+                                       , max_delta_step = max_delta_step_opt
+                                       , scale_pos_weight = scale_pos_weight_opt
                                        )
                          , booster = "dart"
                          , objective = object_fun
@@ -942,7 +942,7 @@ xgb_cv_opt_dart <- function (data
             eval_met <- evalmetric
             num_classes <- classes
             cv <- xgb.cv(params = list(
-                                       , gamma = gamma_opt
+                                       gamma = gamma_opt
                                        , min_child_weight = minchild_opt
                                        , eta = eta_opt
                                        , max_depth = max_depth_opt
@@ -950,10 +950,10 @@ xgb_cv_opt_dart <- function (data
                                        , skip_drop = skip_range_opt
                                        , subsample = subsample_opt
                                        , colsample_bytree = bytree_opt
-                                       , lambda_opt = lambda
-                                       , alpha_opt = alpha
-                                       , max_delta_step_opt = max_delta_step
-                                       , scale_pos_weight_opt = scale_pos_weight
+                                       , lambda = lambda_opt
+                                       , alpha = alpha_opt
+                                       , max_delta_step = max_delta_step_opt
+                                       , scale_pos_weight = scale_pos_weight_opt
                                        )
                          , booster = "dart"
                          , objective = object_fun
@@ -1685,9 +1685,9 @@ if(is.null(eval_metric)){
                    label = Class
                    , classes=num_classes
                    , nrounds_range=as.integer(c(100, nrounds))
-                   , alpha_range=alpha_vec
+                   , alpha_range=xgbalpha.vec
                    , eta_range=xgbeta.vec
-                   , lambda_range=lambda.vec
+                   , lambda_range=xgblambda.vec
                    , gamma_range=xgbgamma.vec
                    , max_depth_range=as.integer(tree.depth.vec)
                    , min_child_range=as.integer(xgbminchild.vec)
@@ -2241,7 +2241,7 @@ regressXGBoostTree <- function(data
                                         , min_child_weight = min_child_weight
                                         , alpha=alpha
                                         , eta=eta
-                                        , lambda=lembda
+                                        , lambda=lambda
                                         , gamma=gamma
                                         , subsample = subsample
                                         , colsample_bytree = colsample_bytree
@@ -3049,9 +3049,9 @@ if(is.null(eval_metric)){
                    label = Class
                    , classes=num_classes
                    , nrounds_range=as.integer(c(100, nrounds))
-                   , alpha_range=alpha_vec
+                   , alpha_range=xgbalpha.vec
                    , eta_range=xgbeta.vec
-                   , lambda_range=lambda.vec
+                   , lambda_range=xgblambda.vec
                    , gamma_range=xgbgamma.vec
                    , max_depth_range=as.integer(tree.depth.vec)
                    , drop_range=drop.tree.vec
@@ -3611,7 +3611,7 @@ regressXGBoostDart <- function(data
                                                , subsample
                                                , alpha=alpha
                                                , eta=eta
-                                               , lambda=lembda
+                                               , lambda=lambda
                                                , nrounds
                                                , gamma
                                                , colsample_bytree
@@ -3625,7 +3625,7 @@ regressXGBoostDart <- function(data
                                         , min_child_weight = min_child_weight
                                         , alpha=alpha
                                         , eta=eta
-                                        , lambda=lembda
+                                        , lambda=lambda
                                         , gamma = gamma
                                         , subsample = subsample
                                         , colsample_bytree = colsample_bytree
