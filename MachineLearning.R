@@ -7737,8 +7737,10 @@ autoMLTable <- function(data
                         , tree_method=tree_method
                         , single_precision_histogram=single_precision_histogram
                         , treedepth=treedepth
+                        , xgbalpha=xgbalpha
                         , xgbgamma=xgbgamma
                         , xgbeta=xgbeta
+                        , xgblambda=xgblambda
                         , xgbcolsample=xgbcolsample
                         , xgbsubsample=xgbsubsample
                         , xgbminchild=xgbminchild
@@ -7781,8 +7783,10 @@ autoMLTable <- function(data
                         , treedepth=treedepth
                         , treedrop=treedrop
                         , skipdrop=skipdrop
+                        , xgbalpha=xgbalpha
                         , xgbgamma=xgbgamma
                         , xgbeta=xgbeta
+                        , xgblambda=xgblambda
                         , xgbcolsample=xgbcolsample
                         , xgbsubsample=xgbsubsample
                         , xgbminchild=xgbminchild
