@@ -2056,17 +2056,18 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
     
     second_metric <- NULL
     
-    save_callback <- if(!is.null(save.directory)){
-        callback_model_checkpoint(filepath=paste0(save.directory, save.name, ".hdf5"),
+    callback_list <- if(!is.null(save.directory)){
+        list(callback_model_checkpoint(filepath=paste0(save.directory, save.name, ".hdf5"),
             monitor="val_loss",
             verbose=1,
             save_best_only=TRUE,
             save_weights_only=TRUE,
             mode="min",
             save_freq="epoch"
-            )
+            ),
+            callback_terminate_on_naan())
     } else if(is.null(save.directory)){
-            NULL
+        list(callback_terminate_on_naan())
     }
     
     #x_train <- data.matrix(x_train)
@@ -2082,7 +2083,7 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
-            callbacks = save_callback
+            callbacks = callback_list
             )
         } else if(simple.split==0){
             model %>% fit(
@@ -2093,7 +2094,7 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
-            callbacks = save_callback
+            callbacks = callback_list
             )
         }
     } else if(is.null(second_metric)){
@@ -2107,7 +2108,7 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
-            callbacks = save_callback
+            callbacks = callback_list
             )
         } else if(simple.split==0){
             model %>% fit(
@@ -2119,7 +2120,7 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
-            callbacks = save_callback
+            callbacks = callback_list
             )
         }
     }
