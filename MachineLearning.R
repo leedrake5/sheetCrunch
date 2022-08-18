@@ -10092,3 +10092,28 @@ bayesMLTable <- function(data
     return(qualpart)
 }
 }
+
+sequential_predict <- function(model, model_data, new_data, lag=-1, lag_variable, scale=FALSE){
+    
+    model_data_predictions <- predict(object=model, newdata=model_data)
+    
+    starting_new_data <- new_data[1,]
+    starting_new_data$Hold <- model_data_predictions[length(model_data_predictions)]
+    colnames(starting_new_data) <- c(colnames(new_data), lag_variable)
+    
+    new_data$Hold <- 1
+    colnames(new_data) <- c(colnames(new_data), lag_variable)
+
+
+    
+    new_data[1,] <- starting_new_data
+    new_data_predictions_list <- list()
+    for(i in 1:nrow(new_data)){
+        new_data_predictions_list[[i]] <- predict(object=model, newdata[i, colnames(model$Model$trainingData[,-1])])
+        if(i!=nrow(new_data)){
+            new_data[i+1,]$hold <- new_data_predictions_list[[i]]
+        }
+    }
+    
+    return(new_data)
+    }
