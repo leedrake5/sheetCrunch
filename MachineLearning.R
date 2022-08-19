@@ -8303,17 +8303,17 @@ bayesMLTable <- function(data
         
         param_list <- list(
             nrounds = c(50, nrounds),
-            , treedepth = c(tree.depth.vec[1], tree.depth.vec[2])
-            , xgbcolsample = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
-            , xgbalpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
-            , xgbeta = c(xgbeta.vec[1], xgbeta.vec[2])
-            , xgblambda=c(xgblambda.vec[1], xgblambda.vec[2])
-            , xgbgamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
-            , xgbminchild = c(xgbminchild.vec[1], xgbminchild.vec[2])
-            , xgbsubsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
-            , maxdeltastep = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
-            , scaleposweight = c(scaleposweight.vec[1], scaleposweight.vec[2])
-            , number=as.integer(c(1, number))
+            , treedepth_val = c(tree.depth.vec[1], tree.depth.vec[2])
+            , xgbcolsample_val = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
+            , xgbalpha_val = c(xgbalpha.vec[1], xgbalpha.vec[2])
+            , xgbeta_val = c(xgbeta.vec[1], xgbeta.vec[2])
+            , xgblambda_val=c(xgblambda.vec[1], xgblambda.vec[2])
+            , xgbgamma_val=c(xgbgamma.vec[1], xgbgamma.vec[2])
+            , xgbminchild_val = c(xgbminchild.vec[1], xgbminchild.vec[2])
+            , xgbsubsample_val = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
+            , maxdeltastep_val = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
+            , scaleposweight_val = c(scaleposweight.vec[1], scaleposweight.vec[2])
+            , number_val=as.integer(c(1, number))
         )
         
         qualpart_function <- function(treedepth_val
@@ -8427,24 +8427,24 @@ bayesMLTable <- function(data
                         , the_group=the_group
                         , tree_method=tree_method
                         , single_precision_histogram=single_precision_histogram
-                        , treedepth=paste0(OPT_Res$Best_Par["treedepth"], "-", OPT_Res$Best_Par["treedepth"])
-                        , xgbalpha=paste0(OPT_Res$Best_Par["xgbalpha"], "-", OPT_Res$Best_Par["xgbalpha"])
-                        , xgbgamma=paste0(OPT_Res$Best_Par["xgbgamma"], "-", OPT_Res$Best_Par["xgbgamma"])
-                        , xgbeta=paste0(OPT_Res$Best_Par["xgbeta"], "-", OPT_Res$Best_Par["xgbeta"])
-                        , xgblambda=paste0(OPT_Res$Best_Par["xgblambda"], "-", OPT_Res$Best_Par["xgblambda"])
-                        , xgbcolsample=paste0(OPT_Res$Best_Par["xgbcolsample"], "-", OPT_Res$Best_Par["xgbcolsample"])
-                        , xgbsubsample=paste0(OPT_Res$Best_Par["xgbsubsample"], "-", OPT_Res$Best_Par["xgbsubsample"])
-                        , xgbminchild=paste0(OPT_Res$Best_Par["xgbminchild"], "-", OPT_Res$Best_Par["xgbminchild"])
-                        , maxdeltastep=paste0(OPT_Res$Best_Par["maxdeltastep"], "-", OPT_Res$Best_Par["maxdeltastep"])
-                        , scaleposweight=paste0(OPT_Res$Best_Par["scaleposweight"], "-", OPT_Res$Best_Par["scaleposweight"])
-                        , nrounds=OPT_Res$Best_Par["nrounds"]
-                        , test_nrounds=OPT_Res$Best_Par["nrounds"]
+                        , treedepth=paste0(OPT_Res$Best_Par["treedepth_val"], "-", OPT_Res$Best_Par["treedepth_val"])
+                        , xgbalpha=paste0(OPT_Res$Best_Par["xgbalpha_val"], "-", OPT_Res$Best_Par["xgbalpha_val"])
+                        , xgbgamma=paste0(OPT_Res$Best_Par["xgbgamma_val"], "-", OPT_Res$Best_Par["xgbgamma_val"])
+                        , xgbeta=paste0(OPT_Res$Best_Par["xgbeta_val"], "-", OPT_Res$Best_Par["xgbeta_val"])
+                        , xgblambda=paste0(OPT_Res$Best_Par["xgblambda_val"], "-", OPT_Res$Best_Par["xgblambda_val"])
+                        , xgbcolsample=paste0(OPT_Res$Best_Par["xgbcolsample_val"], "-", OPT_Res$Best_Par["xgbcolsample_val"])
+                        , xgbsubsample=paste0(OPT_Res$Best_Par["xgbsubsample_val"], "-", OPT_Res$Best_Par["xgbsubsample_val"])
+                        , xgbminchild=paste0(OPT_Res$Best_Par["xgbminchild_val"], "-", OPT_Res$Best_Par["xgbminchild_val"])
+                        , maxdeltastep=paste0(OPT_Res$Best_Par["maxdeltastep_val"], "-", OPT_Res$Best_Par["maxdeltastep_val"])
+                        , scaleposweight=paste0(OPT_Res$Best_Par["scaleposweight_val"], "-", OPT_Res$Best_Par["scaleposweight_val"])
+                        , nrounds=OPT_Res$Best_Par["nrounds_val"]
+                        , test_nrounds=OPT_Res$Best_Par["nrounds_val"]
                         , metric=metric
                         , eval_metric=eval_metric
                         #, summary_function=summary_function
                         , train=train
                         , cvrepeats=cvrepeats
-                        , number=OPT_Res$Best_Par["number"]
+                        , number=OPT_Res$Best_Par["number_val"]
                         , Bayes=Bayes
                         , folds=folds
                         , init_points=init_points
@@ -8460,7 +8460,7 @@ bayesMLTable <- function(data
                         , nthread=nthread
                         , verbose=verbose
                         )
-        
+                        qualpart$Opt_Res <- OPT_Res
         
     } else if(type=="xgbDart"){
         #Set ranges of maximum tree depths
@@ -8490,19 +8490,19 @@ bayesMLTable <- function(data
         
         param_list <- list(
             nrounds = c(50, nrounds),
-            , treedepth = c(tree.depth.vec[1], tree.depth.vec[2])
-            , treedrop = c(drop.tree.vec[1], drop.tree.vec[2])
-            , skipdrop = c(skip.drop.vec[1], skip.drop.vec[2])
-            , xgbcolsample = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
-            , xgbalpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
-            , xgbeta = c(xgbeta.vec[1], xgbeta.vec[2])
-            , xgblambda=c(xgblambda.vec[1], xgblambda.vec[2])
-            , xgbgamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
-            , xgbminchild = c(xgbminchild.vec[1], xgbminchild.vec[2])
-            , xgbsubsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
-            , maxdeltastep = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
-            , scaleposweight = c(scaleposweight.vec[1], scaleposweight.vec[2])
-            , number=as.integer(c(1, number))
+            , treedepth_val = c(tree.depth.vec[1], tree.depth.vec[2])
+            , treedrop_val = c(drop.tree.vec[1], drop.tree.vec[2])
+            , skipdrop_val = c(skip.drop.vec[1], skip.drop.vec[2])
+            , xgbcolsample_val = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
+            , xgbalpha_val = c(xgbalpha.vec[1], xgbalpha.vec[2])
+            , xgbeta_val = c(xgbeta.vec[1], xgbeta.vec[2])
+            , xgblambda_val=c(xgblambda.vec[1], xgblambda.vec[2])
+            , xgbgamma_val=c(xgbgamma.vec[1], xgbgamma.vec[2])
+            , xgbminchild_val = c(xgbminchild.vec[1], xgbminchild.vec[2])
+            , xgbsubsample_val = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
+            , maxdeltastep_val = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
+            , scaleposweight_val = c(scaleposweight.vec[1], scaleposweight.vec[2])
+            , number_val=as.integer(c(1, number))
         )
         
         qualpart_function <- function(treedepth_val
@@ -8620,26 +8620,26 @@ bayesMLTable <- function(data
                         , the_group=the_group
                         , tree_method=tree_method
                         , single_precision_histogram=single_precision_histogram
-                        , treedepth=paste0(OPT_Res$Best_Par["treedepth"], "-", OPT_Res$Best_Par["treedepth"])
-                        , treedrop=paste0(OPT_Res$Best_Par["treedrop"], "-", OPT_Res$Best_Par["treedrop"])
-                        , skipdrop=paste0(OPT_Res$Best_Par["skipdrop"], "-", OPT_Res$Best_Par["skipdrop"])
-                        , xgbalpha=paste0(OPT_Res$Best_Par["xgbalpha"], "-", OPT_Res$Best_Par["xgbalpha"])
-                        , xgbgamma=paste0(OPT_Res$Best_Par["xgbgamma"], "-", OPT_Res$Best_Par["xgbgamma"])
-                        , xgbeta=paste0(OPT_Res$Best_Par["xgbeta"], "-", OPT_Res$Best_Par["xgbeta"])
-                        , xgblambda=paste0(OPT_Res$Best_Par["xgblambda"], "-", OPT_Res$Best_Par["xgblambda"])
-                        , xgbcolsample=paste0(OPT_Res$Best_Par["xgbcolsample"], "-", OPT_Res$Best_Par["xgbcolsample"])
-                        , xgbsubsample=paste0(OPT_Res$Best_Par["xgbsubsample"], "-", OPT_Res$Best_Par["xgbsubsample"])
-                        , xgbminchild=paste0(OPT_Res$Best_Par["xgbminchild"], "-", OPT_Res$Best_Par["xgbminchild"])
-                        , maxdeltastep=paste0(OPT_Res$Best_Par["maxdeltastep"], "-", OPT_Res$Best_Par["maxdeltastep"])
-                        , scaleposweight=OPT_Res$Best_Par["scaleposweight"]
-                        , nrounds=OPT_Res$Best_Par["nrounds"]
-                        , test_nrounds=OPT_Res$Best_Par["nrounds"]
+                        , treedepth=paste0(OPT_Res$Best_Par["treedepth_val"], "-", OPT_Res$Best_Par["treedepth_val"])
+                        , treedrop=paste0(OPT_Res$Best_Par["treedrop_val"], "-", OPT_Res$Best_Par["treedrop_val"])
+                        , skipdrop=paste0(OPT_Res$Best_Par["skipdrop_val"], "-", OPT_Res$Best_Par["skipdrop_val"])
+                        , xgbalpha=paste0(OPT_Res$Best_Par["xgbalpha_val"], "-", OPT_Res$Best_Par["xgbalpha_val"])
+                        , xgbgamma=paste0(OPT_Res$Best_Par["xgbgamma_val"], "-", OPT_Res$Best_Par["xgbgamma_val"])
+                        , xgbeta=paste0(OPT_Res$Best_Par["xgbeta_val"], "-", OPT_Res$Best_Par["xgbeta_val"])
+                        , xgblambda=paste0(OPT_Res$Best_Par["xgblambda_val"], "-", OPT_Res$Best_Par["xgblambda_val"])
+                        , xgbcolsample=paste0(OPT_Res$Best_Par["xgbcolsample_val"], "-", OPT_Res$Best_Par["xgbcolsample_val"])
+                        , xgbsubsample=paste0(OPT_Res$Best_Par["xgbsubsample_val"], "-", OPT_Res$Best_Par["xgbsubsample_val"])
+                        , xgbminchild=paste0(OPT_Res$Best_Par["xgbminchild_val"], "-", OPT_Res$Best_Par["xgbminchild_val"])
+                        , maxdeltastep=paste0(OPT_Res$Best_Par["maxdeltastep_val"], "-", OPT_Res$Best_Par["maxdeltastep_val"])
+                        , scaleposweight=OPT_Res$Best_Par["scaleposweight_val"]
+                        , nrounds=OPT_Res$Best_Par["nrounds_val"]
+                        , test_nrounds=OPT_Res$Best_Par["nrounds_val"]
                         , metric=metric
                         , eval_metric=eval_metric
                         #, summary_function=summary_function
                         , train=train
                         , cvrepeats=cvrepeats
-                        , number=OPT_Res$Best_Par["number"]
+                        , number=OPT_Res$Best_Par["number_val"]
                         , Bayes=Bayes
                         , folds=folds
                         , init_points=init_points
@@ -8655,7 +8655,7 @@ bayesMLTable <- function(data
                         , nthread=nthread
                         , verbose=verbose
                         )
-        
+                        qualpart$Opt_Res <- OPT_Res
     } else if(type=="xgbLinear"){
         #Set ranges of L1 regularization
         xgbalpha.vec <- as.numeric(unlist(strsplit(as.character(xgbalpha), "-")))
@@ -8665,11 +8665,11 @@ bayesMLTable <- function(data
         xgblambda.vec <- as.numeric(unlist(strsplit(as.character(xgblambda), "-")))
         
         param_list <- list(
-           nrounds = c(50, nrounds),
-           xgbalpha = c(xgbalpha.vec[1], xgbalpha.vec[2]),
-           xgbeta = c(xgbeta.vec[1], xgbeta.vec[2]),
-           xgblambda=c(xgblambda.vec[1], xgblambda.vec[2]),
-           number=as.integer(c(1, number)))
+           nrounds_val = c(50, nrounds),
+           xgbalpha_val = c(xgbalpha.vec[1], xgbalpha.vec[2]),
+           xgbeta_val = c(xgbeta.vec[1], xgbeta.vec[2]),
+           xgblambda_val=c(xgblambda.vec[1], xgblambda.vec[2]),
+           number_val=as.integer(c(1, number)))
         
         qualpart_function <- function(
             xgbalpha_val
@@ -8769,17 +8769,17 @@ bayesMLTable <- function(data
                         , the_group=the_group
                         , tree_method=tree_method
                         , single_precision_histogram=single_precision_histogram
-                        , xgbalpha=paste0(OPT_Res$Best_Par["xgbalpha"], "-", OPT_Res$Best_Par["xgbalpha"])
-                        , xgbeta=paste0(OPT_Res$Best_Par["xgbeta"], "-", OPT_Res$Best_Par["xgbeta"])
-                        , xgblambda=paste0(OPT_Res$Best_Par["xgblambda"], "-", OPT_Res$Best_Par["xgblambda"])
-                        , nrounds=OPT_Res$Best_Par["nrounds"]
-                        , test_nrounds=OPT_Res$Best_Par["nrounds"]
+                        , xgbalpha=paste0(OPT_Res$Best_Par["xgbalpha_val"], "-", OPT_Res$Best_Par["xgbalpha_val"])
+                        , xgbeta=paste0(OPT_Res$Best_Par["xgbeta_val"], "-", OPT_Res$Best_Par["xgbeta_val"])
+                        , xgblambda=paste0(OPT_Res$Best_Par["xgblambda_val"], "-", OPT_Res$Best_Par["xgblambda_val"])
+                        , nrounds=OPT_Res$Best_Par["nrounds_val"]
+                        , test_nrounds=OPT_Res$Best_Par["nrounds_val"]
                         , metric=metric
                         , eval_metric=eval_metric
                         #, summary_function=summary_function
                         , train=train
                         , cvrepeats=cvrepeats
-                        , number=OPT_Res$Best_Par["number"]
+                        , number=OPT_Res$Best_Par["number_val"]
                         , Bayes=Bayes
                         , folds=folds
                         , init_points=init_points
@@ -8795,11 +8795,11 @@ bayesMLTable <- function(data
                         , nthread=nthread
                         , verbose=verbose
                         )
-        
+                        qualpart$Opt_Res <- OPT_Res
     } else if(type=="Forest"){
-        param_list <- list(try=c(1, try),
-        trees=c(10, trees),
-        number=as.integer(c(1, number)))
+        param_list <- list(try_val=c(1, try),
+        trees_val=c(10, trees),
+        number_val=as.integer(c(1, number)))
         
         qualpart_function <- function(
             try_val
@@ -8885,13 +8885,13 @@ bayesMLTable <- function(data
                         , split=split
                         , split_by_group=split_by_group
                         , the_group=the_group
-                        , try=OPT_Res$Best_Par["try"]
-                        , trees=OPT_Res$Best_Par["trees"]
+                        , try=OPT_Res$Best_Par["try_val"]
+                        , trees=OPT_Res$Best_Par["trees_val"]
                         , metric=metric
                         #, summary_function=summary_function
                         , train=train
                         , cvrepeats=cvrepeats
-                        , number=OPT_Res$Best_Par["number"]
+                        , number=OPT_Res$Best_Par["number_val"]
                         , save.directory=save.directory
                         , save.name=save.name
                         , parallelMethod=parallelMethod
@@ -8902,7 +8902,7 @@ bayesMLTable <- function(data
                         , seed=seed
                         , search=FALSE
                         )
-        
+                        qualpart$Opt_Res <- OPT_Res
     } else if(type=="svmLinear" | type=="svmPoly" | type=="svmRadial" | type=="svmRadialCost" | type=="svmRadialSigma" | type=="svmBoundrangeString" | type=="svmExpoString" | type=="svmSpectrumString"){
         
         if(type=="svmLinear"){
@@ -8995,12 +8995,12 @@ bayesMLTable <- function(data
                         , split=split
                         , split_by_group=split_by_group
                         , the_group=the_group
-                        , svmc=paste0(OPT_Res$Best_Par["svmc"], "-", OPT_Res$Best_Par["svmc"])
+                        , svmc=paste0(OPT_Res$Best_Par["svmc_val"], "-", OPT_Res$Best_Par["svmc_val"])
                         , metric=metric
                         #, summary_function=summary_function
                         , train=train
                         , cvrepeats=cvrepeats
-                        , number=OPT_Res$Best_Par["number"]
+                        , number=OPT_Res$Best_Par["number_val"]
                         , save.directory=save.directory
                         , save.name=save.name
                         , parallelMethod=parallelMethod
@@ -9011,7 +9011,7 @@ bayesMLTable <- function(data
                         , seed=seed
                         , search=FALSE
                         )
-            
+                        qualpart$Opt_Res <- OPT_Res
         } else if(type=="svmPoly"){
             svmc.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmc), "-"))), error=function(x) "2-2")
             svmdegree.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmdegree), "-"))), error=function(x) "1-2")
@@ -9115,14 +9115,14 @@ bayesMLTable <- function(data
                             , split=split
                             , split_by_group=split_by_group
                             , the_group=the_group
-                            , svmc=paste0(OPT_Res$Best_Par["svmc"], "-", OPT_Res$Best_Par["svmc"])
-                            , svmdegree=paste0(OPT_Res$Best_Par["svmdegree"], "-", OPT_Res$Best_Par["svmdegree"])
-                            , svmscale=paste0(OPT_Res$Best_Par["svmscale"], "-", OPT_Res$Best_Par["svmscale"])
+                            , svmc=paste0(OPT_Res$Best_Par["svmc_val"], "-", OPT_Res$Best_Par["svmc_val"])
+                            , svmdegree=paste0(OPT_Res$Best_Par["svmdegree_val"], "-", OPT_Res$Best_Par["svmdegree_val"])
+                            , svmscale=paste0(OPT_Res$Best_Par["svmscale_val"], "-", OPT_Res$Best_Par["svmscale_val"])
                             , metric=metric
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number"]
+                            , number=OPT_Res$Best_Par["number_val"]
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
@@ -9133,6 +9133,7 @@ bayesMLTable <- function(data
                             , seed=seed
                             , search=FALSE
                             )
+                            qualpart$Opt_Res <- OPT_Res
         } else if(type=="svmRadial"){
             svmc.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmc), "-"))), error=function(x) "2-2")
             svmsigma.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmsigma), "-"))), error=function(x) "1-2")
@@ -9228,13 +9229,13 @@ bayesMLTable <- function(data
                             , split=split
                             , split_by_group=split_by_group
                             , the_group=the_group
-                            , svmc=paste0(OPT_Res$Best_Par["svmc"], "-", OPT_Res$Best_Par["svmc"])
-                            , svmsigma=paste0(OPT_Res$Best_Par["svmsigma"], "-", OPT_Res$Best_Par["svmsigma"])
+                            , svmc=paste0(OPT_Res$Best_Par["svmc_val"], "-", OPT_Res$Best_Par["svmc_val"])
+                            , svmsigma=paste0(OPT_Res$Best_Par["svmsigma_val"], "-", OPT_Res$Best_Par["svmsigma_val"])
                             , metric=metric
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number"]
+                            , number=OPT_Res$Best_Par["number_val"]
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
@@ -9245,6 +9246,7 @@ bayesMLTable <- function(data
                             , seed=seed
                             , search=FALSE
                             )
+                            qualpart$Opt_Res <- OPT_Res
         } else if(type=="svmRadialCost"){
             svmc.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmc), "-"))), error=function(x) "2-2")
             
@@ -9335,12 +9337,12 @@ bayesMLTable <- function(data
                             , split=split
                             , split_by_group=split_by_group
                             , the_group=the_group
-                            , svmc=paste0(OPT_Res$Best_Par["svmc"], "-", OPT_Res$Best_Par["svmc"])
+                            , svmc=paste0(OPT_Res$Best_Par["svmc_val"], "-", OPT_Res$Best_Par["svmc_val"])
                             , metric=metric
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number"]
+                            , number=OPT_Res$Best_Par["number_val"]
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
@@ -9351,6 +9353,7 @@ bayesMLTable <- function(data
                             , seed=seed
                             , search=FALSE
                             )
+                            qualpart$Opt_Res <- OPT_Res
         } else if(type=="svmRadialSigma"){
             svmc.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmc), "-"))), error=function(x) "2-2")
             svmsigma.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmsigma), "-"))), error=function(x) "1-2")
@@ -9446,13 +9449,13 @@ bayesMLTable <- function(data
                             , split=split
                             , split_by_group=split_by_group
                             , the_group=the_group
-                            , svmc=paste0(OPT_Res$Best_Par["svmc"], "-", OPT_Res$Best_Par["svmc"])
-                            , svmsigma=paste0(OPT_Res$Best_Par["svmsigma"], "-", OPT_Res$Best_Par["svmsigma"])
+                            , svmc=paste0(OPT_Res$Best_Par["svmc_val"], "-", OPT_Res$Best_Par["svmc_val"])
+                            , svmsigma=paste0(OPT_Res$Best_Par["svmsigma_val"], "-", OPT_Res$Best_Par["svmsigma_val"])
                             , metric=metric
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number"]
+                            , number=OPT_Res$Best_Par["number_val"]
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
@@ -9463,6 +9466,7 @@ bayesMLTable <- function(data
                             , seed=seed
                             , search=FALSE
                             )
+                            qualpart$Opt_Res <- OPT_Res
         } else if(type=="svmBoundrangeString"){
             svmc.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmc), "-"))), error=function(x) "2-2")
             xgblambda.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(xgblambda), "-"))), error=function(x) "0.2-0.2")
@@ -9558,13 +9562,13 @@ bayesMLTable <- function(data
                             , split=split
                             , split_by_group=split_by_group
                             , the_group=the_group
-                            , svmc=paste0(OPT_Res$Best_Par["svmc"], "-", OPT_Res$Best_Par["svmc"])
-                            , svmlength=paste0(OPT_Res$Best_Par["svmlength"], "-", OPT_Res$Best_Par["svmlength"])
+                            , svmc=paste0(OPT_Res$Best_Par["svmc_val"], "-", OPT_Res$Best_Par["svmc_val"])
+                            , svmlength=paste0(OPT_Res$Best_Par["svmlength_val"], "-", OPT_Res$Best_Par["svmlength_val"])
                             , metric=metric
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number"]
+                            , number=OPT_Res$Best_Par["number_val"]
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
@@ -9575,6 +9579,7 @@ bayesMLTable <- function(data
                             , seed=seed
                             , search=FALSE
                             )
+                            qualpart$Opt_Res <- OPT_Res
         } else if(type=="svmExpoString"){
             svmc.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmc), "-"))), error=function(x) "2-2")
             xgblambda.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(xgblambda), "-"))), error=function(x) "0.2-0.2")
@@ -9670,13 +9675,13 @@ bayesMLTable <- function(data
                             , split=split
                             , split_by_group=split_by_group
                             , the_group=the_group
-                            , svmc=paste0(OPT_Res$Best_Par["svmc"], "-", OPT_Res$Best_Par["svmc"])
-                            , xgblambda=paste0(OPT_Res$Best_Par["xgblambda"], "-", OPT_Res$Best_Par["xgblambda"])
+                            , svmc=paste0(OPT_Res$Best_Par["svmc_val"], "-", OPT_Res$Best_Par["svmc_val"])
+                            , xgblambda=paste0(OPT_Res$Best_Par["xgblambda_val"], "-", OPT_Res$Best_Par["xgblambda_val"])
                             , metric=metric
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number"]
+                            , number=OPT_Res$Best_Par["number_val"]
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
@@ -9687,7 +9692,7 @@ bayesMLTable <- function(data
                             , seed=seed
                             , search=FALSE
                             )
-            
+                            qualpart$Opt_Res <- OPT_Res
         } else if(type=="svmSpectrumString"){
             svmc.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmc), "-"))), error=function(x) "2-2")
             xgblambda.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(xgblambda), "-"))), error=function(x) "0.2-0.2")
@@ -9784,13 +9789,13 @@ bayesMLTable <- function(data
                     , split=split
                     , split_by_group=split_by_group
                     , the_group=the_group
-                    , svmc=paste0(OPT_Res$Best_Par["svmc"], "-", OPT_Res$Best_Par["svmc"])
-                    , xgblambda=paste0(OPT_Res$Best_Par["xgblambda"], "-"< OPT_Res$Best_Par["xgblambda"])
+                    , svmc=paste0(OPT_Res$Best_Par["svmc_val"], "-", OPT_Res$Best_Par["svmc_val"])
+                    , xgblambda=paste0(OPT_Res$Best_Par["xgblambda_val"], "-"< OPT_Res$Best_Par["xgblambda_val"])
                     , metric=metric
                     #, summary_function=summary_function
                     , train=train
                     , cvrepeats=cvrepeats
-                    , number=OPT_Res$Best_Par["number"]
+                    , number=OPT_Res$Best_Par["number_val"]
                     , save.directory=save.directory
                     , save.name=save.name
                     , parallelMethod=parallelMethod
@@ -9801,6 +9806,7 @@ bayesMLTable <- function(data
                     , seed=seed
                     , search=FALSE
                     )
+                    qualpart$Opt_Res <- OPT_Res
     } else if(type=="bayesLinear" | type=="bayesTree" | type=="bayesNeuralNet"){
         
         if(type=="bayesNeuralNet"){
@@ -9893,13 +9899,13 @@ bayesMLTable <- function(data
                             , split=split
                             , split_by_group=split_by_group
                             , the_group=the_group
-                            , neuralhiddenunits=paste0(OPT_Res$Best_Par["neuralhiddenunits"], "-", OPT_Res$Best_Par["neuralhiddenunits"])
+                            , neuralhiddenunits=paste0(OPT_Res$Best_Par["neuralhiddenunits_val"], "-", OPT_Res$Best_Par["neuralhiddenunits_val"])
                             , metric=metric
                             , eval_metric=eval_metric
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number"]
+                            , number=OPT_Res$Best_Par["number_val"]
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
@@ -9910,6 +9916,7 @@ bayesMLTable <- function(data
                             , seed=seed
                             , search=FALSE
                             )
+                            qualpart$Opt_Res <- OPT_Res
         } else if(type=="bayesTree"){
             xgbalpha.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(xgbalpha), "-"))), error=function(x) "2-2")
             bartk.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(bartk), "-"))), error=function(x) "2-2")
@@ -10016,16 +10023,16 @@ bayesMLTable <- function(data
                             , split=split
                             , split_by_group=split_by_group
                             , the_group=the_group
-                            , trees=OPT_Res$Best_Par["trees"]
-                            , xgbalpha=paste0(OPT_Res$Best_Par["xgbalpha"], "-", PT_Res$Best_Par["xgbalpha"])
-                            , bartbeta=paste0(OPT_Res$Best_Par["bartbeta"], "-", PT_Res$Best_Par["xgbalpha"])
-                            , bartnu=paste0(OPT_Res$Best_Par["bartnu"], "-", PT_Res$Best_Par["bartnu"])
-                            , bartk=paste0(OPT_Res$Best_Par["bartk"], "-", PT_Res$Best_Par["bartk"])
+                            , trees=OPT_Res$Best_Par["trees_val"]
+                            , xgbalpha=paste0(OPT_Res$Best_Par["xgbalpha_val"], "-", PT_Res$Best_Par["xgbalpha_val"])
+                            , bartbeta=paste0(OPT_Res$Best_Par["bartbeta_val"], "-", PT_Res$Best_Par["bartbeta_val"])
+                            , bartnu=paste0(OPT_Res$Best_Par["bartnu_val"], "-", PT_Res$Best_Par["bartnu_val"])
+                            , bartk=paste0(OPT_Res$Best_Par["bartk_val"], "-", PT_Res$Best_Par["bartk_val"])
                             , metric=metric
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number"]
+                            , number=OPT_Res$Best_Par["number_val"]
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
