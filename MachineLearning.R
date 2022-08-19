@@ -8908,7 +8908,7 @@ bayesMLTable <- function(data
         if(type=="svmLinear"){
             svmc.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmc), "-"))), error=function(x) "2-2")
             
-            param_list <- list(svmc=c(svmc.vec[1], smc.vec[2]),
+            param_list <- list(svmc=c(svmc.vec[1], svmc.vec[2]),
             number=as.integer(c(1, number)))
             
             qualpart_function <- function(
@@ -9248,7 +9248,7 @@ bayesMLTable <- function(data
         } else if(type=="svmRadialCost"){
             svmc.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmc), "-"))), error=function(x) "2-2")
             
-            param_list <- list(svmc=c(svmc.vec[1], smc.vec[2]),
+            param_list <- list(svmc=c(svmc.vec[1], svmc.vec[2]),
             number=as.integer(c(1, number)))
             
             qualpart_function <- function(

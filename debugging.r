@@ -1,6 +1,6 @@
 source("~/GitHub/sheetCrunch/MachineLearning.r")
 library(ISLR)
-data = Default[1:500,]
+data = Default[1:2000,]
 variable="student"
 predictors=NULL
 min.n=5
@@ -60,3 +60,21 @@ verbose=1
 bayes_metric="test_accuracy"
 parallelMethod="windows"
 parallel_method="windows"
+epochs=100
+activation="adam"
+dropout="0.8"
+optimizer="sigmoid"
+learning.rate=0.00001
+loss="mse"
+metric=c("mse", "mae")
+start_kernel=15
+pool_size=5
+batch_size=256
+model.type="First_CNN"
+importance=FALSE
+init_points=40
+n_iter=10
+n_gpus=1
+eager=FALSE
+previous.model=NULL
+epochs_test=10
