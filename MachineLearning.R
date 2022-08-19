@@ -8908,8 +8908,8 @@ bayesMLTable <- function(data
         if(type=="svmLinear"){
             svmc.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmc), "-"))), error=function(x) "2-2")
             
-            param_list <- list(svmc=c(svmc.vec[1], svmc.vec[2]),
-            number=as.integer(c(1, number)))
+            param_list <- list(svmc_val=c(svmc.vec[1], svmc.vec[2]),
+            number_val=as.integer(c(1, number)))
             
             qualpart_function <- function(
                 svmc_val
@@ -9018,10 +9018,10 @@ bayesMLTable <- function(data
             svmscale.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmscale), "-"))), error=function(x) "1-2")
 
             param_list <- list(
-            svmc = c(svmc.vec[1], svmc.vec[2]),
-            svmscale = c(svmscale.vec[1], svmscale.vec[2]),
-            svmdegree = as.integer(c(svmdegree.vec[1], svmdegree.vec[2])),
-            number=as.integer(c(1, number)))
+            svmc_val = c(svmc.vec[1], svmc.vec[2]),
+            svmscale_val = c(svmscale.vec[1], svmscale.vec[2]),
+            svmdegree_val = as.integer(c(svmdegree.vec[1], svmdegree.vec[2])),
+            number_val=as.integer(c(1, number)))
             
             qualpart_function <- function(
                 svmc_val
@@ -9138,9 +9138,9 @@ bayesMLTable <- function(data
             svmsigma.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmsigma), "-"))), error=function(x) "1-2")
 
             param_list <- list(
-            svmc = seq(svmc.vec[1], svmc.vec[2], 1),
-            svmsigma=svmsigma.vec,
-            number=as.integer(c(1, number)))
+            svmc_val = seq(svmc.vec[1], svmc.vec[2], 1),
+            svmsigma_val=svmsigma.vec,
+            number_val=as.integer(c(1, number)))
             
             qualpart_function <- function(
                 svmc_val
@@ -9248,8 +9248,8 @@ bayesMLTable <- function(data
         } else if(type=="svmRadialCost"){
             svmc.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmc), "-"))), error=function(x) "2-2")
             
-            param_list <- list(svmc=c(svmc.vec[1], svmc.vec[2]),
-            number=as.integer(c(1, number)))
+            param_list <- list(svmc_val=c(svmc.vec[1], svmc.vec[2]),
+            number_val=as.integer(c(1, number)))
             
             qualpart_function <- function(
                 svmc_val
@@ -9356,9 +9356,9 @@ bayesMLTable <- function(data
             svmsigma.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmsigma), "-"))), error=function(x) "1-2")
 
             param_list <- expand.grid(
-            svmc = seq(svmc.vec[1], svmc.vec[2], 1),
-            svmsigma=svmsigma,
-            number=as.integer(c(1, number)))
+            svmc_val = seq(svmc.vec[1], svmc.vec[2], 1),
+            svmsigma_val=svmsigma,
+            number_val=as.integer(c(1, number)))
             
             qualpart_function <- function(
                 svmc_val
@@ -9468,9 +9468,9 @@ bayesMLTable <- function(data
             xgblambda.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(xgblambda), "-"))), error=function(x) "0.2-0.2")
             
             param_list <- list(
-            svmc = c(svmc.vec[1], svmc.vec[2]),
-            svmlength = c(svmlength.vec[1], svmlength.vec[2]),
-            number=as.integer(c(1, number)))
+            svmc_val = c(svmc.vec[1], svmc.vec[2]),
+            svmlength_val = c(svmlength.vec[1], svmlength.vec[2]),
+            number_val=as.integer(c(1, number)))
             
             qualpart_function <- function(
                 svmc_val
@@ -9580,9 +9580,9 @@ bayesMLTable <- function(data
             xgblambda.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(xgblambda), "-"))), error=function(x) "0.2-0.2")
 
             param_list <- list(
-            svmc = c(svmc.vec[1], svmc.vec[2]),
-            xgblambda = c(xgblambda.vec[1], xgblambda.vec[2]),
-            number=as.integer(c(1, number)))
+            svmc_val = c(svmc.vec[1], svmc.vec[2]),
+            xgblambda_val = c(xgblambda.vec[1], xgblambda.vec[2]),
+            number_val=as.integer(c(1, number)))
             
             qualpart_function <- function(
                 svmc_val
@@ -9693,9 +9693,9 @@ bayesMLTable <- function(data
             xgblambda.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(xgblambda), "-"))), error=function(x) "0.2-0.2")
 
             param_list <- list(
-            svmc = c(svmc.vec[1], svmc.vec[2]),
-            xgblambda = c(xgblambda.vec[1], xgblambda.vec[2]),
-            number=as.integer(c(1, number)))
+            svmc_val = c(svmc.vec[1], svmc.vec[2]),
+            xgblambda_val = c(xgblambda.vec[1], xgblambda.vec[2]),
+            number_val=as.integer(c(1, number)))
             
             qualpart_function <- function(
                 svmc_val
@@ -9806,8 +9806,8 @@ bayesMLTable <- function(data
         if(type=="bayesNeuralNet"){
             neuralhiddenunits.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(neuralhiddenunits), "-"))), error=function(x) "1-10")
 
-            param_list <- list(neurons = c(as.integer(neuralhiddenunits.vec[1]), as.integer(neuralhiddenunits.vec[2])),
-            number=as.integer(c(1, number)))
+            param_list <- list(neuralhiddenunits_val = c(as.integer(neuralhiddenunits.vec[1]), as.integer(neuralhiddenunits.vec[2])),
+            number_val=as.integer(c(1, number)))
             
             qualpart_function <- function(
                 neuralhiddenunits_val
@@ -9917,12 +9917,12 @@ bayesMLTable <- function(data
             bartnu.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(bartnu), "-"))), error=function(x) "1-2")
             
             param_list <- list(
-            xgbalpha = c(xgbalpha.vec[1], xgbalpha.vec[2]),
-            bartbeta = c(bartbeta.vec[1], bartbeta.vec[2]),
-            bartnu = c(bartnu.vec[1], bartnu.vec[2]),
-            bartk = c(bartk.vec[1], bartk.vec[2]),
-            trees=c(10, trees),
-            number=as.integer(c(1, number)))
+            xgbalpha_val = c(xgbalpha.vec[1], xgbalpha.vec[2]),
+            bartbeta_val = c(bartbeta.vec[1], bartbeta.vec[2]),
+            bartnu_val = c(bartnu.vec[1], bartnu.vec[2]),
+            bartk_val = c(bartk.vec[1], bartk.vec[2]),
+            trees_val=c(10, trees),
+            number_val=as.integer(c(1, number)))
             
             qualpart_function <- function(
                 xgbalpha_val
