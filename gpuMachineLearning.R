@@ -1463,7 +1463,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     } else if(optimizer=="nadam"){
         optimizer_nadam(learning_rate=learning.rate, clipvalue=0.5)
     } else if(optimizer=="sgd"){
-        optimizer_sgd(learning_rate=learning.rate, clipvalue=0.5)
+        optimizer_sgd(learning_rate=learning.rate, nesterov=TRUE, momentum=0.9, clipvalue=0.5)
     }
         
         
@@ -1560,17 +1560,18 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
         split
     }
     
-    save_callback <- if(!is.null(save.directory)){
-        callback_model_checkpoint(filepath=paste0(save.directory, save.name, ".hdf5"),
-            monitor="val_accuracy",
+    callback_list <- if(!is.null(save.directory)){
+        list(callback_model_checkpoint(filepath=paste0(save.directory, save.name, ".hdf5"),
+            monitor="val_loss",
             verbose=1,
             save_best_only=TRUE,
             save_weights_only=TRUE,
-            mode="max",
+            mode="min",
             save_freq="epoch"
-            )
+            ),
+            callback_terminate_on_naan())
     } else if(is.null(save.directory)){
-            NULL
+        list(callback_terminate_on_naan())
     }
     
     
@@ -1583,12 +1584,12 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             validation_data=list(x_test, y_test),
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
-            callbacks = list(second_metric, save_callback)
+            callbacks = callback_list
             )
         } else if(simple.split==0){
             model %>% fit(
@@ -1596,11 +1597,11 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
-            callbacks = list(second_metric, save_callback)
+            callbacks = callback_list
             )
         }
     } else if(is.null(second_metric)){
@@ -1610,7 +1611,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             validation_data=list(x_test, y_test),
             #steps_per_epoch=2,
             #validation_steps=2,
@@ -1624,7 +1625,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
             epochs = epochs,
             validation_split = model.split,
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
@@ -1639,9 +1640,9 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     
     intermediate_layer_model <- keras_model(inputs = model$input,
                                     outputs = get_layer(model, "penultimate")$output)
-    intermediate_output <- predict(intermediate_layer_model, x_train)
+    intermediate_output <- predict(intermediate_layer_model, x_train, verbose=verbose)
     if(!is.null(split) | !is.null(split_by_group)){
-        intermediate_output_test <- predict(intermediate_layer_model, x_test)
+        intermediate_output_test <- predict(intermediate_layer_model, x_test, verbose=verbose)
     }
      
     #if(!is.null(save.directory)){
@@ -1650,7 +1651,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     
     history_plot <- plot(result) + theme_light()
     
-    predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=1)
+    predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=verbose)
     predictions.train.pre <- predictions.train.proto + 1
     #predictions.train.pre <- ramify::argmax(predictions.train.proto)
     predictions.train <- levels(as.factor(data$Class))[predictions.train.pre]
@@ -1686,7 +1687,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     
     if(!is.null(split) | !is.null(split_by_group)){
         if(split>0){
-            predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=1)
+            predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=verbose)
             predictions.test.pre <- predictions.test.proto + 1
             predictions.test <- levels(y_train_pre)[predictions.test.pre]
             
@@ -2685,17 +2686,18 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
     
     #x_train <- data.matrix(x_train)
     
-    save_callback <- if(!is.null(save.directory)){
-        callback_model_checkpoint(filepath=paste0(save.directory, save.name, ".hdf5"),
+        callback_list <- if(!is.null(save.directory)){
+        list(callback_model_checkpoint(filepath=paste0(save.directory, save.name, ".hdf5"),
             monitor="val_loss",
             verbose=1,
             save_best_only=TRUE,
             save_weights_only=TRUE,
             mode="min",
             save_freq="epoch"
-            )
+            ),
+            callback_terminate_on_naan())
     } else if(is.null(save.directory)){
-            NULL
+        list(callback_terminate_on_naan())
     }
     
     result <- if(!is.null(second_metric)){
@@ -2705,11 +2707,11 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
-            callbacks = list(second_metric, save_callback)
+            callbacks = callback_list
             )
         } else if(model.split>0){
             model %>% fit(
@@ -2718,11 +2720,11 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
             epochs = epochs,
             validation_data = list(x_var=x_test_second, y_var=y_test_second),
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
-            callbacks = list(second_metric, save_callback)
+            callbacks = callback_list
             )
         }
     } else if(is.null(second_metric)){
@@ -2732,7 +2734,7 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
@@ -2745,7 +2747,7 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
             epochs = epochs,
             validation_data = list(x_var=x_test_second, y_var=y_test_second),
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
@@ -2769,7 +2771,7 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
     #    keras::save_model_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
     #}
     
-    predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=1)
+    predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=verbose)
     predictions.train.pre <- predictions.train.proto + 1
     #predictions.train.pre <- ramify::argmax(predictions.train.proto)
     predictions.train <- levels(as.factor(data$Class))[predictions.train.pre]
@@ -2800,7 +2802,7 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
     
     if(is.null(model.split) | model.split==0){
         if(!is.null(split) | !is.null(split_by_group)){
-            predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=1)
+            predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=verbose)
             predictions.test.pre <- predictions.test.proto + 1
             predictions.test <- levels(y_train_pre)[predictions.test.pre]
             
@@ -2827,14 +2829,14 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
         }
     } else if(!is.null(model.split) | model.split>0){
         if(!is.null(split) | !is.null(split_by_group)){
-            predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=1)
+            predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=verbose)
             predictions.test.pre <- predictions.test.proto + 1
             predictions.test <- levels(y_train_pre)[predictions.test.pre]
             
             test.results.frame <- data.frame(Sample=as.vector(data.test$Sample), Known=as.vector(data.test$Class), Predicted=predictions.test)
             test.accuracy.rate <- rfUtilities::accuracy(x=test.results.frame$Known, y=test.results.frame$Predicted)
             
-            predictions.test.proto_second <- predict_classes(model, x_test_second, batch_size=batch_size, verbose=1)
+            predictions.test.proto_second <- predict_classes(model, x_test_second, batch_size=batch_size, verbose=verbose)
             predictions.test.pre_second <- predictions.test.proto_second + 1
             predictions.test_second <- levels(y_train_pre)[predictions.test.pre_second]
             
@@ -2859,7 +2861,7 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
             
             results <- list(DataTrain=data.train, DataTest=data.test, Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre, y_test_pre=y_test_pre), y_train=y_train, x_train=x_train, y_test=y_test, x_test=x_test, ResultPlot=ResultPlot, ImportancePlot=imp_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, testAccuracy=test.accuracy.rate, testAccuracyFrame=test.results.frame, validationAccuracy=test.accuracy.rate_second, validationAccuracyFrame=test.result.frame_second, intermediateOutput_train=intermediate_output, intermediateOutput_test=intermediate_output_test)
         } else if(is.null(split) & is.null(split_by_group)){
-                predictions.test.proto_second <- predict_classes(model, x_test_second, batch_size=batch_size, verbose=1)
+                predictions.test.proto_second <- predict_classes(model, x_test_second, batch_size=batch_size, verbose=verbose)
                 predictions.test.pre_second <- predictions.test.proto_second + 1
                 predictions.test_second <- levels(y_train_pre)[predictions.test.pre_second]
                 
@@ -3308,17 +3310,18 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     
     #x_train <- data.matrix(x_train)
     
-    save_callback <- if(!is.null(save.directory)){
-        callback_model_checkpoint(filepath=paste0(save.directory, save.name, ".hdf5"),
+        callback_list <- if(!is.null(save.directory)){
+        list(callback_model_checkpoint(filepath=paste0(save.directory, save.name, ".hdf5"),
             monitor="val_loss",
             verbose=1,
             save_best_only=TRUE,
             save_weights_only=TRUE,
             mode="min",
             save_freq="epoch"
-            )
+            ),
+            callback_terminate_on_naan())
     } else if(is.null(save.directory)){
-            NULL
+        list(callback_terminate_on_naan())
     }
     
     result <- if(!is.null(second_metric)){
@@ -3328,11 +3331,11 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
-            callbacks = list(second_metric, save_callback)
+            callbacks = callback_list
             )
         } else if(model.split>0){
             model %>% fit(
@@ -3341,11 +3344,11 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             epochs = epochs,
             validation_data = list(x_var=x_test_second, y_var=y_test_second),
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
-            callbacks = list(second_metric, save_callback)
+            callbacks = callback_list
             )
         }
     } else if(is.null(second_metric)){
@@ -3355,7 +3358,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
@@ -3368,7 +3371,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             epochs = epochs,
             validation_data = list(x_var=x_test_second, y_var=y_test_second),
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
@@ -3392,7 +3395,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         #keras::save_model_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5"))
     #}
     
-    predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=1)
+    predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=verbose)
     predictions.train.pre <- predictions.train.proto + 1
     #predictions.train.pre <- ramify::argmax(predictions.train.proto)
     predictions.train <- levels(as.factor(data$Class))[predictions.train.pre]
@@ -3424,7 +3427,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     
     if(is.null(model.split) | model.split==0){
         if(!is.null(split) | !is.null(split_by_group)){
-            predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=1)
+            predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=verbose)
             predictions.test.pre <- predictions.test.proto + 1
             predictions.test <- levels(y_train_pre)[predictions.test.pre]
             
@@ -3451,14 +3454,14 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         }
     } else if(!is.null(model.split) | model.split>0){
         if(!is.null(split) | !is.null(split_by_group)){
-            predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=1)
+            predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=verbose)
             predictions.test.pre <- predictions.test.proto + 1
             predictions.test <- levels(y_train_pre)[predictions.test.pre]
             
             test.results.frame <- data.frame(Sample=as.vector(data.test$Sample), Known=as.vector(data.test$Class), Predicted=predictions.test)
             test.accuracy.rate <- rfUtilities::accuracy(x=test.results.frame$Known, y=test.results.frame$Predicted)
             
-            predictions.test.proto_second <- predict_classes(model, x_test_second, batch_size=batch_size, verbose=1)
+            predictions.test.proto_second <- predict_classes(model, x_test_second, batch_size=batch_size, verbose=verbose)
             predictions.test.pre_second <- predictions.test.proto_second + 1
             predictions.test_second <- levels(y_train_pre)[predictions.test.pre_second]
             
@@ -3483,7 +3486,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             
             results <- list(DataTrain=data.train, DataTest=data.test, Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), model.data=data_list, y_train_pre=y_train_pre, y_test_pre=y_test_pre), y_train=y_train, x_train=x_train, y_test=y_test, x_test=x_test, ResultPlot=ResultPlot, ImportancePlot=imp_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, testAccuracy=test.accuracy.rate, testAccuracyFrame=test.results.frame, validationAccuracy=test.accuracy.rate_second, validationAccuracyFrame=test.result.frame_second, intermediateOutput_train=intermediate_output, intermediateOutput_test=intermediate_output_test)
         } else if(is.null(split) & is.null(split_by_group)){
-                predictions.test.proto_second <- predict_classes(model, x_test_second, batch_size=batch_size, verbose=1)
+                predictions.test.proto_second <- predict_classes(model, x_test_second, batch_size=batch_size, verbose=verbose)
                 predictions.test.pre_second <- predictions.test.proto_second + 1
                 predictions.test_second <- levels(y_train_pre)[predictions.test.pre_second]
                 
@@ -3806,7 +3809,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         } else if(optimizer=="nadam"){
             optimizer_nadam(learning_rate=learning.rate, clipvalue=0.5)
         } else if(optimizer=="sgd"){
-            optimizer_sgd(learning_rate=learning.rate, clipvalue=0.5)
+            optimizer_sgd(learning_rate=learning.rate, nesterov=TRUE, momentum=0.9, clipvalue=0.5)
         }
             
             
@@ -3906,17 +3909,18 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         split
     }
     
-    save_callback <- if(!is.null(save.directory)){
-        callback_model_checkpoint(filepath=paste0(save.directory, save.name, ".hdf5"),
-            monitor="val_accuracy",
+    callback_list <- if(!is.null(save.directory)){
+        list(callback_model_checkpoint(filepath=paste0(save.directory, save.name, ".hdf5"),
+            monitor="val_loss",
             verbose=1,
             save_best_only=TRUE,
             save_weights_only=TRUE,
-            mode="max",
+            mode="min",
             save_freq="epoch"
-            )
+            ),
+            callback_terminate_on_naan())
     } else if(is.null(save.directory)){
-            NULL
+        list(callback_terminate_on_naan())
     }
     
     
@@ -3929,12 +3933,12 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             validation_data=list(x_test, y_test),
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
-            callbacks = list(second_metric, save_callback)
+            callbacks = callback_list
             )
         } else if(simple.split==0){
             model %>% fit(
@@ -3942,11 +3946,11 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
-            callbacks = list(second_metric, save_callback)
+            callbacks = callback_list
             )
         }
     } else if(is.null(second_metric)){
@@ -3956,7 +3960,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             validation_data=list(x_test, y_test),
             #steps_per_epoch=2,
             #validation_steps=2,
@@ -3970,7 +3974,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             epochs = epochs,
             validation_split = model.split,
             verbose=verbose,
-            class_weight = l_weights,
+            #class_weight = l_weights,
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
@@ -3997,7 +4001,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     
     history_plot <- plot(result) + theme_light()
     
-    predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=1)
+    predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=verbose)
     predictions.train.pre <- predictions.train.proto + 1
     #predictions.train.pre <- ramify::argmax(predictions.train.proto)
     predictions.train <- levels(as.factor(data$Class))[predictions.train.pre]
@@ -4033,7 +4037,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     
     if(!is.null(split) | !is.null(split_by_group)){
         if(split>0){
-            predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=1)
+            predictions.test.proto <- predict_classes(model, x_test, batch_size=batch_size, verbose=verbose)
             predictions.test.pre <- predictions.test.proto + 1
             predictions.test <- levels(y_train_pre)[predictions.test.pre]
             
@@ -4329,17 +4333,18 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
     #metrics = c('accuracy')
     #)
     
-    save_callback <- if(!is.null(save.directory)){
-        callback_model_checkpoint(filepath=paste0(save.directory, save.name, ".hdf5"),
+        callback_list <- if(!is.null(save.directory)){
+        list(callback_model_checkpoint(filepath=paste0(save.directory, save.name, ".hdf5"),
             monitor="val_loss",
             verbose=1,
             save_best_only=TRUE,
             save_weights_only=TRUE,
             mode="min",
             save_freq="epoch"
-            )
+            ),
+            callback_terminate_on_naan())
     } else if(is.null(save.directory)){
-            NULL
+        list(callback_terminate_on_naan())
     }
     
     #x_train <- data.matrix(x_train)
@@ -4350,7 +4355,7 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
     epochs = epochs,
     validation_split = model.split,
     verbose=verbose,
-    #class_weight = l_weights,
+    ##class_weight = l_weights,
     #steps_per_epoch=2,
     #validation_steps=2,
     shuffle=TRUE,
@@ -7791,10 +7796,10 @@ bayesMLTable <- function(data
                         , epochs=100
                         , epochs_test=10
                         , callback="recall"
-                        , loss="mse"
-                        , activation='relu'
+                        , loss_vector=c("mse", "mae")
+                        , activation_vector=c("relu", "elu", "sigmoid", "tanh", "selu", "exponential")
                         , dropout=0.1
-                        , optimizer='rmsprop'
+                        , optimizer_vector=c("rmsprop", "sgd", "adam", "nadam", "adadelta", "adamax")
                         , learning.rate=0.0001
                         , start_kernel=7
                         , pool_size=2
@@ -7857,18 +7862,18 @@ bayesMLTable <- function(data
         scaleposweight.vec <- as.numeric(unlist(strsplit(as.character(scaleposweight), "-")))
         
         param_list <- list(
-            nrounds = c(50, nrounds),
-            , treedepth = c(tree.depth.vec[1], tree.depth.vec[2])
-            , xgbcolsample = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
-            , xgbalpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
-            , xgbeta = c(xgbeta.vec[1], xgbeta.vec[2])
-            , xgblambda=c(xgblambda.vec[1], xgblambda.vec[2])
-            , xgbgamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
-            , xgbminchild = c(xgbminchild.vec[1], xgbminchild.vec[2])
-            , xgbsubsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
-            , maxdeltastep = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
-            , scaleposweight = c(scaleposweight.vec[1], scaleposweight.vec[2])
-            , number=as.integer(c(1, number))
+            nrounds_val = as.integer(c(50, nrounds))
+            , treedepth_val = as.integer(c(tree.depth.vec[1], tree.depth.vec[2]))
+            , xgbcolsample_val = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
+            , xgbalpha_val = c(xgbalpha.vec[1], xgbalpha.vec[2])
+            , xgbeta_val = c(xgbeta.vec[1], xgbeta.vec[2])
+            , xgblambda_val=c(xgblambda.vec[1], xgblambda.vec[2])
+            , xgbgamma_val=c(xgbgamma.vec[1], xgbgamma.vec[2])
+            , xgbminchild_val = as.integer(c(xgbminchild.vec[1], xgbminchild.vec[2]))
+            , xgbsubsample_val = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
+            , maxdeltastep_val = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
+            , scaleposweight_val = c(scaleposweight.vec[1], scaleposweight.vec[2])
+            , number_val=as.integer(c(1, number))
         )
         
         qualpart_function <- function(treedepth_val
@@ -7927,9 +7932,9 @@ bayesMLTable <- function(data
                 )
                 
                 if(bayes_metric=="training_r2"){
-                    tryCatch(list(Score = 1-summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
+                    tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_r2"){
-                    tryCatch(list(Score = 1-summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
+                    tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_rmse"){
                     tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_rmse"){
@@ -7939,25 +7944,25 @@ bayesMLTable <- function(data
                 } else if(bayes_metric=="test_mae"){
                     tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_accuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_accuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_kappa"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_kappa"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_sensitivity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_sensitivity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_specificity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_specificity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_balancedaccuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_balancedaccuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
                 }
                 
             }
@@ -8044,20 +8049,20 @@ bayesMLTable <- function(data
         scaleposweight.vec <- as.numeric(unlist(strsplit(as.character(scaleposweight), "-")))
         
         param_list <- list(
-            nrounds = c(50, nrounds),
-            , treedepth = c(tree.depth.vec[1], tree.depth.vec[2])
-            , treedrop = c(drop.tree.vec[1], drop.tree.vec[2])
-            , skipdrop = c(skip.drop.vec[1], skip.drop.vec[2])
-            , xgbcolsample = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
-            , xgbalpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
-            , xgbeta = c(xgbeta.vec[1], xgbeta.vec[2])
-            , xgblambda=c(xgblambda.vec[1], xgblambda.vec[2])
-            , xgbgamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
-            , xgbminchild = c(xgbminchild.vec[1], xgbminchild.vec[2])
-            , xgbsubsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
-            , maxdeltastep = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
-            , scaleposweight = c(scaleposweight.vec[1], scaleposweight.vec[2])
-            , number=as.integer(c(1, number))
+            nrounds_val = as.integer(c(50, nrounds))
+            , treedepth_val = as.integer(c(tree.depth.vec[1], tree.depth.vec[2]))
+            , treedrop_val = c(drop.tree.vec[1], drop.tree.vec[2])
+            , skipdrop_val = c(skip.drop.vec[1], skip.drop.vec[2])
+            , xgbcolsample_val = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
+            , xgbalpha_val = c(xgbalpha.vec[1], xgbalpha.vec[2])
+            , xgbeta_val = c(xgbeta.vec[1], xgbeta.vec[2])
+            , xgblambda_val=c(xgblambda.vec[1], xgblambda.vec[2])
+            , xgbgamma_val=c(xgbgamma.vec[1], xgbgamma.vec[2])
+            , xgbminchild_val = as.integer(c(xgbminchild.vec[1], xgbminchild.vec[2]))
+            , xgbsubsample_val = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
+            , maxdeltastep_val = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
+            , scaleposweight_val = c(scaleposweight.vec[1], scaleposweight.vec[2])
+            , number_val=as.integer(c(1, number))
         )
         
         qualpart_function <- function(treedepth_val
@@ -8120,9 +8125,9 @@ bayesMLTable <- function(data
                 )
                 
                 if(bayes_metric=="training_r2"){
-                    tryCatch(list(Score = 1-summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
+                    tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_r2"){
-                    tryCatch(list(Score = 1-summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
+                    tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_rmse"){
                     tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_rmse"){
@@ -8132,25 +8137,25 @@ bayesMLTable <- function(data
                 } else if(bayes_metric=="test_mae"){
                     tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_accuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_accuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_kappa"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_kappa"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_sensitivity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_sensitivity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_specificity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_specificity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_balancedaccuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_balancedaccuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
                 }
                 
             }
@@ -8221,11 +8226,11 @@ bayesMLTable <- function(data
         xgblambda.vec <- as.numeric(unlist(strsplit(as.character(xgblambda), "-")))
         
         param_list <- list(
-           nrounds = c(50, nrounds),
-           xgbalpha = c(xgbalpha.vec[1], xgbalpha.vec[2]),
-           xgbeta = c(xgbeta.vec[1], xgbeta.vec[2]),
-           xgblambda=c(xgblambda.vec[1], xgblambda.vec[2]),
-           number=as.integer(c(1, number)))
+           nrounds_val = as.integer(c(50, nrounds)),
+           xgbalpha_val = c(xgbalpha.vec[1], xgbalpha.vec[2]),
+           xgbeta_val = c(xgbeta.vec[1], xgbeta.vec[2]),
+           xgblambda_val = c(xgblambda.vec[1], xgblambda.vec[2]),
+           number_val = as.integer(c(1, number)))
         
         qualpart_function <- function(
             xgbalpha_val
@@ -8270,9 +8275,9 @@ bayesMLTable <- function(data
                 )
                 
                 if(bayes_metric=="training_r2"){
-                    tryCatch(list(Score = 1-summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
+                    tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_r2"){
-                    tryCatch(list(Score = 1-summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
+                    tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_rmse"){
                     tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_rmse"){
@@ -8282,25 +8287,25 @@ bayesMLTable <- function(data
                 } else if(bayes_metric=="test_mae"){
                     tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_accuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_accuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_kappa"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_kappa"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_sensitivity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_sensitivity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_specificity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_specificity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_balancedaccuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_balancedaccuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
                 }
                 
             }
@@ -8389,9 +8394,9 @@ bayesMLTable <- function(data
                 )
                 
                 if(bayes_metric=="training_r2"){
-                    tryCatch(list(Score = 1-summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
+                    tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_r2"){
-                    tryCatch(list(Score = 1-summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
+                    tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_rmse"){
                     tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_rmse"){
@@ -8401,25 +8406,25 @@ bayesMLTable <- function(data
                 } else if(bayes_metric=="test_mae"){
                     tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_accuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_accuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_kappa"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_kappa"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_sensitivity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_sensitivity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_specificity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_specificity"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
                 } else if(bayes_metric=="train_balancedaccuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
                 } else if(bayes_metric=="test_balancedaccuracy"){
-                    tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
+                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
                 }
                 
             }
@@ -9615,13 +9620,14 @@ bayesMLTable <- function(data
             
             
             if(qual_optimize==TRUE){
-                qual_grid <- as.data.frame(expand.grid(loss=c("mse", "mae"), optimizer=c("rmsprop", "sgd", "adam", "nadam", "adadelta", "adamax"), activation=c("relu", "elu", "sigmoid", "tanh", "selu", "exponential")))
+                qual_grid <- as.data.frame(expand.grid(loss=loss_vector, optimizer=optimizer_vector, activation=activation_vector))
                 qual_grid$Index <- paste0("Row_", 1:nrow(qual_grid))
                 
                 qual_list <- list()
                 for(i in 1:nrow(qual_grid)){
                     print(paste0("Starting ", i, " of ", nrow(qual_grid), " Loss:", loss=qual_grid[i,"loss"], ", Optimizer:", optimizer=qual_grid[i,"optimizer"], " Activation:", activation=qual_grid[i,"activation"]))
-                    cv <- autoKeras(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=c("mse", "mae"), start_kernel=7, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE,  n_gpus=n_gpus, scale=TRUE, save.directory=save.directory, save.name=save.name, verbose=0)
+                    cv <- tryCatch(autoKeras(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=7, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=save.directory, save.name=save.name, verbose=0)
+                    , error=function(e) NULL)
                     
                     if(bayes_metric=="training_r2"){
                         qual_list[[i]] <- tryCatch(list(Index=paste0("Row_", i), Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
@@ -9741,19 +9747,19 @@ bayesMLTable <- function(data
                     } else if(bayes_metric=="train_accuracy"){
                         tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
                     } else if(bayes_metric=="test_accuracy"){
-                        tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                        tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
                     } else if(bayes_metric=="train_kappa"){
-                        tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                        tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
                     } else if(bayes_metric=="test_kappa"){
-                        tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                        tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
                     } else if(bayes_metric=="train_sensitivity"){
-                        tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                        tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
                     } else if(bayes_metric=="test_sensitivity"){
-                        tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                        tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
                     } else if(bayes_metric=="train_specificity"){
-                        tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                        tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
                     } else if(bayes_metric=="test_specificity"){
-                        tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0), error=function(e) list(Score=0))
+                        tryCatch(list(Score = 1-as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
                     } else if(bayes_metric=="train_balancedaccuracy"){
                         tryCatch(list(Score = 1-as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
                     } else if(bayes_metric=="test_balancedaccuracy"){
