@@ -8270,6 +8270,7 @@ bayesMLTable <- function(data
                         , save_plots=FALSE
                         , scale=FALSE
                         , seed=NULL
+                        , cv_seed=123
                         , additional_validation_frame=NULL
                         , nthread=-1
                         , verbose=1
@@ -8354,7 +8355,7 @@ bayesMLTable <- function(data
                 , NegativeClass = NegativeClass
                 , save_plots=save_plots
                 , scale=scale
-                , seed=seed
+                , seed=cv_seed
                 , nthread=nthread
                 , verbose=verbose
                 , treedepth=paste0(treedepth_val, "-", treedepth_val)
@@ -8545,7 +8546,7 @@ bayesMLTable <- function(data
                 , NegativeClass = NegativeClass
                 , save_plots=save_plots
                 , scale=scale
-                , seed=seed
+                , seed=cv_seed
                 , nthread=nthread
                 , verbose=verbose
                 , treedepth=paste0(treedepth_val, "-", treedepth_val)
@@ -8703,7 +8704,7 @@ bayesMLTable <- function(data
                 , NegativeClass = NegativeClass
                 , save_plots=save_plots
                 , scale=scale
-                , seed=seed
+                , seed=cv_seed
                 , nthread=nthread
                 , verbose=verbose
                 , xgbalpha=paste0(xgbalpha_val, "-", xgbalpha_val)
@@ -8824,7 +8825,7 @@ bayesMLTable <- function(data
                 , NegativeClass = NegativeClass
                 , save_plots=save_plots
                 , scale=scale
-                , seed=seed
+                , seed=cv_seed
                 , try=try_val
                 , trees=trees_val
                 , number=number_val
@@ -8934,7 +8935,7 @@ bayesMLTable <- function(data
                     , NegativeClass = NegativeClass
                     , save_plots=save_plots
                     , scale=scale
-                    , seed=seed
+                    , seed=cv_seed
                     , svmc=paste0(svmc_val, "-", svmc_val)
                     , number=number_val
                     , search=FALSE
@@ -9052,7 +9053,7 @@ bayesMLTable <- function(data
                     , NegativeClass = NegativeClass
                     , save_plots=save_plots
                     , scale=scale
-                    , seed=seed
+                    , seed=cv_seed
                     , svmc=svmc_val_vec
                     , svmdegree=svmdegree_val_vec
                     , svmscale=svmscale_val
@@ -9167,7 +9168,7 @@ bayesMLTable <- function(data
                     , NegativeClass = NegativeClass
                     , save_plots=save_plots
                     , scale=scale
-                    , seed=seed
+                    , seed=cv_seed
                     , svmc=paste0(svmc_val, "-", svmc_val)
                     , svmsigma=paste0(svmsigma_val, "-", svmsigma_val)
                     , number=number_val
@@ -9276,7 +9277,7 @@ bayesMLTable <- function(data
                     , NegativeClass = NegativeClass
                     , save_plots=save_plots
                     , scale=scale
-                    , seed=seed
+                    , seed=cv_seed
                     , svmc=paste0(svmc_val, "-", svmc_val)
                     , number=number_val
                     , search=FALSE
@@ -9387,7 +9388,7 @@ bayesMLTable <- function(data
                     , NegativeClass = NegativeClass
                     , save_plots=save_plots
                     , scale=scale
-                    , seed=seed
+                    , seed=cv_seed
                     , svmc=paste0(svmc_val, "-", svmc_val)
                     , svmsigma=paste0(svmsigma_val, "-", svmsigma_val)
                     , number=number_val
@@ -9500,7 +9501,7 @@ bayesMLTable <- function(data
                     , NegativeClass = NegativeClass
                     , save_plots=save_plots
                     , scale=scale
-                    , seed=seed
+                    , seed=cv_seed
                     , svmc=paste0(svmc_val, "-", svmc_val)
                     , svmlength=paste0(svmlength_val, "-", svmlength_val)
                     , number=number_val
@@ -9613,7 +9614,7 @@ bayesMLTable <- function(data
                     , NegativeClass = NegativeClass
                     , save_plots=save_plots
                     , scale=scale
-                    , seed=seed
+                    , seed=cv_seed
                     , svmc=paste0(svmc_val, "-", svmc_val)
                     , xgblambda=paste0(xgblambda_val, "-", xgblambda_val)
                     , number=number_val
@@ -9726,7 +9727,7 @@ bayesMLTable <- function(data
                     , NegativeClass = NegativeClass
                     , save_plots=save_plots
                     , scale=scale
-                    , seed=seed
+                    , seed=cv_seed
                     , svmc=paste0(svmc_val, "-", svmc_val)
                     , xgblambda=paste0(xgblambda_val, "-", xgblambda_val)
                     , number=number_val
@@ -9838,7 +9839,7 @@ bayesMLTable <- function(data
                     , NegativeClass = NegativeClass
                     , save_plots=save_plots
                     , scale=scale
-                    , seed=seed
+                    , seed=cv_seed
                     , neuralhiddenunits=paste0(neuralhiddenunits_val, "-", neuralhiddenunits_val)
                     , number=number_val
                     , search=FALSE
@@ -9958,7 +9959,7 @@ bayesMLTable <- function(data
                     , NegativeClass = NegativeClass
                     , save_plots=save_plots
                     , scale=scale
-                    , seed=seed
+                    , seed=cv_seed
                     , xgbalpha=paste0(xgbalpha_val, "-", xgbalpha_val)
                     , bartbeta=paste0(bartbeta_val, "-", bartbeta_val)
                     , bartnu=paste0(bartnu_val, "-", bartnu_val)
@@ -10102,7 +10103,7 @@ bayesMLTable <- function(data
 
 sequential_predict <- function(model, model_data, new_data, lag=-1, lag_variable, scale=FALSE){
     
-    model_data_predictions <- predict(object=model, newdata=model_data)
+    model_data_predictions <- predict(object=model$Model, newdata=model_data[,colnames(model$Model$trainingData[,-1])])
     
     starting_new_data <- new_data[1,]
     starting_new_data$Hold <- model_data_predictions[length(model_data_predictions)]
