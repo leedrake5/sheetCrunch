@@ -330,6 +330,19 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
                 .
             }
         } %T>% extract(., j = `:=`(Value, -Inf))
+    iter_points_dt_backup <- Matrix_runif(n = init_points+n_iter, lower = DT_bounds[,
+            Lower], upper = DT_bounds[, Upper]) %>% data.table(.) %T>%
+            setnames(., old = names(.), new = DT_bounds[, Parameter]) %T>%
+            {
+                if (any(DT_bounds[, Type] == "integer")) {
+                    set(., j = DT_bounds[Type == "integer", Parameter],
+                      value = round(extract(., j = DT_bounds[Type ==
+                        "integer", Parameter], with = FALSE)))
+                }
+                else {
+                    .
+                }
+            }
     iter_points_dt <- data.table(matrix(-Inf, nrow = n_iter,
         ncol = nrow(DT_bounds) + 1)) %>% setnames(., old = names(.),
         new = c(DT_bounds[, Parameter], "Value"))
@@ -375,29 +388,29 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
             GP <- GPfit::GP_fit(X = Par_Mat[Rounds_Unique, ],
                 Y = Value_Vec[Rounds_Unique], corr = kernel)
         })
-        Next_Par <- Utility_Max(DT_bounds, GP, acq = acq, y_max = max(DT_history[,
+        Next_Par <- tryCatch(Utility_Max(DT_bounds, GP, acq = acq, y_max = max(DT_history[,
             Value]), kappa = kappa, eps = eps) %>% Min_Max_Inverse_Scale_Vec(.,
             lower = DT_bounds[, Lower], upper = DT_bounds[, Upper]) %>%
             magrittr::set_names(., DT_bounds[, Parameter]) %>%
             inset(., DT_bounds[Type == "integer", Parameter],
                 round(extract(., DT_bounds[Type == "integer",
-                  Parameter])))
-        Next_Log <- utils::capture.output({
+                  Parameter]))), error=function(e) unlist(iter_points_dt_backup[j,]))
+        Next_Log <- tryCatch(utils::capture.output({
             Next_Time <- system.time({
                 Next_Score_Pred <- do.call(what = FUN, args = as.list(Next_Par))
             })
-        })
-        data.table::set(DT_history, i = as.integer(j), j = c(DT_bounds[,
+        }), error=function(e) NULL)
+        tryCatch(data.table::set(DT_history, i = as.integer(j), j = c(DT_bounds[,
             Parameter], "Value"), value = as.list(c(Next_Par,
-            Value = Next_Score_Pred$Score)))
-        Pred_list[[j]] <- Next_Score_Pred$Pred
+            Value = Next_Score_Pred$Score))), error=function(e) NULL)
+        tryCatch(Pred_list[[j]] <- Next_Score_Pred$Pred, error=function(e) NULL)
         if (verbose == TRUE) {
-            paste(c("elapsed", names(DT_history)), c(format(Next_Time["elapsed"],
+            tryCatch(paste(c("elapsed", names(DT_history)), c(format(Next_Time["elapsed"],
                 trim = FALSE, digits = NULL, nsmall = 2), format(DT_history[j,
                 "Round", with = FALSE], trim = FALSE, digits = NULL,
                 nsmall = 0), format(DT_history[j, -"Round", with = FALSE],
                 trim = FALSE, digits = NULL, nsmall = 4)), sep = " = ",
-                collapse = "\t") %>% cat(., "\n")
+                collapse = "\t") %>% cat(., "\n"), error=function(e) NULL)
         }#, error=function(e) NULL})
     }
     Best_Par <- as.numeric(DT_history[which.max(Value), DT_bounds[,

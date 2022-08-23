@@ -1,7 +1,7 @@
 source("~/GitHub/sheetCrunch/MachineLearning.r")
 library(ISLR)
 data = Default[1:2000,]
-variable="student"
+variable="income"
 predictors=NULL
 min.n=5
 split=0.15
@@ -81,3 +81,4 @@ epochs_test=10
 optimizer_vector=c("rmsprop", "sgd", "adam", "nadam", "adadelta", "adamax")
 loss_vector=c("binary_crossentropy", "poisson", "hinge", "kl_divergence")
 activation_vector=c("relu", "elu", "sigmoid", "tanh", "selu")
+cv_seed=4
