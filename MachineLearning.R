@@ -4984,7 +4984,7 @@ regressXGBoostLinear <- function(data
                                   , metric=metric
                                   , method = "xgbLinear"
                                   , objective = "reg:squarederror"
-                                  , nthread=-1
+                                  , nthread=nthread
                                   , na.action=na.omit
                                   , verbose=verbose
                                   )
