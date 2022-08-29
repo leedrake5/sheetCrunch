@@ -1256,8 +1256,8 @@ dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE,
     sample.frame <- data[,c("Sample", variable)]
     if(scale==TRUE & is.numeric(data[,variable])){
         
-        if(!is.null(y_min)){y_min <- my.min(data[,variable])}
-        if(!is.null(y_max)){y_max <- my.max(data[,variable])}
+        if(is.null(y_min)){y_min <- my.min(data[,variable])}
+        if(is.null(y_max)){y_max <- my.max(data[,variable])}
         sample.frame[,variable] <- ((sample.frame[,variable]-y_min)/(y_max-y_min))
     } else {
         y_min <- NULL
@@ -1278,8 +1278,8 @@ dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE,
         )
         colnames(quant.fish) <- colnames(just.fish)[sapply(just.fish, is.numeric)]
         if(scale==TRUE){
-            if(!is.null(mins)){mins <- apply(quant.fish, 2, my.min)}
-            if(!is.null(maxes)){maxes <- apply(quant.fish, 2, my.max)}
+            if(is.null(mins)){mins <- apply(quant.fish, 2, my.min)}
+            if(is.null(maxes)){maxes <- apply(quant.fish, 2, my.max)}
             if(reduce==FALSE){
                 quant.fish <- quant.fish %>% scaleTransform
             } else if(reduce==TRUE){
