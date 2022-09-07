@@ -1202,19 +1202,19 @@ importanceBar <- function(model){
 }
 
 ###Dependent Transformation
-scaleTransform <- function(values, y_min=NULL, y_max=NULL){
+scaleTransform <- function(values, the_min=NULL, the_max=NULL){
     
-    if(is.null(y_min)){
-        y_min <- my.min(values)
+    if(is.null(the_min)){
+        the_min <- my.min(values)
     }
     
-    if(is.null(y_max)){
-        y_max <- my.max(values)
+    if(is.null(the_max)){
+        the_max <- my.max(values)
     }
     
-    y_train_scale <- ((values-y_min)/(y_max-y_min))
+    train_scale <- ((values-the_min)/(the_max-the_min))
 
-    return(y_train_scale)
+    return(train_scale)
 }
 
 scaleDecode <- function(values, y_min, y_max){
@@ -1281,9 +1281,13 @@ dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE,
             if(is.null(mins)){mins <- apply(quant.fish, 2, my.min)}
             if(is.null(maxes)){maxes <- apply(quant.fish, 2, my.max)}
             if(reduce==FALSE){
-                quant.fish <- quant.fish %>% scaleTransform
+                for(i in names(mins)){
+                    quant.fish[,i] <- scaleTransform(values=quant.fish[,i], the_min=mins[i], the_max=maxes[i])
+                }
             } else if(reduce==TRUE){
-                quant.fish <- quant.fish %>% scaleTransform %>% round(digits=2)
+                for(i in names(mins)){
+                    quant.fish[i] <- round(scaleTransform(values=quant.fish[i], the_min=mins[i], the_max=maxes[i]), 2)
+                }
             }
             
             
@@ -1337,6 +1341,7 @@ dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE,
     if(!is.null(seed)){set.seed(seed)}
     results.final$RandXXX <- rnorm(nrow(results.final), 1, 0.2)
     results.final <- results.final[order(results.final$RandXXX),!colnames(results.final) %in% "RandXXX"]
+    results.final <- results.final[,sapply(results.final, function(x) length(unique(x))>1)]
     results.final <- results.final[complete.cases(results.final),]
     
     return(list(Data=results.final, YMin=y_min, YMax=y_max, Mins=mins, Maxes=maxes))
@@ -8108,8 +8113,11 @@ autoMLTable <- function(data
       return(qualpart)
     } else if(!is.null(additional_validation_frame)){
     
-
-    additional_data <- dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
+    additional_data <- if(scale==FALSE){
+        dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
+    } else if(scale==TRUE){
+        dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed, y_min=qualpart$ModelData$Data$YMin, y_max=qualpart$ModelData$Data$YMax, mins=qualpart$ModelData$Data$Mins, maxes=qualpart$ModelData$Data$Maxes)
+    }
     additional_data$Data <- additional_data$Data[order(additional_data$Data$Sample),]
     
     
@@ -10067,7 +10075,11 @@ bayesMLTable <- function(data
     } else if(!is.null(additional_validation_frame)){
     
 
-    additional_data <- dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
+    additional_data <- if(scale==FALSE){
+        dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
+    } else if(scale==TRUE){
+        dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed, y_min=qualpart$ModelData$Data$YMin, y_max=qualpart$ModelData$Data$YMax, mins=qualpart$ModelData$Data$Mins, maxes=qualpart$ModelData$Data$Maxes)
+    }
     additional_data$Data <- additional_data$Data[order(additional_data$Data$Sample),]
     
     
