@@ -1219,7 +1219,7 @@ scaleTransform <- function(values, the_min=NULL, the_max=NULL){
 
 scaleDecode <- function(values, y_min, y_max){
 
-    (y_max-y_min)*values
+    (y_max-y_min)*values + y_min
     
     #y_train_decoded <- (values*(y_max-y_min)) + y_min
 
