@@ -7834,6 +7834,7 @@ bayesMLTable <- function(data
                         , verbose=1
                         , bayes_metric="test_r2"
                         , qual_optimize=TRUE
+                        , eager=FALSE
                         ){
                         
 
