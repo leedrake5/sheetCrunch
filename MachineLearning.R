@@ -359,7 +359,7 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
         }
         This_Log <- utils::capture.output({
             This_Time <- system.time({
-                This_Score_Pred <- do.call(what = FUN, args = as.list(This_Par))
+                This_Score_Pred <- tryCatch(do.call(what = FUN, args = as.list(This_Par)), error=function(e) list(Score=-100))
             })
         })
         data.table::set(DT_history, i = as.integer(i), j = "Value",
