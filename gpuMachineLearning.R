@@ -43,6 +43,12 @@ store_model_hdf5 <- function (object, filepath, overwrite = TRUE, include_optimi
         invisible(TRUE)
 }
 
+#predict_classes <- function(object, newdata, batch_size, verbose){
+#    predict(object=object, x=newdata, batch_size=batch_size, verbose=verbose) %>% k_argmax()
+#}
+
+
+
 kerasAUC <- function(y_true, y_pred){
     true= k_flatten(y_true)
     pred = k_flatten(y_pred)
@@ -1433,7 +1439,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     
     
     #metric_top_3_categorical_accuracy <- custom_metric("top_3_categorical_accuracy", function(y_true, y_pred) {  metric_top_k_categorical_accuracy(y_true, y_pred, k = 3) })
-    #optimizer_sgd(learning_rate=0.001, clipvalue=0.6)
+    #optimizer_sgd(lr=0.001, clipvalue=0.6)
     
     loss_decision <- if(is.null(loss)){
         if(num_classes>2){
@@ -1453,17 +1459,17 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     #loss_decision <- 'sparse_categorical_crossentropy'
     
     optimization <- if(optimizer=="rmsprop"){
-        optimizer_rmsprop(learning_rate=learning.rate, clipvalue=0.5)
+        optimizer_rmsprop(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="adam"){
-        optimizer_adam(learning_rate=learning.rate, clipvalue=0.5)
+        optimizer_adam(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="adagrad"){
-        optimizer_adagrad(learning_rate=learning.rate, clipvalue=0.5)
+        optimizer_adagrad(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="adadelta"){
-        optimizer_adadelta(learning_rate=learning.rate, clipvalue=0.5)
+        optimizer_adadelta(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="nadam"){
-        optimizer_nadam(learning_rate=learning.rate, clipvalue=0.5)
+        optimizer_nadam(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="sgd"){
-        optimizer_sgd(learning_rate=learning.rate, nesterov=TRUE, momentum=0.9, clipvalue=0.5)
+        optimizer_sgd(lr=learning.rate, nesterov=TRUE, momentum=0.9, clipvalue=0.5)
     }
         
         
@@ -1657,7 +1663,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     predictions.train <- levels(as.factor(data$Class))[predictions.train.pre]
     
     train.results.frame <- data.frame(Sample=data.train$Sample, Known=as.vector(data.train$Class), Predicted=predictions.train)
-    train.accuracy.rate <- rfUtilities::accuracy(x=train.results.frame$Known, y=train.results.frame$Predicted)
+    train.accuracy.rate <- confusionMatrix(as.factor(train.results.frame$Predicted), as.factor(train.results.frame$Known))
     
     #predictor$data$X <- x_train
     if(importance==TRUE){
@@ -1692,14 +1698,14 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
             predictions.test <- levels(y_train_pre)[predictions.test.pre]
             
             test.results.frame <- data.frame(Sample=as.vector(data.test$Sample), Known=as.vector(data.test$Class), Predicted=predictions.test)
-            test.accuracy.rate <- rfUtilities::accuracy(x=test.results.frame$Known, y=test.results.frame$Predicted)
+            test.accuracy.rate <- confusionMatrix(as.factor(test.results.frame$Predicted), as.factor(test.results.frame$Known))
             
             KnownSet <- data.frame(Sample=data.train$Sample, Known=data.train[,"Class"], Predicted=predictions.train, stringsAsFactors=FALSE)
             KnownSet$Type <- rep("1. Train", nrow(KnownSet))
             test.results.frame$Type <- rep("2. Test", nrow(test.results.frame))
             All <- rbind(KnownSet, test.results.frame)
             
-            results.bar.frame <- data.frame(Accuracy=c(train.accuracy.rate$PCC, test.accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
+            results.bar.frame <- data.frame(Accuracy=c(train.accuracy.rate$overall["Accuracy"], test.accuracy.rate$overall["Accuracy"]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
                    
             ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
             geom_bar(stat="identity") +
@@ -2008,24 +2014,24 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
     }
     
     optimization <- if(optimizer=="rmsprop"){
-        optimizer_rmsprop(learning_rate=learning.rate, clipvalue=0.5)
+        optimizer_rmsprop(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="adam"){
-        optimizer_adam(learning_rate=learning.rate, clipvalue=0.5, decay=0.01)
+        optimizer_adam(lr=learning.rate, clipvalue=0.5, decay=0.01)
     } else if(optimizer=="adagrad"){
-        optimizer_adagrad(learning_rate=learning.rate, clipvalue=0.5)
+        optimizer_adagrad(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="adadelta"){
-        optimizer_adadelta(learning_rate=learning.rate, clipvalue=0.5)
+        optimizer_adadelta(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="nadam"){
-        optimizer_nadam(learning_rate=learning.rate, clipvalue=0.5)
+        optimizer_nadam(lr=learning.rate, clipvalue=0.5)
     } else if(optimizer=="sgd"){
-        optimizer_sgd(learning_rate=learning.rate, nesterov=TRUE, momentum=0.9, clipvalue=0.5)
+        optimizer_sgd(lr=learning.rate, nesterov=TRUE, momentum=0.9, clipvalue=0.5)
     }
     
     #parallel_model <- multi_gpu_model(model, gpus=4)
     
     
     #metric_top_3_categorical_accuracy <- custom_metric("top_3_categorical_accuracy", function(y_true, y_pred) {  metric_top_k_categorical_accuracy(y_true, y_pred, k = 3) })
-    #optimizer_sgd(learning_rate=0.001, clipvalue=0.6)
+    #optimizer_sgd(lr=0.001, clipvalue=0.6)
     
     
 
@@ -2554,17 +2560,17 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
         }
         
         optimization <- if(optimizer=="rmsprop"){
-            optimizer_rmsprop(learning_rate=learning.rate)
+            optimizer_rmsprop(lr=learning.rate)
         } else if(optimizer=="adam"){
-            optimizer_adam(learning_rate=learning.rate)
+            optimizer_adam(lr=learning.rate)
         } else if(optimizer=="adagrad"){
-            optimizer_adagrad(learning_rate=learning.rate)
+            optimizer_adagrad(lr=learning.rate)
         } else if(optimizer=="adadelta"){
-            optimizer_adadelta(learning_rate=learning.rate)
+            optimizer_adadelta(lr=learning.rate)
         } else if(optimizer=="nadam"){
-            optimizer_nadam(learning_rate=learning.rate)
+            optimizer_nadam(lr=learning.rate)
         } else if(optimizer=="sgd"){
-            optimizer_sgd(learning_rate=learning.rate)
+            optimizer_sgd(lr=learning.rate)
         }
         
         loss_decision <- if(is.null(loss)){
@@ -2596,7 +2602,7 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
     
     
     #metric_top_3_categorical_accuracy <- custom_metric("top_3_categorical_accuracy", function(y_true, y_pred) {  metric_top_k_categorical_accuracy(y_true, y_pred, k = 3) })
-    #optimizer_sgd(learning_rate=0.001, clipvalue=0.6)
+    #optimizer_sgd(lr=0.001, clipvalue=0.6)
     
     if(num_classes==2){
         y_train_hold <- y_train
@@ -2814,7 +2820,7 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
             test.results.frame$Type <- rep("2. Test", nrow(test.results.frame))
             All <- rbind(KnownSet, test.results.frame)
             
-            results.bar.frame <- data.frame(Accuracy=c(train.accuracy.rate$PCC, test.accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
+            results.bar.frame <- data.frame(Accuracy=c(train.accuracy.rate$overall["Accuracy"], test.accuracy.rate$overall["Accuracy"]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
                    
             ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
             geom_bar(stat="identity") +
@@ -3190,17 +3196,17 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         }
         
         optimization <- if(optimizer=="rmsprop"){
-            optimizer_rmsprop(learning_rate=learning.rate)
+            optimizer_rmsprop(lr=learning.rate)
         } else if(optimizer=="adam"){
-            optimizer_adam(learning_rate=learning.rate)
+            optimizer_adam(lr=learning.rate)
         } else if(optimizer=="adagrad"){
-            optimizer_adagrad(learning_rate=learning.rate)
+            optimizer_adagrad(lr=learning.rate)
         } else if(optimizer=="adadelta"){
-            optimizer_adadelta(learning_rate=learning.rate)
+            optimizer_adadelta(lr=learning.rate)
         } else if(optimizer=="nadam"){
-            optimizer_nadam(learning_rate=learning.rate)
+            optimizer_nadam(lr=learning.rate)
         } else if(optimizer=="sgd"){
-            optimizer_sgd(learning_rate=learning.rate)
+            optimizer_sgd(lr=learning.rate)
         }
         
         loss_decision <- if(is.null(loss)){
@@ -3232,7 +3238,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     
     
     #metric_top_3_categorical_accuracy <- custom_metric("top_3_categorical_accuracy", function(y_true, y_pred) {  metric_top_k_categorical_accuracy(y_true, y_pred, k = 3) })
-    #optimizer_sgd(learning_rate=0.001, clipvalue=0.6)
+    #optimizer_sgd(lr=0.001, clipvalue=0.6)
     
     if(num_classes==2){
         y_train_hold <- y_train
@@ -3439,7 +3445,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             test.results.frame$Type <- rep("2. Test", nrow(test.results.frame))
             All <- rbind(KnownSet, test.results.frame)
             
-            results.bar.frame <- data.frame(Accuracy=c(train.accuracy.rate$PCC, test.accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
+            results.bar.frame <- data.frame(Accuracy=c(train.accuracy.rate$overall["Accuracy"], test.accuracy.rate$overall["Accuracy"]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
                    
             ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
             geom_bar(stat="identity") +
@@ -3799,17 +3805,17 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         #loss_decision <- 'sparse_categorical_crossentropy'
         
         optimization <- if(optimizer=="rmsprop"){
-            optimizer_rmsprop(learning_rate=learning.rate, clipvalue=0.5)
+            optimizer_rmsprop(lr=learning.rate, clipvalue=0.5)
         } else if(optimizer=="adam"){
-            optimizer_adam(learning_rate=learning.rate, clipvalue=0.5)
+            optimizer_adam(lr=learning.rate, clipvalue=0.5)
         } else if(optimizer=="adagrad"){
-            optimizer_adagrad(learning_rate=learning.rate, clipvalue=0.5)
+            optimizer_adagrad(lr=learning.rate, clipvalue=0.5)
         } else if(optimizer=="adadelta"){
-            optimizer_adadelta(learning_rate=learning.rate, clipvalue=0.5)
+            optimizer_adadelta(lr=learning.rate, clipvalue=0.5)
         } else if(optimizer=="nadam"){
-            optimizer_nadam(learning_rate=learning.rate, clipvalue=0.5)
+            optimizer_nadam(lr=learning.rate, clipvalue=0.5)
         } else if(optimizer=="sgd"){
-            optimizer_sgd(learning_rate=learning.rate, nesterov=TRUE, momentum=0.9, clipvalue=0.5)
+            optimizer_sgd(lr=learning.rate, nesterov=TRUE, momentum=0.9, clipvalue=0.5)
         }
             
             
@@ -3832,7 +3838,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     
     
     #metric_top_3_categorical_accuracy <- custom_metric("top_3_categorical_accuracy", function(y_true, y_pred) {  metric_top_k_categorical_accuracy(y_true, y_pred, k = 3) })
-    #optimizer_sgd(learning_rate=0.001, clipvalue=0.6)
+    #optimizer_sgd(lr=0.001, clipvalue=0.6)
     
     if(is.null(weights)){
         if(num_classes > 2){
@@ -4049,7 +4055,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             test.results.frame$Type <- rep("2. Test", nrow(test.results.frame))
             All <- rbind(KnownSet, test.results.frame)
             
-            results.bar.frame <- data.frame(Accuracy=c(train.accuracy.rate$PCC, test.accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
+            results.bar.frame <- data.frame(Accuracy=c(train.accuracy.rate$overall["Accuracy"], test.accuracy.rate$overall["Accuracy"]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
                    
             ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
             geom_bar(stat="identity") +
@@ -4322,7 +4328,7 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
     
     
     #metric_top_3_categorical_accuracy <- custom_metric("top_3_categorical_accuracy", function(y_true, y_pred) {  metric_top_k_categorical_accuracy(y_true, y_pred, k = 3) })
-    #optimizer_sgd(learning_rate=0.001, clipvalue=0.6)
+    #optimizer_sgd(lr=0.001, clipvalue=0.6)
     
     
     
@@ -9628,8 +9634,8 @@ bayesMLTable <- function(data
                 qual_list <- list()
                 for(i in 1:nrow(qual_grid)){
                     print(paste0("Starting ", i, " of ", nrow(qual_grid), " Loss:", loss=qual_grid[i,"loss"], ", Optimizer:", optimizer=qual_grid[i,"optimizer"], " Activation:", activation=qual_grid[i,"activation"]))
-                    cv <- tryCatch(autoKeras(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=7, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model)
-                    , error=function(e) NULL)
+                    cv <- autoKeras(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=7, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model)
+                    #, error=function(e) NULL)
                     
                     if(bayes_metric=="training_r2"){
                         qual_list[[i]] <- tryCatch(list(Index=paste0("Row_", i), Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
