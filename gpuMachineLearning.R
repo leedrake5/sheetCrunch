@@ -9628,7 +9628,7 @@ bayesMLTable <- function(data
                 qual_list <- list()
                 for(i in 1:nrow(qual_grid)){
                     print(paste0("Starting ", i, " of ", nrow(qual_grid), " Loss:", loss=qual_grid[i,"loss"], ", Optimizer:", optimizer=qual_grid[i,"optimizer"], " Activation:", activation=qual_grid[i,"activation"]))
-                    cv <- tryCatch(autoKeras(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=7, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=save.directory, save.name=save.name, verbose=0, eager=eager, previous.model=previous.model)
+                    cv <- tryCatch(autoKeras(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=7, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model)
                     , error=function(e) NULL)
                     
                     if(bayes_metric=="training_r2"){
@@ -9710,8 +9710,8 @@ bayesMLTable <- function(data
                     , the_group=the_group
                     , metric=metric
                     #, summary_function=summary_function
-                    , save.directory=save.directory
-                    , save.name=save.name
+                    , save.directory=NULL
+                    , save.name=NULL
                     , scale=scale
                     , seed=seed
                     , verbose=0
