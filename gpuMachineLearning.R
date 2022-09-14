@@ -1,5 +1,7 @@
 source("MachineLearning.R")
 
+#install.packages("https://cran.r-project.org/src/contrib/Archive/keras/keras_2.4.0.tar.gz", repos=NULL, type="source")
+
 list.of.packages <- c("keras", "iml", "lime", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm", "listarrays", "funModeling")
 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
@@ -1705,16 +1707,16 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
             test.results.frame$Type <- rep("2. Test", nrow(test.results.frame))
             All <- rbind(KnownSet, test.results.frame)
             
-            results.bar.frame <- data.frame(Accuracy=c(train.accuracy.rate$overall["Accuracy"], test.accuracy.rate$overall["Accuracy"]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
+            #results.bar.frame <- data.frame(Accuracy=c(train.accuracy.rate$overall["Accuracy"], test.accuracy.rate$overall["Accuracy"]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
                    
-            ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
-            geom_bar(stat="identity") +
-            geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
-                      position = position_dodge(0.9), size=3.5) +
-            theme_light()
+            #ResultPlot <- ggplot(results.bar.frame, aes(x=Type, y=Accuracy, fill=Type)) +
+            #geom_bar(stat="identity") +
+            #geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
+                      #position = position_dodge(0.9), size=3.5) +
+            #theme_light()
                     
             
-            results <- list(Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre, y_test_pre=y_test_pre), y_train=y_train, x_train=x_train, y_test=y_test, x_test=x_test, ResultPlot=ResultPlot, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, testAccuracy=test.accuracy.rate, testAccuracyFrame=test.results.frame, intermediateOutput_train=intermediate_output, intermediateOutput_test=intermediate_output_test)
+            results <- list(Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre, y_test_pre=y_test_pre), y_train=y_train, x_train=x_train, y_test=y_test, x_test=x_test,  Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, testAccuracy=test.accuracy.rate, testAccuracyFrame=test.results.frame, intermediateOutput_train=intermediate_output, intermediateOutput_test=intermediate_output_test)
         } else if(split==0){
             results <- list(Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre), y_train=y_train, x_train=x_train, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output)
         }
@@ -9634,8 +9636,8 @@ bayesMLTable <- function(data
                 qual_list <- list()
                 for(i in 1:nrow(qual_grid)){
                     print(paste0("Starting ", i, " of ", nrow(qual_grid), " Loss:", loss=qual_grid[i,"loss"], ", Optimizer:", optimizer=qual_grid[i,"optimizer"], " Activation:", activation=qual_grid[i,"activation"]))
-                    cv <- autoKeras(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=7, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model)
-                    #, error=function(e) NULL)
+                    cv <- tryCatch(autoKeras(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=7, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model)
+                    , error=function(e) NULL)
                     
                     if(bayes_metric=="training_r2"){
                         qual_list[[i]] <- tryCatch(list(Index=paste0("Row_", i), Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
@@ -9807,7 +9809,7 @@ bayesMLTable <- function(data
                             , verbose=verbose
                             , previous.model=previous.model
                             , eager=eager
-                            , importance=FALSE
+                            , importance=importance
                             , model.split=model.split
                             , epochs=epochs
                             , optimizer=qual_frame[1, "optimizer"]
