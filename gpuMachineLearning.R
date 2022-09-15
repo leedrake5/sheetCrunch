@@ -1379,11 +1379,16 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     } else if(model.type=="First_CNN"){
         keras_model_sequential() %>%
         #layer_dropout(rate=0.5) %>%
-        layer_conv_1d(filters = 32, kernel_size = c(3), activation = activation,
+        layer_conv_1d(filters = 32, kernel_size = c(2), activation = activation,
         input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
-        layer_conv_1d(filters = 64, kernel_size = c(3), activation = activation) %>%
+        layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
+        layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.6, 0), activation = activation) %>%
         layer_max_pooling_1d(pool_size = c(2)) %>%
-        #bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
+        bidirectional(layer_lstm(units=128, return_sequences=TRUE, dropout=0.2, recurrent_dropout=0, activation="tanh", recurrent_activation="sigmoid", unroll=FALSE, use_bias=TRUE)) %>%
+        bidirectional(layer_lstm(units=128, return_sequences=TRUE,  dropout=0.2, recurrent_dropout=0, activation="tanh", recurrent_activation="sigmoid", unroll=FALSE, use_bias=TRUE)) %>%
+        bidirectional(layer_lstm(units=128, return_sequences=TRUE,  dropout=0.2, recurrent_dropout=0, activation="tanh", recurrent_activation="sigmoid", unroll=FALSE, use_bias=TRUE)) %>%
+        layer_dense(256, activation=activation) %>%
+        layer_dropout(rate = dropout) %>%
         layer_dropout(rate = 0.25) %>%
         layer_flatten() %>%
         layer_dense(units = 128, activation = activation) %>%
@@ -2171,7 +2176,7 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
             imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
         }
         
-        if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN" | "Expiremental_CNN_1"){
+        if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN" | model.type=="Expiremental_CNN_1"){
             batch.size <- batch_size
             predict_CNN <- function(model, newdata, batch_size=batch.size, verbose=verbose){
                 data_wrap <- listarrays::expand_dims(as.matrix(newdata), 3)
@@ -4521,7 +4526,7 @@ autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, spli
 }
 
 
-xgbTreeNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta="0.1-0.1", xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
+xgbTreeNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta="0.1-0.1", xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
 
     keras_results <- autoKeras(data=data, variable=class, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
     gc()
@@ -4740,6 +4745,7 @@ if(is.null(xgb_eval_metric)){
                              , method = "xgbTree"
                              , tree_method = tree_method
                              , single_precision_histogram = single_precision_histogram
+                             , predictor=predictor
                              , objective = objective.mod
                              , num_class=num_classes
                              , nthread=nthread
@@ -4754,6 +4760,7 @@ if(is.null(xgb_eval_metric)){
                              , method = "xgbTree"
                              , tree_method = tree_method
                              , single_precision_histogram = single_precision_histogram
+                             , predictor=predictor
                              , objective = objective.mod
                              , nthread=nthread
                              , verbose=verbose
@@ -4801,6 +4808,7 @@ if(is.null(xgb_eval_metric)){
                    , init_points = init_points
                    , n_iter = n_iter
                    , nthread=nthread
+                   , predictor=predictor
                    )
                    
                    best_param <- list(
@@ -4925,6 +4933,7 @@ if(is.null(xgb_eval_metric)){
                          , method = "xgbTree"
                          , tree_method = tree_method
                          , single_precision_histogram = single_precision_histogram
+                         , predictor=predictor
                          , objective = objective.mod
                          , num_class=num_classes
                          , nthread=nthread
@@ -4939,6 +4948,7 @@ if(is.null(xgb_eval_metric)){
                          , method = "xgbTree"
                          , tree_method = tree_method
                          , single_precision_histogram = single_precision_histogram
+                         , predictor=predictor
                          , objective = objective.mod
                          , nthread=nthread
                          , verbose=verbose
@@ -5047,7 +5057,7 @@ if(is.null(xgb_eval_metric)){
 
 }
 
-xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, save_plots=FALSE){
+xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, save_plots=FALSE){
 
     keras_results <- autoKeras(data=data, variable=dependent, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
     gc()
@@ -5188,6 +5198,7 @@ xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
                                           , method = "xgbTree"
                                           , tree_method = tree_method
                                           , single_precision_histogram = single_precision_histogram
+                                          , predictor=predictor
                                           , objective = "reg:squarederror"
                                           , nthread=nthread
                                           , verbose=verbose
@@ -5259,6 +5270,7 @@ xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
                                        , nrounds=nrounds
                                        , tree_method = tree_method
                                        , single_precision_histogram = single_precision_histogram
+                                       , predictor=predictor
                                        , nthread=nthread
                                        , maximize = TRUE
                                        , verbose = verbose
@@ -5399,6 +5411,7 @@ xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
                                   , method = "xgbTree"
                                   , tree_method = tree_method
                                   , single_precision_histogram = single_precision_histogram
+                                  , predictor=predictor
                                   , objective = "reg:squarederror"
                                   , nthread=nthread
                                   , verbose=verbose
@@ -5507,7 +5520,7 @@ xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
 
 }
 
-xgbTreeNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
+xgbTreeNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
 
     if(is.null(save.name)){
         save.name <- if(!is.numeric(data[,variable])){
@@ -5585,6 +5598,7 @@ xgbTreeNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
                             , seed=seed
                             , nthread=nthread
                             , verbose=verbose
+                            , predictor=predictor
                             )
     } else if(is.numeric(data[,variable])){
         xgbTreeNeuralNetRegress(data=data
@@ -5638,6 +5652,7 @@ xgbTreeNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
                            , seed=seed
                            , nthread=nthread
                            , verbose=verbose
+                           , predictor=predictor
                            )
     }
     
@@ -5645,7 +5660,7 @@ xgbTreeNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
 
 }
 
-xgbDartNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
+xgbDartNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
 
     keras_results <- autoKeras(data=data, variable=class, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
     gc()
@@ -5874,6 +5889,7 @@ if(is.null(xgb_eval_metric)){
                              , num_class=num_classes
                              , tree_method = tree_method
                              , single_precision_histogram = single_precision_histogram
+                             , predictor=predictor
                              , nthread=nthread
                              , verbose=verbose
                              )
@@ -5887,6 +5903,7 @@ if(is.null(xgb_eval_metric)){
                              , objective = objective.mod
                              , tree_method = tree_method
                              , single_precision_histogram = single_precision_histogram
+                             , predictor=predictor
                              , nthread=nthread
                              , verbose=verbose
                              )
@@ -5937,6 +5954,7 @@ if(is.null(xgb_eval_metric)){
                    , init_points = init_points
                    , n_iter = n_iter
                    , nthread=nthread
+                   , predictor=predictor
                    )
                    
                    best_param <- list(
@@ -6067,6 +6085,8 @@ if(is.null(xgb_eval_metric)){
                          , metric=xgb_metric
                          , method = "xgbDART"
                          , tree_method = tree_method
+                         , single_precision_histogram = single_precision_histogram
+                         , predictor=predictor
                          , objective = objective.mod
                          , num_class=num_classes
                          , nthread=nthread
@@ -6081,6 +6101,7 @@ if(is.null(xgb_eval_metric)){
                          , method = "xgbDART"
                          , tree_method = tree_method
                          , single_precision_histogram = single_precision_histogram
+                         , predictor=predictor
                          , objective = objective.mod
                          , nthread=nthread
                          , verbose=verbose
@@ -6188,7 +6209,7 @@ if(is.null(xgb_eval_metric)){
 
 }
 
-xgbDartNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, save_plots=FALSE){
+xgbDartNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, save_plots=FALSE){
 
     keras_results <- autoKeras(data=data, variable=dependent, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
     gc()
@@ -6412,6 +6433,7 @@ xgbDartNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
                                        , early_stopping_rounds = 50
                                        , tree_method = tree_method
                                        , single_precision_histogram = single_precision_histogram
+                                       , predictor=predictor
                                        , nthread=nthread
                                        , maximize = TRUE
                                        , verbose = verbose
@@ -6550,6 +6572,7 @@ xgbDartNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
                                   , method = "xgbDART"
                                   , tree_method = tree_method
                                   , single_precision_histogram = single_precision_histogram
+                                  , predictor=predictor
                                   , objective = "reg:squarederror"
                                   , nthread=nthread
                                   , verbose=verbose
@@ -6658,7 +6681,7 @@ xgbDartNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
 
 }
 
-xgbDartNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
+xgbDartNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
 
     if(is.null(save.name)){
         save.name <- if(!is.numeric(data[,variable])){
@@ -6738,6 +6761,7 @@ xgbDartNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
                             , seed=seed
                             , nthread=nthread
                             , verbose=verbose
+                            , predictor=predictor
                             )
     } else if(is.numeric(data[,variable])){
         xgbDartNeuralNetRegress(data=data
@@ -6793,6 +6817,7 @@ xgbDartNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
                            , seed=seed
                            , nthread=nthread
                            , verbose=verbose
+                           , predictor=predictor
                            )
     }
     
@@ -7734,16 +7759,16 @@ xgbLinearNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=N
 }
 
 
-autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, type="XGBLinear", tree_method="hist", single_precision_histogram=FALSE, treedepth="2-2", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", maxdeltastep="0-10", scaleposweight="0-10", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, loss=NULL, metric=NULL, xgb_eval_metric="auc", xgb_metric="RMSE", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL, model.split=0, epochs=10, callback="recall", activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, save_plots=FALSE, scale=FALSE){
+autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, type="XGBLinear", tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", treedepth="2-2", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", maxdeltastep="0-10", scaleposweight="0-10", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, loss=NULL, metric=NULL, xgb_eval_metric="auc", xgb_metric="RMSE", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL, model.split=0, epochs=10, callback="recall", activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, save_plots=FALSE, scale=FALSE){
     
     
     #Choose model class
     model <- if(type=="xgbTree"){
-        autoXGBoostTree(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, tree_method=tree_method, single_precision_histogram=single_precision_histogram, treedepth=treedepth, xgbgamma=xgbgamma, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, maxdeltastep=maxdeltastep, scaleposweight=scaleposweight, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale, verbose=verbosee)
+        autoXGBoostTree(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, tree_method=tree_method, single_precision_histogram=single_precision_histogram, predictor=predictor, treedepth=treedepth, xgbgamma=xgbgamma, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, maxdeltastep=maxdeltastep, scaleposweight=scaleposweight, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale, verbose=verbosee)
     } else if(type=="xgbLinear"){
         autoXGBoostLinear(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale, verbose=verbose)
     }  else if(type=="xgbDart"){
-        autoXGBoostDart(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, tree_method=tree_method, single_precision_histogram=single_precision_histogram, treedepth=treedepth, treedrop=treedrop, skipdrop=skipdrop, xgbgamma=xgbgamma, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, maxdeltastep=maxdeltastep, scaleposweight=scaleposweight, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale, verbose=verbose)
+        autoXGBoostDart(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, tree_method=tree_method, single_precision_histogram=single_precision_histogram, predictor=predictor, treedepth=treedepth, treedrop=treedrop, skipdrop=skipdrop, xgbgamma=xgbgamma, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, maxdeltastep=maxdeltastep, scaleposweight=scaleposweight, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale, verbose=verbose)
     } else if(type=="Forest"){
         autoForest(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, try=try, trees=trees, metric=metric, train=train, number=number, cvrepeats=cvrepeats, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale)
     } else if(type=="svmLinear" | type=="svmPoly" | type=="svmRadial" | type=="svmRadialCost" | type=="svmRadialSigma" | type=="svmBoundrangeString" | type=="svmExpoString" | type=="svmSpectrumString"){
@@ -7753,11 +7778,11 @@ autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, sp
     } else if(type=="Keras"){
         autoKeras(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
     } else if(type=="xgbTreeNeuralNet"){
-        xgbTreeNeuralNet(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, tree_method=tree_method, single_precision_histogram=single_precision_histogram, treedepth=treedepth, xgbgamma=xgbgamma, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, maxdeltastep=maxdeltastep, scaleposweight=scaleposweight, nrounds=nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale)
+        xgbTreeNeuralNet(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, tree_method=tree_method, single_precision_histogram=single_precision_histogram, predictor=predictor, treedepth=treedepth, xgbgamma=xgbgamma, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, maxdeltastep=maxdeltastep, scaleposweight=scaleposweight, nrounds=nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale)
     } else if(type=="xgbLinearNeuralNet"){
         xgbLinearNeuralNet(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale)
     }  else if(type=="xgbDartNeuralNet"){
-        xgbDartNeuralNet(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, tree_method=tree_method, single_precision_histogram=single_precision_histogram, treedepth=treedepth, treedrop=treedrop, skipdrop=skipdrop, xgbgamma=xgbgamma, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, maxdeltastep=maxdeltastep, scaleposweight=scaleposweight, nrounds=nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale)
+        xgbDartNeuralNet(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, tree_method=tree_method, single_precision_histogram=single_precision_histogram, predictor=predictor, treedepth=treedepth, treedrop=treedrop, skipdrop=skipdrop, xgbgamma=xgbgamma, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, maxdeltastep=maxdeltastep, scaleposweight=scaleposweight, nrounds=nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale)
     }
     
     return(model)
@@ -7773,7 +7798,7 @@ bayesMLTable <- function(data
                         , the_group=NULL
                         , type="XGBLinear"
                         , tree_method="hist"
-                        , single_precision_histogram=FALSE
+                        , single_precision_histogram=FALSE, predictor="cpu_predictor"
                         , treedepth="2-2"
                         , treedrop="0.3-0.3"
                         , skipdrop="0.3-0.3"
@@ -7844,6 +7869,7 @@ bayesMLTable <- function(data
                         , qual_optimize=TRUE
                         , eager=FALSE
                         , previous.model=NULL
+                        , predictor=predictor
                         ){
                         
 
@@ -7939,6 +7965,7 @@ bayesMLTable <- function(data
                 , scaleposweight=paste0(scaleposweight_val, "-", scaleposweight_val)
                 , nrounds=nrounds_val
                 , number=number_val
+                , predictor=predictor
                 )
                 
                 if(bayes_metric=="training_r2"){
@@ -8029,6 +8056,7 @@ bayesMLTable <- function(data
                         , seed=seed
                         , nthread=nthread
                         , verbose=verbose
+                        , predictor=predictor
                         )
                         qualpart$Opt_Res <- OPT_Res
         
@@ -8132,6 +8160,7 @@ bayesMLTable <- function(data
                 , scaleposweight=paste0(scaleposweight_val, "-", scaleposweight_val)
                 , nrounds=nrounds_val
                 , number=number_val
+                , predictor=predictor
                 )
                 
                 if(bayes_metric=="training_r2"){
@@ -8224,6 +8253,7 @@ bayesMLTable <- function(data
                         , seed=seed
                         , nthread=nthread
                         , verbose=verbose
+                        , predictor=predictor
                         )
                         qualpart$Opt_Res <- OPT_Res
                         

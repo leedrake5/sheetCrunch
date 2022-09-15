@@ -647,6 +647,7 @@ xgb_cv_opt_tree <- function (data
                              , seed = 0
                              , nthread = -1
                              , verbose = 1
+                             , predictor="cpu_predictor"
                              )
 {
     
@@ -722,6 +723,7 @@ xgb_cv_opt_tree <- function (data
                          , nthread=nthread
                          , tree_method=tree_method
                          , single_precision_histogram=single_precision_histogram
+                         , predictor=predictor
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4])
@@ -778,7 +780,7 @@ xgb_cv_opt_tree <- function (data
                          , verbose = verbose
                          , nrounds = nrounds_opt
                          , nthread=nthread
-                         
+                         , predictor=predictor
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4])
@@ -846,6 +848,7 @@ xgb_cv_opt_dart <- function (data
                              , seed = 0
                              , nthread = -1
                              , verbose = 1
+                             , predictor="cpu_predictor"
                              )
 {
     
@@ -924,6 +927,7 @@ xgb_cv_opt_dart <- function (data
                          , maximize = to_maximize
                          , verbose = verbose
                          , nrounds = nrounds_opt
+                         , predictor=predictor
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4])
@@ -985,6 +989,7 @@ xgb_cv_opt_dart <- function (data
                          , maximize = to_maximize
                          , verbose = verbose
                          , nrounds = nrounds_opt
+                         , predictor=predictor
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4])
@@ -1394,6 +1399,7 @@ classifyXGBoostTree <- function(data
                                 , seed=NULL
                                 , nthread = -1
                                 , verbose = 1
+                                , predictor="cpu_predictor"
                                 ){
     
     ###Prepare the data
@@ -1660,6 +1666,7 @@ if(is.null(eval_metric)){
                              , method = "xgbTree"
                              , tree_method = tree_method
                              , single_precision_histogram = single_precision_histogram
+                             , predictor=predictor
                              , objective = objective.mod
                              , num_class=num_classes
                              , na.action=na.omit
@@ -1675,6 +1682,7 @@ if(is.null(eval_metric)){
                              , method = "xgbTree"
                              , tree_method = tree_method
                              , single_precision_histogram = single_precision_histogram
+                             , predictor=predictor
                              , objective = objective.mod
                              , na.action=na.omit
                              , nthread=nthread
@@ -1724,6 +1732,7 @@ if(is.null(eval_metric)){
                    , n_iter = n_iter
                    , nthread=nthread
                    , verbose=verbose
+                   , predictor=predictor
                    )
                    
         best_param <- list(
@@ -1850,6 +1859,7 @@ if(is.null(eval_metric)){
                          , method = "xgbTree"
                          , tree_method = tree_method
                          , single_precision_histogram = single_precision_histogram
+                         , predictor=predictor
                          , objective = objective.mod
                          , num_class=num_classes
                          , nthread=nthread
@@ -1865,6 +1875,7 @@ if(is.null(eval_metric)){
                          , method = "xgbTree"
                          , tree_method = tree_method
                          , single_precision_histogram = single_precision_histogram
+                         , predictor=predictor
                          , objective = objective.mod
                          , nthread=nthread
                          , na.action=na.omit
@@ -2015,6 +2026,7 @@ regressXGBoostTree <- function(data
                                , seed=NULL
                                , nthread=-1
                                , verbose=1
+                               , predictor="cpu_predictor"
                                ){
     
     ###Prepare the data
@@ -2205,6 +2217,7 @@ regressXGBoostTree <- function(data
                                           , method = "xgbTree"
                                           , tree_method = tree_method
                                           , single_precision_histogram = single_precision_histogram
+                                          , predictor=predictor
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           , nthread=nthread
@@ -2276,6 +2289,7 @@ regressXGBoostTree <- function(data
                                        , nrounds=nrounds
                                        , tree_method = tree_method
                                        , single_precision_histogram= single_precision_histogram
+                                       , predictor=predictor
                                        , nthread=nthread
                                        , maximize = TRUE
                                        , verbose = verbose
@@ -2415,6 +2429,7 @@ regressXGBoostTree <- function(data
                                   , method = "xgbTree"
                                   , tree_method = tree_method
                                   , single_precision_histogram = single_precision_histogram
+                                  , predictor=predictor
                                   , objective = "reg:squarederror"
                                   , nthread=nthread
                                   , na.action=na.omit
@@ -2591,6 +2606,7 @@ autoXGBoostTree <- function(data
                             , seed=NULL
                             , nthread=-1
                             , verbose=1
+                            , predictor="cpu_predictor"
                             ){
     
     if(is.null(save.name)){
@@ -2655,6 +2671,7 @@ autoXGBoostTree <- function(data
                             , seed=seed
                             , nthread=nthread
                             , verbose=verbose
+                            , predictor=predictor
                             )
     } else if(is.numeric(data[,variable])){
         regressXGBoostTree(data=data
@@ -2694,6 +2711,7 @@ autoXGBoostTree <- function(data
                            , seed=seed
                            , nthread=nthread
                            , verbose=verbose
+                           , predictor=predictor
                            )
     }
     
@@ -2750,6 +2768,7 @@ classifyXGBoostDart <- function(data
                                 , seed=NULL
                                 , nthread=-1
                                 , verbose=1
+                                , predictor="cpu_predictor"
                                 ){
     
     ###Prepare the data
@@ -3026,6 +3045,7 @@ if(is.null(eval_metric)){
                              , nthread=nthread
                              , tree_method=tree_method
                              , single_precision_histogram=single_precision_histogram
+                             , predictor=predictor
                              , verbose=verbose
                              )
             } else if(num_classes==2){
@@ -3040,6 +3060,7 @@ if(is.null(eval_metric)){
                              , nthread=nthread
                              , tree_method=tree_method
                              , single_precision_histogram=single_precision_histogram
+                             , predictor=predictor
                              , verbose=verbose
                              )
             }
@@ -3090,6 +3111,7 @@ if(is.null(eval_metric)){
                    , n_iter = n_iter
                    , nthread=nthread
                    , verbose=verbose
+                   , predictor=predictor
                    )
                    
         best_param <- list(
@@ -3220,6 +3242,7 @@ if(is.null(eval_metric)){
                          , method = "xgbDART"
                          , tree_method = tree_method
                          , single_precision_histogram = single_precision_histogram
+                         , predictor=predictor
                          , objective = objective.mod
                          , num_class=num_classes
                          , nthread=nthread
@@ -3235,6 +3258,7 @@ if(is.null(eval_metric)){
                          , method = "xgbDART"
                          , tree_method = tree_method
                          , single_precision_histogram = single_precision_histogram
+                         , predictor=predictor
                          , objective = objective.mod
                          , nthread=nthread
                          , na.action=na.omit
@@ -3387,6 +3411,7 @@ regressXGBoostDart <- function(data
                                , seed=NULL
                                , nthread=-1
                                , verbose=1
+                               , predictor="cpu_predictor"
                                ){
     
     ###Prepare the data
@@ -3583,6 +3608,7 @@ regressXGBoostDart <- function(data
                                           , method = "xgbTree"
                                           , tree_method = tree_method
                                           , single_precision_histogram = single_precision_histogram
+                                          , predictor=predictor
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           , nthread=nthread
@@ -3660,6 +3686,7 @@ regressXGBoostDart <- function(data
                                        , early_stopping_rounds = 50
                                        , tree_method = tree_method
                                        , single_precision_histogram = single_precision_histogram
+                                       , predictor=predictor
                                        , nthread=nthread
                                        , maximize = TRUE
                                        , verbose = verbose
@@ -3798,6 +3825,7 @@ regressXGBoostDart <- function(data
                                   , method = "xgbDART"
                                   , tree_method = tree_method
                                   , single_precision_histogram = single_precision_histogram
+                                  , predictor=predictor
                                   , objective = "reg:squarederror"
                                   , na.action=na.omit
                                   , nthread=nthread
@@ -3976,6 +4004,7 @@ autoXGBoostDart <- function(data
                             , seed=NULL
                             , nthread=-1
                             , verbose=1
+                            , predictor="cpu_predictor"
                             ){
     
     if(is.null(save.name)){
@@ -4042,6 +4071,7 @@ autoXGBoostDart <- function(data
                             , seed=seed
                             , nthread=nthread
                             , verbose=verbose
+                            , predictor=predictor
                             )
     } else if(is.numeric(data[,variable])){
         regressXGBoostDart(data=data
@@ -4083,6 +4113,7 @@ autoXGBoostDart <- function(data
                            , seed=seed
                            , nthread=nthread
                            , verbose=verbose
+                           , predictor=predictor
                            )
     }
     
@@ -7889,6 +7920,7 @@ autoMLTable <- function(data
                         , nthread=-1
                         , verbose=1
                         , search=FALSE
+                        , predictor="cpu_predictor"
                         ){
     
     
@@ -7935,6 +7967,7 @@ autoMLTable <- function(data
                         , seed=seed
                         , nthread=nthread
                         , verbose=verbose
+                        , predictor=predictor
                         )
     } else if(type=="xgbDart"){
     #mistake
@@ -7981,6 +8014,7 @@ autoMLTable <- function(data
                         , seed=seed
                         , nthread=nthread
                         , verbose=verbose
+                        , predictor=predictor
                         )
     } else if(type=="xgbLinear"){
         autoXGBoostLinear(data=data
@@ -8300,6 +8334,7 @@ bayesMLTable <- function(data
                         , nthread=-1
                         , verbose=1
                         , bayes_metric="test_r2"
+                        , predictor="cpu_predictor"
                         ){
                         
 
@@ -8395,6 +8430,7 @@ bayesMLTable <- function(data
                 , scaleposweight=paste0(scaleposweight_val, "-", scaleposweight_val)
                 , nrounds=nrounds_val
                 , number=number_val
+                , predictor=predictor
                 )
                 
                 if(bayes_metric=="training_r2"){
@@ -8485,6 +8521,7 @@ bayesMLTable <- function(data
                         , seed=seed
                         , nthread=nthread
                         , verbose=verbose
+                        , predictor=predictor
                         )
                         qualpart$Opt_Res <- OPT_Res
         
@@ -8588,6 +8625,7 @@ bayesMLTable <- function(data
                 , scaleposweight=paste0(scaleposweight_val, "-", scaleposweight_val)
                 , nrounds=nrounds_val
                 , number=number_val
+                , predictor=predictor
                 )
                 
                 if(bayes_metric=="training_r2"){
@@ -8680,6 +8718,7 @@ bayesMLTable <- function(data
                         , seed=seed
                         , nthread=nthread
                         , verbose=verbose
+                        , predictor=predictor
                         )
                         qualpart$Opt_Res <- OPT_Res
     } else if(type=="xgbLinear"){
