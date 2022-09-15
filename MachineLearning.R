@@ -648,6 +648,7 @@ xgb_cv_opt_tree <- function (data
                              , nthread = -1
                              , verbose = 1
                              , predictor="cpu_predictor"
+                             , early_stopping_rounds=100
                              )
 {
     
@@ -716,7 +717,6 @@ xgb_cv_opt_tree <- function (data
                          , watchlist = xg_watchlist
                          , prediction = FALSE
                          , showsd = TRUE
-                         , early_stopping_rounds = 100
                          , maximize = to_maximize
                          , verbose = verbose
                          , nrounds = nrounds_opt
@@ -724,6 +724,7 @@ xgb_cv_opt_tree <- function (data
                          , tree_method=tree_method
                          , single_precision_histogram=single_precision_histogram
                          , predictor=predictor
+                         , early_stopping_rounds=early_stopping_rounds
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4])
@@ -775,12 +776,12 @@ xgb_cv_opt_tree <- function (data
                          , watchlist = xg_watchlist
                          , prediction = FALSE
                          , showsd = TRUE
-                         , early_stopping_rounds = 100
                          , maximize = to_maximize
                          , verbose = verbose
                          , nrounds = nrounds_opt
                          , nthread=nthread
                          , predictor=predictor
+                         , early_stopping_rounds=early_stopping_rounds
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4])
@@ -849,6 +850,7 @@ xgb_cv_opt_dart <- function (data
                              , nthread = -1
                              , verbose = 1
                              , predictor="cpu_predictor"
+                             , early_stopping_rounds=100
                              )
 {
     
@@ -923,11 +925,11 @@ xgb_cv_opt_dart <- function (data
                          , watchlist = xg_watchlist
                          , prediction = FALSE
                          , showsd = TRUE
-                         , early_stopping_rounds = 100
                          , maximize = to_maximize
                          , verbose = verbose
                          , nrounds = nrounds_opt
                          , predictor=predictor
+                         , early_stopping_rounds=early_stopping_rounds
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4])
@@ -985,11 +987,11 @@ xgb_cv_opt_dart <- function (data
                          , watchlist = xg_watchlist
                          , prediction = FALSE
                          , showsd = TRUE
-                         , early_stopping_rounds = 100
                          , maximize = to_maximize
                          , verbose = verbose
                          , nrounds = nrounds_opt
                          , predictor=predictor
+                         , early_stopping_rounds=early_stopping_rounds
                          )
             if (eval_met %in% c("auc", "ndcg", "map")) {
                 s <- max(cv$evaluation_log[, 4])
@@ -1400,6 +1402,7 @@ classifyXGBoostTree <- function(data
                                 , nthread = -1
                                 , verbose = 1
                                 , predictor="cpu_predictor"
+                                , early_stopping_rounds=100
                                 ){
     
     ###Prepare the data
@@ -1667,6 +1670,7 @@ if(is.null(eval_metric)){
                              , tree_method = tree_method
                              , single_precision_histogram = single_precision_histogram
                              , predictor=predictor
+                             , early_stopping_rounds=early_stopping_rounds
                              , objective = objective.mod
                              , num_class=num_classes
                              , na.action=na.omit
@@ -1683,6 +1687,7 @@ if(is.null(eval_metric)){
                              , tree_method = tree_method
                              , single_precision_histogram = single_precision_histogram
                              , predictor=predictor
+                             , early_stopping_rounds=early_stopping_rounds
                              , objective = objective.mod
                              , na.action=na.omit
                              , nthread=nthread
@@ -1733,6 +1738,7 @@ if(is.null(eval_metric)){
                    , nthread=nthread
                    , verbose=verbose
                    , predictor=predictor
+                   , early_stopping_rounds=early_stopping_rounds
                    )
                    
         best_param <- list(
@@ -1860,6 +1866,7 @@ if(is.null(eval_metric)){
                          , tree_method = tree_method
                          , single_precision_histogram = single_precision_histogram
                          , predictor=predictor
+                         , early_stopping_rounds=early_stopping_rounds
                          , objective = objective.mod
                          , num_class=num_classes
                          , nthread=nthread
@@ -1876,6 +1883,7 @@ if(is.null(eval_metric)){
                          , tree_method = tree_method
                          , single_precision_histogram = single_precision_histogram
                          , predictor=predictor
+                         , early_stopping_rounds=early_stopping_rounds
                          , objective = objective.mod
                          , nthread=nthread
                          , na.action=na.omit
@@ -2027,6 +2035,7 @@ regressXGBoostTree <- function(data
                                , nthread=-1
                                , verbose=1
                                , predictor="cpu_predictor"
+                               , early_stopping_rounds=100
                                ){
     
     ###Prepare the data
@@ -2218,6 +2227,7 @@ regressXGBoostTree <- function(data
                                           , tree_method = tree_method
                                           , single_precision_histogram = single_precision_histogram
                                           , predictor=predictor
+                                          , early_stopping_rounds=early_stopping_rounds
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           , nthread=nthread
@@ -2290,6 +2300,7 @@ regressXGBoostTree <- function(data
                                        , tree_method = tree_method
                                        , single_precision_histogram= single_precision_histogram
                                        , predictor=predictor
+                                       , early_stopping_rounds=early_stopping_rounds
                                        , nthread=nthread
                                        , maximize = TRUE
                                        , verbose = verbose
@@ -2430,6 +2441,7 @@ regressXGBoostTree <- function(data
                                   , tree_method = tree_method
                                   , single_precision_histogram = single_precision_histogram
                                   , predictor=predictor
+                                  , early_stopping_rounds=early_stopping_rounds
                                   , objective = "reg:squarederror"
                                   , nthread=nthread
                                   , na.action=na.omit
@@ -2607,6 +2619,7 @@ autoXGBoostTree <- function(data
                             , nthread=-1
                             , verbose=1
                             , predictor="cpu_predictor"
+                            , early_stopping_rounds=100
                             ){
     
     if(is.null(save.name)){
@@ -2672,6 +2685,7 @@ autoXGBoostTree <- function(data
                             , nthread=nthread
                             , verbose=verbose
                             , predictor=predictor
+                            , early_stopping_rounds=early_stopping_rounds
                             )
     } else if(is.numeric(data[,variable])){
         regressXGBoostTree(data=data
@@ -2712,6 +2726,7 @@ autoXGBoostTree <- function(data
                            , nthread=nthread
                            , verbose=verbose
                            , predictor=predictor
+                           , early_stopping_rounds=early_stopping_rounds
                            )
     }
     
@@ -2769,6 +2784,7 @@ classifyXGBoostDart <- function(data
                                 , nthread=-1
                                 , verbose=1
                                 , predictor="cpu_predictor"
+                                , early_stopping_rounds=100
                                 ){
     
     ###Prepare the data
@@ -3046,6 +3062,7 @@ if(is.null(eval_metric)){
                              , tree_method=tree_method
                              , single_precision_histogram=single_precision_histogram
                              , predictor=predictor
+                             , early_stopping_rounds=early_stopping_rounds
                              , verbose=verbose
                              )
             } else if(num_classes==2){
@@ -3061,6 +3078,7 @@ if(is.null(eval_metric)){
                              , tree_method=tree_method
                              , single_precision_histogram=single_precision_histogram
                              , predictor=predictor
+                             , early_stopping_rounds=early_stopping_rounds
                              , verbose=verbose
                              )
             }
@@ -3112,6 +3130,7 @@ if(is.null(eval_metric)){
                    , nthread=nthread
                    , verbose=verbose
                    , predictor=predictor
+                   , early_stopping_rounds=early_stopping_rounds
                    )
                    
         best_param <- list(
@@ -3243,6 +3262,7 @@ if(is.null(eval_metric)){
                          , tree_method = tree_method
                          , single_precision_histogram = single_precision_histogram
                          , predictor=predictor
+                         , early_stopping_rounds=early_stopping_rounds
                          , objective = objective.mod
                          , num_class=num_classes
                          , nthread=nthread
@@ -3259,6 +3279,7 @@ if(is.null(eval_metric)){
                          , tree_method = tree_method
                          , single_precision_histogram = single_precision_histogram
                          , predictor=predictor
+                         , early_stopping_rounds=early_stopping_rounds
                          , objective = objective.mod
                          , nthread=nthread
                          , na.action=na.omit
@@ -3412,6 +3433,7 @@ regressXGBoostDart <- function(data
                                , nthread=-1
                                , verbose=1
                                , predictor="cpu_predictor"
+                               , early_stopping_rounds=100
                                ){
     
     ###Prepare the data
@@ -3609,6 +3631,7 @@ regressXGBoostDart <- function(data
                                           , tree_method = tree_method
                                           , single_precision_histogram = single_precision_histogram
                                           , predictor=predictor
+                                          , early_stopping_rounds=early_stopping_rounds
                                           , objective = "reg:squarederror"
                                           , na.action=na.omit
                                           , nthread=nthread
@@ -3687,6 +3710,7 @@ regressXGBoostDart <- function(data
                                        , tree_method = tree_method
                                        , single_precision_histogram = single_precision_histogram
                                        , predictor=predictor
+                                       , early_stopping_rounds=early_stopping_rounds
                                        , nthread=nthread
                                        , maximize = TRUE
                                        , verbose = verbose
@@ -3826,6 +3850,7 @@ regressXGBoostDart <- function(data
                                   , tree_method = tree_method
                                   , single_precision_histogram = single_precision_histogram
                                   , predictor=predictor
+                                  , early_stopping_rounds=early_stopping_rounds
                                   , objective = "reg:squarederror"
                                   , na.action=na.omit
                                   , nthread=nthread
@@ -4005,6 +4030,7 @@ autoXGBoostDart <- function(data
                             , nthread=-1
                             , verbose=1
                             , predictor="cpu_predictor"
+                            , early_stopping_rounds=100
                             ){
     
     if(is.null(save.name)){
@@ -4072,6 +4098,7 @@ autoXGBoostDart <- function(data
                             , nthread=nthread
                             , verbose=verbose
                             , predictor=predictor
+                            , early_stopping_rounds=early_stopping_rounds
                             )
     } else if(is.numeric(data[,variable])){
         regressXGBoostDart(data=data
@@ -4114,6 +4141,7 @@ autoXGBoostDart <- function(data
                            , nthread=nthread
                            , verbose=verbose
                            , predictor=predictor
+                           , early_stopping_rounds=early_stopping_rounds
                            )
     }
     
@@ -7921,6 +7949,7 @@ autoMLTable <- function(data
                         , verbose=1
                         , search=FALSE
                         , predictor="cpu_predictor"
+                        , early_stopping_rounds=100
                         ){
     
     
@@ -7968,6 +7997,7 @@ autoMLTable <- function(data
                         , nthread=nthread
                         , verbose=verbose
                         , predictor=predictor
+                        , early_stopping_rounds=early_stopping_rounds
                         )
     } else if(type=="xgbDart"){
     #mistake
@@ -8015,6 +8045,7 @@ autoMLTable <- function(data
                         , nthread=nthread
                         , verbose=verbose
                         , predictor=predictor
+                        , early_stopping_rounds=early_stopping_rounds
                         )
     } else if(type=="xgbLinear"){
         autoXGBoostLinear(data=data
@@ -8335,6 +8366,7 @@ bayesMLTable <- function(data
                         , verbose=1
                         , bayes_metric="test_r2"
                         , predictor="cpu_predictor"
+                        , early_stopping_rounds=100
                         ){
                         
 
@@ -8431,6 +8463,7 @@ bayesMLTable <- function(data
                 , nrounds=nrounds_val
                 , number=number_val
                 , predictor=predictor
+                , early_stopping_rounds=early_stopping_rounds
                 )
                 
                 if(bayes_metric=="training_r2"){
@@ -8522,6 +8555,7 @@ bayesMLTable <- function(data
                         , nthread=nthread
                         , verbose=verbose
                         , predictor=predictor
+                        , early_stopping_rounds=early_stopping_rounds
                         )
                         qualpart$Opt_Res <- OPT_Res
         
@@ -8626,6 +8660,7 @@ bayesMLTable <- function(data
                 , nrounds=nrounds_val
                 , number=number_val
                 , predictor=predictor
+                , early_stopping_rounds=early_stopping_rounds
                 )
                 
                 if(bayes_metric=="training_r2"){
@@ -8719,6 +8754,7 @@ bayesMLTable <- function(data
                         , nthread=nthread
                         , verbose=verbose
                         , predictor=predictor
+                        , early_stopping_rounds=early_stopping_rounds
                         )
                         qualpart$Opt_Res <- OPT_Res
     } else if(type=="xgbLinear"){
