@@ -360,6 +360,7 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
         This_Log <- utils::capture.output({
             This_Time <- system.time({
                 This_Score_Pred <- tryCatch(do.call(what = FUN, args = as.list(This_Par)), error=function(e) list(Score=-100))
+                if(is.na(This_Score_Pred)){This_Score_Pred <- list(Score=100)}
             })
         })
         data.table::set(DT_history, i = as.integer(i), j = "Value",
@@ -398,6 +399,7 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
         Next_Log <- tryCatch(utils::capture.output({
             Next_Time <- system.time({
                 Next_Score_Pred <- do.call(what = FUN, args = as.list(Next_Par))
+                if(is.na(Next_Score_Pred)){Next_Score_Pred <- list(Score=100)}
             })
         }), error=function(e) NULL)
         tryCatch(data.table::set(DT_history, i = as.integer(j), j = c(DT_bounds[,
