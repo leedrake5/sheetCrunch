@@ -1,4 +1,6 @@
-source("~/GitHub/sheetCrunch/MachineLearning.r")
+reticulate::use_virtualenv("/Users/lee/tensorflow-metal", required=TRUE)
+
+source("~/GitHub/sheetCrunch/gpuMachineLearning.r", chdir=T)
 library(ISLR)
 data = Default[1:2000,]
 variable="income"
@@ -7,7 +9,7 @@ min.n=5
 split=0.15
 split_by_group=NULL
 the_group=NULL
-type="svmPoly"
+type="xgbTreeNeuralNet"
 tree_method="hist"
 single_precision_histogram=FALSE
 treedepth="2-20"
@@ -58,8 +60,8 @@ additional_validation_frame=NULL
 nthread=-1
 verbose=1
 bayes_metric="test_accuracy"
-parallelMethod="windows"
-parallel_method="windows"
+parallelMethod="linux"
+parallel_method="linux"
 epochs=100
 activation="adam"
 dropout="0.8"
@@ -82,3 +84,58 @@ optimizer_vector=c("rmsprop", "sgd", "adam", "nadam", "adadelta", "adamax")
 loss_vector=c("binary_crossentropy", "poisson", "hinge", "kl_divergence")
 activation_vector=c("relu", "elu", "sigmoid", "tanh", "selu")
 cv_seed=4
+
+
+
+
+
+data=data[, c("Sample", "Group", "eccentricity", "perihelion", "obliquity", "co2_trend", "global_insolation", "insolation", "Benthic_d18O_Detrend")]
+variable="Benthic_d18O_Detrend"
+split_by_group="Group"
+the_group="Parameter_Val"
+type="xgbTreeNeuralNet"
+model.split=0
+epochs=10000
+metric=c("mse", "mae")
+start_kernel=5
+pool_size=3
+batch_size=64
+model.type="First_CNN"
+n_gpus=1
+epochs_test=50
+activation_vector=c("relu", "elu", "sigmoid", "tanh", "selu")
+dropout=0.8
+optimizer_vector=c("rmsprop", "sgd", "adam", "nadam", "adadelta", "adamax")
+learning.rate=0.01
+loss_vector=c("mse", "mae")
+xgbalpha="0-10"
+treedepth="2-30"
+xgbgamma="0-100"
+xgblambda="0-90"
+xgbeta="0.01-0.99"
+xgbsubsample="0.01-0.99"
+xgbcolsample="0.01-0.99"
+xgbminchild="1-100"
+maxdeltastep="0-10"
+scaleposweight="0-10"
+xgb_metric="MAE"
+nrounds=10000
+test_nrounds=500
+train="cv"
+number=20
+Bayes=FALSE
+folds=10
+init_points=80
+n_iter=20
+scale=FALSE
+importance=FALSE
+parallelMethod="linux"
+tree_method="hist"
+single_precision_histogram=FALSE
+bayes_metric="test_mae"
+early_stopping_rounds=NULL
+save.directory="~/"
+save.name="xgbnntest"
+additional_validation_frame=test_data
+xgb_eval_metric="rmse"
+predictor="cpu_predictor"

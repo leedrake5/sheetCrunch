@@ -8303,6 +8303,42 @@ batchCompress <- function(qualpart_directory){
 
 }
 
+metricGen <- function(cv, bayes_metric){
+    if(bayes_metric=="training_r2"){
+        tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
+    } else if(bayes_metric=="test_r2"){
+        tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
+    } else if(bayes_metric=="train_rmse"){
+        tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1), error=function(e) list(Score=0))
+    } else if(bayes_metric=="test_rmse"){
+        tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1), error=function(e) list(Score=0))
+    } else if(bayes_metric=="train_mae"){
+        tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1), error=function(e) list(Score=0))
+    } else if(bayes_metric=="test_mae"){
+        tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1), error=function(e) list(Score=0))
+    } else if(bayes_metric=="train_accuracy"){
+        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
+    } else if(bayes_metric=="test_accuracy"){
+        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
+    } else if(bayes_metric=="train_kappa"){
+        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
+    } else if(bayes_metric=="test_kappa"){
+        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
+    } else if(bayes_metric=="train_sensitivity"){
+        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
+    } else if(bayes_metric=="test_sensitivity"){
+        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
+    } else if(bayes_metric=="train_specificity"){
+        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
+    } else if(bayes_metric=="test_specificity"){
+        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
+    } else if(bayes_metric=="train_balancedaccuracy"){
+        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
+    } else if(bayes_metric=="test_balancedaccuracy"){
+        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
+    }
+}
+
 
 ###Bayesian Model Optimization
 bayesMLTable <- function(data
@@ -8468,39 +8504,7 @@ bayesMLTable <- function(data
                 , early_stopping_rounds=early_stopping_rounds
                 )
                 
-                if(bayes_metric=="training_r2"){
-                    tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_r2"){
-                    tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_rmse"){
-                    tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_rmse"){
-                    tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_mae"){
-                    tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_mae"){
-                    tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_accuracy"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_accuracy"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_kappa"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_kappa"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_sensitivity"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_sensitivity"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_specificity"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_specificity"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_balancedaccuracy"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_balancedaccuracy"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                }
+                metricGen(cv=cv, bayes_metric=bayes_metric)
                 
             }
             
@@ -8665,39 +8669,7 @@ bayesMLTable <- function(data
                 , early_stopping_rounds=early_stopping_rounds
                 )
                 
-                if(bayes_metric=="training_r2"){
-                    tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_r2"){
-                    tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_rmse"){
-                    tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_rmse"){
-                    tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_mae"){
-                    tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_mae"){
-                    tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_accuracy"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_accuracy"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_kappa"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_kappa"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_sensitivity"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_sensitivity"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_specificity"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_specificity"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_balancedaccuracy"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_balancedaccuracy"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                }
+                metricGen(cv=cv, bayes_metric=bayes_metric)
                 
             }
             
@@ -8814,39 +8786,7 @@ bayesMLTable <- function(data
                 , number=as.integer(number_val)
                 )
                 
-                if(bayes_metric=="training_r2"){
-                    tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_r2"){
-                    tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_rmse"){
-                    tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_rmse"){
-                    tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_mae"){
-                    tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_mae"){
-                    tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_accuracy"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_accuracy"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_kappa"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_kappa"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_sensitivity"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_sensitivity"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_specificity"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_specificity"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_balancedaccuracy"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_balancedaccuracy"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                }
+                metricGen(cv=cv, bayes_metric=bayes_metric)
                 
             }
             
@@ -8930,39 +8870,7 @@ bayesMLTable <- function(data
                 , search=FALSE
                 )
                 
-                if(bayes_metric=="training_r2"){
-                    tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_r2"){
-                    tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_rmse"){
-                    tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_rmse"){
-                    tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_mae"){
-                    tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_mae"){
-                    tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_accuracy"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_accuracy"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_kappa"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_kappa"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_sensitivity"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_sensitivity"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_specificity"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_specificity"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="train_balancedaccuracy"){
-                    tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                } else if(bayes_metric=="test_balancedaccuracy"){
-                    tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                }
+                metricGen(cv=cv, bayes_metric=bayes_metric)
                 
             }
             
@@ -9039,39 +8947,7 @@ bayesMLTable <- function(data
                     , search=FALSE
                     )
                     
-                    if(bayes_metric=="training_r2"){
-                        tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_r2"){
-                        tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    }
+                    metricGen(cv=cv, bayes_metric=bayes_metric)
                     
                 }
             
@@ -9159,39 +9035,7 @@ bayesMLTable <- function(data
                     , search=FALSE
                     )
                     
-                    if(bayes_metric=="training_r2"){
-                        tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_r2"){
-                        tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    }
+                    metricGen(cv=cv, bayes_metric=bayes_metric)
                     
                 }
                 
@@ -9273,39 +9117,7 @@ bayesMLTable <- function(data
                     , search=FALSE
                     )
                     
-                    if(bayes_metric=="training_r2"){
-                        tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_r2"){
-                        tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    }
+                    metricGen(cv=cv, bayes_metric=bayes_metric)
                     
                 }
                 
@@ -9381,39 +9193,7 @@ bayesMLTable <- function(data
                     , search=FALSE
                     )
                     
-                    if(bayes_metric=="training_r2"){
-                        tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_r2"){
-                        tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    }
+                    metricGen(cv=cv, bayes_metric=bayes_metric)
                     
                 }
                 
@@ -9493,39 +9273,7 @@ bayesMLTable <- function(data
                     , search=FALSE
                     )
                     
-                    if(bayes_metric=="training_r2"){
-                        tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_r2"){
-                        tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    }
+                    metricGen(cv=cv, bayes_metric=bayes_metric)
                     
                 }
                 
@@ -9606,39 +9354,7 @@ bayesMLTable <- function(data
                     , search=FALSE
                     )
                     
-                    if(bayes_metric=="training_r2"){
-                        tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_r2"){
-                        tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    }
+                    metricGen(cv=cv, bayes_metric=bayes_metric)
                     
                 }
                 
@@ -9719,39 +9435,7 @@ bayesMLTable <- function(data
                     , search=FALSE
                     )
                     
-                    if(bayes_metric=="training_r2"){
-                        tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_r2"){
-                        tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    }
+                    metricGen(cv=cv, bayes_metric=bayes_metric)
                     
                 }
                 
@@ -9832,39 +9516,7 @@ bayesMLTable <- function(data
                     , search=FALSE
                     )
                     
-                    if(bayes_metric=="training_r2"){
-                        tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_r2"){
-                        tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    }
+                    metricGen(cv=cv, bayes_metric=bayes_metric)
                     
                 }
         }
@@ -9943,39 +9595,7 @@ bayesMLTable <- function(data
                     , search=FALSE
                     )
                     
-                    if(bayes_metric=="training_r2"){
-                        tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_r2"){
-                        tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    }
+                    metricGen(cv=cv, bayes_metric=bayes_metric)
                     
                 }
                 
@@ -10067,39 +9687,7 @@ bayesMLTable <- function(data
                     , search=FALSE
                     )
                     
-                    if(bayes_metric=="training_r2"){
-                        tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_r2"){
-                        tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_rmse"){
-                        tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_mae"){
-                        tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1, error=function(e) list(Score=0)), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_accuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_kappa"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$overall["Kappa"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_sensitivity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Sensitivity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_specificity"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Specificity"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="train_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$trainAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    } else if(bayes_metric=="test_balancedaccuracy"){
-                        tryCatch(list(Score = as.numeric(cv$testAccuracy$byClass["Balanced Accuracy"])), error=function(e) list(Score=0))
-                    }
+                    metricGen(cv=cv, bayes_metric=bayes_metric)
                     
                 }
                 
