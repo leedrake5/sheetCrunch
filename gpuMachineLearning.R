@@ -7782,7 +7782,7 @@ autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, sp
     
     
     #Choose model class
-    model <- if(type=="xgbTree"){
+    qualpart <- if(type=="xgbTree"){
         autoXGBoostTree(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, tree_method=tree_method, single_precision_histogram=single_precision_histogram, predictor=predictor, early_stopping_rounds=early_stopping_rounds, treedepth=treedepth, xgbgamma=xgbgamma, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, maxdeltastep=maxdeltastep, scaleposweight=scaleposweight, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale, verbose=verbosee)
     } else if(type=="xgbLinear"){
         autoXGBoostLinear(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale, verbose=verbose)
@@ -7804,7 +7804,86 @@ autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, sp
         xgbDartNeuralNet(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, tree_method=tree_method, single_precision_histogram=single_precision_histogram, predictor=predictor, early_stopping_rounds=early_stopping_rounds, treedepth=treedepth, treedrop=treedrop, skipdrop=skipdrop, xgbgamma=xgbgamma, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, maxdeltastep=maxdeltastep, scaleposweight=scaleposweight, nrounds=nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale)
     }
     
-    return(model)
+    if(is.null(additional_validation_frame)){
+      return(qualpart)
+    } else if(!is.null(additional_validation_frame)){
+    
+
+    additional_data <- dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
+    additional_data$Data <- additional_data$Data[order(additional_data$Data$Sample),]
+    
+    if(!type %in% c("xgbTreeNeuralNet", "xgbDartNeuralNet", "xgbLinearNeuralNet")){
+        y_predict <- predict(object=qualpart$Model, newdata=additional_data$Data[,colnames(additional_data$Data) %in% colnames(qualpart$Model$trainingData), drop=FALSE], na.action = na.pass)
+        if(scale==TRUE){
+            y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+            additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+        }
+    } else if(type %in% c("xgbTreeNeuralNet", "xgbDartNeuralNet", "xgbLinearNeuralNet")){
+        keras_model <- unserialize_model(qualpart$kerasResults$Model)
+        intermediate_layer_model <- keras::keras_model(inputs = keras_model$input, outputs = get_layer(keras_model, "penultimate")$output)
+        x_test_pre <- additional_data$Data[, !colnames(additional_data$Data) %in% c("Sample", variable)]
+        x_test_pre <- x_test_pre[, colnames(x_test_pre) %in% colnames(data)]
+        x_test_proto <- as.matrix(x_test_pre)
+        x_test <- if(model.type=="Dense" | model.type=="SuperDense"){
+            x_test_proto
+        } else if(model.type=="GRU"){
+            array_reshape(x_test_proto, c(-1, 1, ncol(x_test_proto)))
+        } else if(model.type=="First_CNN"){
+            listarrays::expand_dims(x_test_proto, 3)
+            #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
+        } else if(model.type=="Complex_CNN"){
+            listarrays::expand_dims(x_test_proto, 3)
+            #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
+        } else if(model.type=="Expiremental_CNN"){
+            #array_reshape(x_test_proto, c(-1, 1, ncol(x_test_proto)))
+            listarrays::expand_dims(x_test_proto, 3)
+            #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
+        }
+        intermediate_output_additional <- predict(intermediate_layer_model, x_test, verbose=verbose)
+        y_predict <- predict(object=qualpart$Model, newdata=intermediate_output_additional, na.action = na.pass)
+        if(scale==TRUE){
+            y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+            additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+        }
+        
+    }
+        
+          results.frame <- data.frame(Sample=additional_data$Data$Sample
+                                , Known=additional_data$Data[,variable]
+                                , Predicted=y_predict
+                                , Type="3. Additional"
+                                )
+                                
+        qualpart$additionalValidationSet <- results.frame
+        qualpart$mergedValidationSet <- as.data.frame(data.table::rbindlist(list(qualpart$ValidationSet, results.frame), use.names=T))
+
+                                
+        if(!is.numeric(additional_data$Data[,variable])){
+          if(is.null(PositiveClass)){
+            PositiveClass <- unique(sort(data[,variable]))[1]
+          }
+          accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
+          merged.accuracy.rate <- confusionMatrix(as.factor(qualpart$mergedValidationSet$Predicted), as.factor(qualpart$mergedValidationSet$Known), positive = PositiveClass)
+        } else if(is.numeric(additional_data$Data[,variable])){
+          accuracy.rate <- lm(Known~Predicted, data=results.frame)
+          merged.accuracy.rate <- lm(Known~Predicted, data=qualpart$mergedValidationSet)
+        }
+        
+        qualpart$additionalAccuracy <- accuracy.rate
+        qualpart$mergedAccuracy <- merged.accuracy.rate
+
+    tryCatch(qualpart$Model$terms <- butcher::axe_env(qualpart$Model$terms), error=function(e) NULL)
+    tryCatch(qualpart$Model$finalModel$callbacks <- butcher::axe_env(qualpart$Model$finalModel$callbacks), error=function(e) NULL)
+    tryCatch(qualpart$Model$finalModel <- butcher::axe_env(qualpart$Model$finalModel), error=function(e) NULL)
+    tryCatch(qualpart$Model$finalModel$model <- butcher::axe_env(qualpart$Model$finalModel$model), error=function(e) NULL)
+    tryCatch(qualpart$Model$finalModel$formula <- butcher::axe_env(qualpart$Model$finalModel$formula), error=function(e) NULL)
+    tryCatch(qualpart$Model$finalModel$proximity <- butcher::axe_env(qualpart$Model$finalModel$proximity), error=function(e) NULL)
+    
+    
+
+    
+    return(qualpart)
+}
 }
 
 ###Bayesian Model Optimization
@@ -9553,7 +9632,7 @@ bayesMLTable <- function(data
                             , n_gpus=n_gpus
                             , weights=weights
                             , tree_method=tree_method
-                            , single_precision_histogram=single_precision_histogram
+                            , single_precision_histogram=FALSE
                             , treedepth=paste0(OPT_Res$Best_Par["treedepth_val"], "-", OPT_Res$Best_Par["treedepth_val"])
                             , xgbalpha=paste0(OPT_Res$Best_Par["xgbalpha_val"], "-", OPT_Res$Best_Par["xgbalpha_val"])
                             , xgbgamma=paste0(OPT_Res$Best_Par["xgbgamma_val"], "-", OPT_Res$Best_Par["xgbgamma_val"])
@@ -9566,6 +9645,7 @@ bayesMLTable <- function(data
                             , scaleposweight=paste0(OPT_Res$Best_Par["scaleposweight_val"], "-", OPT_Res$Best_Par["scaleposweight_val"])
                             , nrounds=OPT_Res$Best_Par["nrounds_val"]
                             , test_nrounds=OPT_Res$Best_Par["nrounds_val"]
+                            , train=train
                             , number=OPT_Res$Best_Par["number_val"]
                             , cvrepeats=cvrepeats
                             , Bayes=Bayes
@@ -9731,6 +9811,7 @@ bayesMLTable <- function(data
                     , maxdeltastep=paste0(maxdeltastep_val, "-", maxdeltastep_val)
                     , scaleposweight=paste0(scaleposweight_val, "-", scaleposweight_val)
                     , nrounds=nrounds_val
+                    , train=train
                     , number=number_val
                     , cvrepeats=cvrepeats
                     , predictor=predictor
@@ -9808,6 +9889,7 @@ bayesMLTable <- function(data
                             , nrounds=OPT_Res$Best_Par["nrounds_val"]
                             , test_nrounds=OPT_Res$Best_Par["nrounds_val"]
                             , number=OPT_Res$Best_Par["number_val"]
+                            , train=train
                             , Bayes=Bayes
                             , folds=folds
                             , init_points=init_points
@@ -9926,6 +10008,7 @@ bayesMLTable <- function(data
                     , xgbeta=paste0(xgbeta_val, "-", xgbeta_val)
                     , xgblambda=paste0(xgblambda_val, "-", xgblambda_val)
                     , nrounds=nrounds_val
+                    , train=train
                     , number=number_val
                     , cvrepeats=cvrepeats
                     , predictor=predictor
@@ -9992,6 +10075,7 @@ bayesMLTable <- function(data
                             , xgblambda=paste0(OPT_Res$Best_Par["xgblambda_val"], "-", OPT_Res$Best_Par["xgblambda_val"])
                             , nrounds=OPT_Res$Best_Par["nrounds_val"]
                             , test_nrounds=OPT_Res$Best_Par["nrounds_val"]
+                            , train=train
                             , number=OPT_Res$Best_Par["number_val"]
                             , Bayes=Bayes
                             , folds=folds
@@ -10018,12 +10102,42 @@ bayesMLTable <- function(data
     additional_data <- dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
     additional_data$Data <- additional_data$Data[order(additional_data$Data$Sample),]
     
-    
+    if(!type %in% c("xgbTreeNeuralNet", "xgbDartNeuralNet", "xgbLinearNeuralNet")){
         y_predict <- predict(object=qualpart$Model, newdata=additional_data$Data[,colnames(additional_data$Data) %in% colnames(qualpart$Model$trainingData), drop=FALSE], na.action = na.pass)
         if(scale==TRUE){
             y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
             additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
         }
+    } else if(type %in% c("xgbTreeNeuralNet", "xgbDartNeuralNet", "xgbLinearNeuralNet")){
+        keras_model <- unserialize_model(qualpart$kerasResults$Model)
+        intermediate_layer_model <- keras::keras_model(inputs = keras_model$input, outputs = get_layer(keras_model, "penultimate")$output)
+        x_test_pre <- additional_data$Data[, !colnames(additional_data$Data) %in% c("Sample", variable)]
+        x_test_pre <- x_test_pre[, colnames(x_test_pre) %in% colnames(data)]
+        x_test_proto <- as.matrix(x_test_pre)
+        x_test <- if(model.type=="Dense" | model.type=="SuperDense"){
+            x_test_proto
+        } else if(model.type=="GRU"){
+            array_reshape(x_test_proto, c(-1, 1, ncol(x_test_proto)))
+        } else if(model.type=="First_CNN"){
+            listarrays::expand_dims(x_test_proto, 3)
+            #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
+        } else if(model.type=="Complex_CNN"){
+            listarrays::expand_dims(x_test_proto, 3)
+            #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
+        } else if(model.type=="Expiremental_CNN"){
+            #array_reshape(x_test_proto, c(-1, 1, ncol(x_test_proto)))
+            listarrays::expand_dims(x_test_proto, 3)
+            #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
+        }
+        intermediate_output_additional <- predict(intermediate_layer_model, x_test, verbose=verbose)
+        y_predict <- predict(object=qualpart$Model, newdata=intermediate_output_additional, na.action = na.pass)
+        if(scale==TRUE){
+            y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+            additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+        }
+        
+    }
+        
           results.frame <- data.frame(Sample=additional_data$Data$Sample
                                 , Known=additional_data$Data[,variable]
                                 , Predicted=y_predict
