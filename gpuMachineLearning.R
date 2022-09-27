@@ -7778,8 +7778,13 @@ xgbLinearNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=N
 }
 
 
-autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, type="XGBLinear", tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="2-2", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", maxdeltastep="0-10", scaleposweight="0-10", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, loss=NULL, metric=NULL, xgb_eval_metric="auc", xgb_metric="RMSE", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL, model.split=0, epochs=10, callback="recall", activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, save_plots=FALSE, scale=FALSE){
+autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, additional_split=NULL, split_by_group=NULL, the_group=NULL, type="XGBLinear", tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="2-2", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", maxdeltastep="0-10", scaleposweight="0-10", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, loss=NULL, metric=NULL, xgb_eval_metric="auc", xgb_metric="RMSE", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL, model.split=0, epochs=10, callback="recall", activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, save_plots=FALSE, scale=FALSE, additional_validation_frame=NULL){
     
+    if(is.null(additional_validation_frame) & !is.null(additional_split)){
+        new_data_list <- additional_data_split(data=data, split=additional_split)
+        data <- new_data_list$Data
+        additional_validation_frame <- new_data_list$additionalValFrame
+    }
     
     #Choose model class
     qualpart <- if(type=="xgbTree"){
@@ -7892,6 +7897,7 @@ bayesMLTable <- function(data
                         , predictors=NULL
                         , min.n=5
                         , split=NULL
+                        , additional_split=NULL
                         , split_by_group=NULL
                         , the_group=NULL
                         , type="XGBLinear"
@@ -7973,7 +7979,12 @@ bayesMLTable <- function(data
                         , xgb_eval_metric="rmse"
                         ){
                         
-
+                if(is.null(additional_validation_frame) & !is.null(additional_split)){
+                    new_data_list <- additional_data_split(data=data, split=additional_split)
+                    data <- new_data_list$Data
+                    additional_validation_frame <- new_data_list$additionalValFrame
+                }
+                        
     #Choose model class
     if(type=="xgbTree"){
         
@@ -10111,7 +10122,7 @@ bayesMLTable <- function(data
     } else if(type %in% c("xgbTreeNeuralNet", "xgbDartNeuralNet", "xgbLinearNeuralNet")){
         keras_model <- unserialize_model(qualpart$kerasResults$Model)
         intermediate_layer_model <- keras::keras_model(inputs = keras_model$input, outputs = get_layer(keras_model, "penultimate")$output)
-        x_test_pre <- additional_data$Data[, !colnames(additional_data$Data) %in% c("Sample", variable)]
+        x_test_pre <- additional_data$Data[, !colnames(additional_data$Data) %in% c("Sample", variable, split_by_group)]
         x_test_pre <- x_test_pre[, colnames(x_test_pre) %in% colnames(data)]
         x_test_proto <- as.matrix(x_test_pre)
         x_test <- if(model.type=="Dense" | model.type=="SuperDense"){

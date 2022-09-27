@@ -1356,6 +1356,28 @@ dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE,
     return(list(Data=results.final, YMin=y_min, YMax=y_max, Mins=mins, Maxes=maxes))
 }
 
+additional_data_split <- function(data, split){
+    
+    #Create a Sample ID column if one doesn't exist yet
+    if(!"Sample" %in% colnames(data)){
+        data$Sample <- make.names(seq(1, nrow(data), 1), unique=T)
+    } else if("Sample" %in% colnames(data)){
+        data$Sample <- make.names(data$Sample, unique=T)
+    }
+    
+    data$RandXXX <- rnorm(nrow(data), 1, 0.2)
+    data <- data[order(data$RandXXX),!colnames(data) %in% "RandXXX"]
+    data <- data[,sapply(data, function(x) length(unique(x))>1)]
+    data <- data[complete.cases(data),]
+    
+    cutoff <- round(nrow(data)*split, 0)
+    
+    additional_validation_frame <- data[1:cutoff,]
+    data <- data[!data$Sample %in% additional_validation_frame$Sample, ]
+    return(list(Data=data, additionalValFrame=additional_validation_frame))
+    
+}
+
 ############################################################################################################
 ### XGBoost classification (Trees?) 
 ###########################################################################################################
@@ -7894,6 +7916,7 @@ autoMLTable <- function(data
                         , predictors=NULL
                         , min.n=5
                         , split=NULL
+                        , additional_split=NULL
                         , split_by_group=NULL
                         , the_group=NULL
                         , type="XGBLinear"
@@ -7953,6 +7976,12 @@ autoMLTable <- function(data
                         , predictor="cpu_predictor"
                         , early_stopping_rounds=100
                         ){
+                            
+            if(is.null(additional_validation_frame) & !is.null(additional_split)){
+                new_data_list <- additional_data_split(data=data, split=additional_split)
+                data <- new_data_list$Data
+                additional_validation_frame <- new_data_list$additionalValFrame
+            }
     
     
     #Choose model class
@@ -8346,6 +8375,7 @@ bayesMLTable <- function(data
                         , predictors=NULL
                         , min.n=5
                         , split=NULL
+                        , additional_split=NULL
                         , split_by_group=NULL
                         , the_group=NULL
                         , type="XGBLinear"
@@ -8407,7 +8437,12 @@ bayesMLTable <- function(data
                         , early_stopping_rounds=100
                         ){
                         
-
+                if(is.null(additional_validation_frame) & !is.null(additional_split)){
+                    new_data_list <- additional_data_split(data=data, split=additional_split)
+                    data <- new_data_list$Data
+                    additional_validation_frame <- new_data_list$additionalValFrame
+                }
+                        
     #Choose model class
     if(type=="xgbTree"){
         
