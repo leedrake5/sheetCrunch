@@ -10170,6 +10170,8 @@ bayesMLTable <- function(data
         }
         
     } else if(type=="Keras"){
+    
+    keras_model <- unserialize_model(qualpart$kerasResults$Model)
         x_test_pre <- additional_data$Data[, !colnames(additional_data$Data) %in% c("Sample", variable, split_by_group)]
         x_test_pre <- x_test_pre[, colnames(x_test_pre) %in% colnames(data)]
         tryCatch(x_test_pre[setdiff(names(qualpart$x_train), names(x_test_pre))] <- 0, error=function(e) NULL)
@@ -10190,7 +10192,7 @@ bayesMLTable <- function(data
             listarrays::expand_dims(x_test_proto, 3)
             #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
         }
-        y_predict <- predict(qualpart$Model, x_test, batch_size=batch_size, verbose=verbose)
+        y_predict <- predict(keras_model, x_test, batch_size=batch_size, verbose=verbose)
         if(scale==TRUE){
             y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
             additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
