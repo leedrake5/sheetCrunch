@@ -10171,7 +10171,7 @@ bayesMLTable <- function(data
         
     } else if(type=="Keras"){
     
-    keras_model <- unserialize_model(qualpart$kerasResults$Model)
+    keras_model <- unserialize_model(qualpart$Model)
         x_test_pre <- additional_data$Data[, !colnames(additional_data$Data) %in% c("Sample", variable, split_by_group)]
         x_test_pre <- x_test_pre[, colnames(x_test_pre) %in% colnames(data)]
         tryCatch(x_test_pre[setdiff(names(qualpart$x_train), names(x_test_pre))] <- 0, error=function(e) NULL)
