@@ -398,7 +398,7 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
                   Parameter]))), error=function(e) unlist(iter_points_dt_backup[j,]))
         Next_Log <- tryCatch(utils::capture.output({
             Next_Time <- system.time({
-                Next_Score_Pred <- do.call(what = FUN, args = as.list(Next_Par))
+                Next_Score_Pred <- tryCatch(do.call(what = FUN, args = as.list(Next_Par)), error=function(e) list(Score=sample(-200:-150, 1)))
                 if(is.na(Next_Score_Pred)){Next_Score_Pred <- list(Score=sample(-250:-200, 1))}
             })
         }), error=function(e) NULL)
@@ -1238,7 +1238,7 @@ scaleDecode <- function(values, y_min, y_max){
 
 # Prepare the data for machine learning. Data is the imported data, variable is the name of the variable you want to analyize. 
 # This function will automatically prepare qualitative data for analysis if needed.
-dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE, seed=NULL, split_by_group=NULL, y_min=NULL, y_max=NULL, mins=NULL, maxes=NULL){
+dataPrepCore <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE, seed=NULL, split_by_group=NULL, y_min=NULL, y_max=NULL, mins=NULL, maxes=NULL){
     
     ###Remove any columns that don't have more than one value
     data <- data[,sapply(data, function(x) length(unique(x))>1)]
@@ -1263,7 +1263,7 @@ dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE,
     
     #Generate a holder frame for later
     sample.frame <- data[,c("Sample", variable)]
-    if(scale==TRUE & is.numeric(data[,variable])){
+    if(scale==TRUE & isDataNumeric(data, variable)){
         
         if(is.null(y_min)){y_min <- my.min(data[,variable])}
         if(is.null(y_max)){y_max <- my.max(data[,variable])}
@@ -1356,7 +1356,26 @@ dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE,
     return(list(Data=results.final, YMin=y_min, YMax=y_max, Mins=mins, Maxes=maxes))
 }
 
-additional_data_split <- function(data, split){
+dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE, seed=NULL, split_by_group=NULL, y_min=NULL, y_max=NULL, mins=NULL, maxes=NULL){
+    
+    if(!is.data.frame(data)){
+        return(data)
+    } else if(is.data.frame(data)){
+        return(dataPrepCore(data=data, variable=variable, predictors=predictors, scale=scale, reduce=reduce, seed=seed, split_by_group=split_by_group, y_min=y_min, y_max=y_max, mins=mins, maxes=maxes))
+    }
+    
+}
+
+isDataNumeric <- function(data, variable){
+    if(!is.data.frame(data)){
+        data <- data$Data
+        is.numeric(data[,variable])
+    } else if(is.data.frame(data)){
+        is.numeric(data[,variable])
+    }
+}
+
+additional_data_split <- function(data, split, variable, predictors=NULL, scale=FALSE, reduce=FALSE, seed=NULL, split_by_group=NULL, y_min=NULL, y_max=NULL, mins=NULL, maxes=NULL){
     
     #Create a Sample ID column if one doesn't exist yet
     if(!"Sample" %in% colnames(data)){
@@ -1364,6 +1383,10 @@ additional_data_split <- function(data, split){
     } else if("Sample" %in% colnames(data)){
         data$Sample <- make.names(data$Sample, unique=T)
     }
+    
+    raw_data <- data
+    data_list <- dataPrep(data=data, variable=variable, predictors=predictors, scale=scale, reduce=reduce, seed=seed, split_by_group=split_by_group, y_min=y_min, y_max=y_max, mins=mins, maxes=maxes)
+    data <- data_list$Data
     
     data$RandXXX <- rnorm(nrow(data), 1, 0.2)
     data <- data[order(data$RandXXX),!colnames(data) %in% "RandXXX"]
@@ -1374,7 +1397,11 @@ additional_data_split <- function(data, split){
     
     additional_validation_frame <- data[1:cutoff,]
     data <- data[!data$Sample %in% additional_validation_frame$Sample, ]
-    return(list(Data=data, additionalValFrame=additional_validation_frame))
+    new_data_list <- data_list
+    new_data_list$Date <- data
+    additional_data_list <- data_list
+    additional_data_list$Data <- additional_validation_frame
+    return(list(Data=new_data_list, additionalValFrame=additional_data_list))
     
 }
 
@@ -2647,9 +2674,9 @@ autoXGBoostTree <- function(data
                             ){
     
     if(is.null(save.name)){
-        save.name <- if(!is.numeric(data[,variable])){
+        save.name <- if(!isDataNumeric(data, variable)){
             "classifyXGBModel"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "regressXGBModel"
         }
     }
@@ -2658,15 +2685,15 @@ autoXGBoostTree <- function(data
     metric <- if(!is.null(metric)){
         metric
     } else if(is.null(metric)){
-        if(!is.numeric(data[,variable])){
+        if(!isDataNumeric(data, variable)){
             "ROC"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "RMSE"
         }
     }
     
     #Choose model type based on whether the variable is numeric or not
-    model <- if(!is.numeric(data[,variable])){
+    model <- if(!isDataNumeric(data, variable)){
         classifyXGBoostTree(data=data
                             , class=variable
                             , predictors=predictors
@@ -2711,7 +2738,7 @@ autoXGBoostTree <- function(data
                             , predictor=predictor
                             , early_stopping_rounds=early_stopping_rounds
                             )
-    } else if(is.numeric(data[,variable])){
+    } else if(isDataNumeric(data, variable)){
         regressXGBoostTree(data=data
                            , dependent=variable
                            , predictors=predictors
@@ -4058,9 +4085,9 @@ autoXGBoostDart <- function(data
                             ){
     
     if(is.null(save.name)){
-        save.name <- if(!is.numeric(data[,variable])){
+        save.name <- if(!isDataNumeric(data, variable)){
             "classifyXGBModel"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "regressXGBModel"
         }
     }
@@ -4069,15 +4096,15 @@ autoXGBoostDart <- function(data
     metric <- if(!is.null(metric)){
         metric
     } else if(is.null(metric)){
-        if(!is.numeric(data[,variable])){
+        if(!isDataNumeric(data, variable)){
             "ROC"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "RMSE"
         }
     }
     
     #Choose model type based on whether the variable is numeric or not
-    model <- if(!is.numeric(data[,variable])){
+    model <- if(!isDataNumeric(data, variable)){
         classifyXGBoostDart(data=data
                             , class=variable
                             , predictors=predictors
@@ -4124,7 +4151,7 @@ autoXGBoostDart <- function(data
                             , predictor=predictor
                             , early_stopping_rounds=early_stopping_rounds
                             )
-    } else if(is.numeric(data[,variable])){
+    } else if(isDataNumeric(data, variable)){
         regressXGBoostDart(data=data
                            , dependent=variable
                            , predictors=predictors
@@ -5246,11 +5273,13 @@ autoXGBoostLinear <- function(data
                               , nthread=-1
                               , verbose=1
                               ){
+                                  
+                        
     
     if(is.null(save.name)){
-        save.name <- if(!is.numeric(data[,variable])){
+        save.name <- if(!isDataNumeric(data, variable)){
             "classifyXGBModel"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "regressXGBModel"
         }
     }
@@ -5259,15 +5288,15 @@ autoXGBoostLinear <- function(data
     metric <- if(!is.null(metric)){
         metric
     } else if(is.null(metric)){
-        if(!is.numeric(data[,variable])){
+        if(!isDataNumeric(data, variable)){
             "Accuracy"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "RMSE"
         }
     }
     
     #Choose model type based on whether the variable is numeric or not
-    model <- if(!is.numeric(data[,variable])){
+    model <- if(!isDataNumeric(data, variable)){
         classifyXGBoostLinear(data=data
                               , class=variable
                               , predictors=predictors
@@ -5301,7 +5330,7 @@ autoXGBoostLinear <- function(data
                               , nthread=nthread
                               , verbose=verbose
                               )
-    } else if(is.numeric(data[,variable])){
+    } else if(isDataNumeric(data, variable)){
         regressXGBoostLinear(data=data
                              , dependent=variable
                              , predictors=predictors
@@ -5974,9 +6003,9 @@ autoForest<- function(data
                       ){
     
     if(is.null(save.name)){
-        save.name <- if(!is.numeric(data[,variable])){
+        save.name <- if(!isDataNumeric(data, variable)){
             "classifyXGBModel"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "regressXGBModel"
         }
     }
@@ -5985,15 +6014,15 @@ autoForest<- function(data
     metric <- if(!is.null(metric)){
         metric
     } else if(is.null(metric)){
-        if(!is.numeric(data[,variable])){
+        if(!isDataNumeric(data, variable)){
             "Accuracy"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "RMSE"
         }
     }
     
     #Choose model type based on whether the variable is numeric or not
-    model <- if(!is.numeric(data[,variable])){
+    model <- if(!isDataNumeric(data, variable)){
         classifyForest(data=data
                        , class=variable
                        , predictors=predictors
@@ -6018,7 +6047,7 @@ autoForest<- function(data
                        , seed=seed
                        , search=search
                        )
-    } else if(is.numeric(data[,variable])){
+    } else if(isDataNumeric(data, variable)){
         regressForest(data=data
                       , dependent=variable
                       , predictors=predictors
@@ -6907,9 +6936,9 @@ autoSVM <- function(data
                     ){
     
     if(is.null(save.name)){
-        save.name <- if(!is.numeric(data[,variable])){
+        save.name <- if(!isDataNumeric(data, variable)){
             "classifyXGBModel"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "regressXGBModel"
         }
     }
@@ -6918,15 +6947,15 @@ autoSVM <- function(data
     metric <- if(!is.null(metric)){
         metric
     } else if(is.null(metric)){
-        if(!is.numeric(data[,variable])){
+        if(!isDataNumeric(data, variable)){
             "ROC"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "RMSE"
         }
     }
     
     #Choose model type based on whether the variable is numeric or not
-    model <- if(!is.numeric(data[,variable])){
+    model <- if(!isDataNumeric(data, variable)){
         classifySVM(data=data
                     , class=variable
                     , predictors=predictors
@@ -6958,7 +6987,7 @@ autoSVM <- function(data
                     , init_points=init_points
                     , search=search
                     )
-    } else if(is.numeric(data[,variable])){
+    } else if(isDataNumeric(data, variable)){
         regressSVM(data=data
                    , dependent=variable
                    , predictors=predictors
@@ -7823,9 +7852,9 @@ autoBayes <- function(data
                       ){
     
     if(is.null(save.name)){
-        save.name <- if(!is.numeric(data[,variable])){
+        save.name <- if(!isDataNumeric(data, variable)){
             "classifyXGBModel"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "regressXGBModel"
         }
     }
@@ -7834,15 +7863,15 @@ autoBayes <- function(data
     metric <- if(!is.null(metric)){
         metric
     } else if(is.null(metric)){
-        if(!is.numeric(data[,variable])){
+        if(!isDataNumeric(data, variable)){
             "ROC"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "RMSE"
         }
     }
     
     #Choose model type based on whether the variable is numeric or not
-    model <- if(!is.numeric(data[,variable])){
+    model <- if(!isDataNumeric(data, variable)){
         classifyBayes(data=data
                       , class=variable
                       , predictors=predictors
@@ -7874,7 +7903,7 @@ autoBayes <- function(data
                       , init_points=init_points
                       , search=search
                       )
-    } else if(is.numeric(data[,variable])){
+    } else if(isDataNumeric(data, variable)){
         regressBayes(data=data
                      , dependent=variable
                      , predictors=predictors
@@ -7977,12 +8006,11 @@ autoMLTable <- function(data
                         , early_stopping_rounds=100
                         ){
                             
-            if(is.null(additional_validation_frame) & !is.null(additional_split)){
-                new_data_list <- additional_data_split(data=data, split=additional_split)
-                data <- new_data_list$Data
-                additional_validation_frame <- new_data_list$additionalValFrame
-            }
-    
+    if(is.null(additional_validation_frame) & !is.null(additional_split)){
+        new_data_list <- additional_data_split(data=data, split=additional_split, variable=variable, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+        data <- new_data_list$Data
+        additional_validation_frame <- new_data_list$additionalValFrame
+    }
     
     #Choose model class
     qualpart <- if(type=="xgbTree"){
@@ -8209,18 +8237,25 @@ autoMLTable <- function(data
       return(qualpart)
     } else if(!is.null(additional_validation_frame)){
     
-    additional_data <- if(scale==FALSE){
+    additional_data <- if(is.data.frame(additional_validation_frame)){
+        if(scale==FALSE){
         dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
-    } else if(scale==TRUE){
-        dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed, y_min=qualpart$ModelData$Data$YMin, y_max=qualpart$ModelData$Data$YMax, mins=qualpart$ModelData$Data$Mins, maxes=qualpart$ModelData$Data$Maxes)
+        } else if(scale==TRUE){
+            dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed, y_min=qualpart$ModelData$Data$YMin, y_max=qualpart$ModelData$Data$YMax, mins=qualpart$ModelData$Data$Mins, maxes=qualpart$ModelData$Data$Maxes)
+        }
+    } else if(!is.data.frame(additional_validation_frame)){
+        additional_validation_frame
     }
     additional_data$Data <- additional_data$Data[order(additional_data$Data$Sample),]
-    
+    additional_data$Data[setdiff(names(qualpart$Model$trainingData), names(additional_data$Data))] <- 0
     
         y_predict <- predict(object=qualpart$Model, newdata=additional_data$Data[,colnames(additional_data$Data) %in% colnames(qualpart$Model$trainingData), drop=FALSE], na.action = na.pass)
         if(scale==TRUE){
-            y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
-            additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+            if(isDataNumeric(data, variable)){
+                y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+                additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+            }
+            
         }
           results.frame <- data.frame(Sample=additional_data$Data$Sample
                                 , Known=additional_data$Data[,variable]
@@ -8229,12 +8264,13 @@ autoMLTable <- function(data
                                 )
                                 
         qualpart$additionalValidationSet <- results.frame
-        qualpart$mergedValidationSet <- as.data.frame(data.table::rbindlist(list(qualpart$ValidationSet, results.frame), use.names=T))
+        qualpart$ValidationSet$Type <- "2. Test"
+        qualpart$mergedValidationSet <- as.data.frame(data.table::rbindlist(list(qualpart$ValidationSet, results.frame), use.names=T, fill=TRUE))
 
                                 
         if(!is.numeric(additional_data$Data[,variable])){
           if(is.null(PositiveClass)){
-            PositiveClass <- unique(sort(data[,variable]))[1]
+            PositiveClass <- tryCatch(unique(sort(additional_data$Data[,variable]))[1], error=function(e) unique(sort(additional_data$Data[,variable]))[1])
           }
           accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
           merged.accuracy.rate <- confusionMatrix(as.factor(qualpart$mergedValidationSet$Predicted), as.factor(qualpart$mergedValidationSet$Known), positive = PositiveClass)
@@ -8438,7 +8474,7 @@ bayesMLTable <- function(data
                         ){
                         
                 if(is.null(additional_validation_frame) & !is.null(additional_split)){
-                    new_data_list <- additional_data_split(data=data, split=additional_split)
+                    new_data_list <- additional_data_split(data=data, split=additional_split, variable=variable, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
                     data <- new_data_list$Data
                     additional_validation_frame <- new_data_list$additionalValFrame
                 }
@@ -8479,7 +8515,7 @@ bayesMLTable <- function(data
             , xgbsubsample_val = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
             , maxdeltastep_val = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
             , scaleposweight_val = c(scaleposweight.vec[1], scaleposweight.vec[2])
-            , number_val=as.integer(c(1, number))
+            
         )
         
         qualpart_function <- function(treedepth_val
@@ -8493,7 +8529,7 @@ bayesMLTable <- function(data
             , xgbcolsample_val
             , maxdeltastep_val
             , scaleposweight_val
-            , number_val
+            
             ) {
                 cv = autoXGBoostTree(data=data
                 , variable=variable
@@ -8534,7 +8570,7 @@ bayesMLTable <- function(data
                 , maxdeltastep=paste0(maxdeltastep_val, "-", maxdeltastep_val)
                 , scaleposweight=paste0(scaleposweight_val, "-", scaleposweight_val)
                 , nrounds=nrounds_val
-                , number=number_val
+                , number=number
                 , predictor=predictor
                 , early_stopping_rounds=early_stopping_rounds
                 )
@@ -8580,7 +8616,7 @@ bayesMLTable <- function(data
                         #, summary_function=summary_function
                         , train=train
                         , cvrepeats=cvrepeats
-                        , number=OPT_Res$Best_Par["number_val"]
+                        , number=number
                         , Bayes=FALSE
                         , folds=folds
                         , init_points=init_points
@@ -8640,7 +8676,7 @@ bayesMLTable <- function(data
             , xgbsubsample_val = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
             , maxdeltastep_val = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
             , scaleposweight_val = c(scaleposweight.vec[1], scaleposweight.vec[2])
-            , number_val=as.integer(c(1, number))
+            
         )
         
         qualpart_function <- function(treedepth_val
@@ -8656,7 +8692,7 @@ bayesMLTable <- function(data
             , xgbcolsample_val
             , maxdeltastep_val
             , scaleposweight_val
-            , number_val
+            
             ) {
                 cv = autoXGBoostDart(data=data
                 , variable=variable
@@ -8699,7 +8735,7 @@ bayesMLTable <- function(data
                 , maxdeltastep=paste0(maxdeltastep_val, "-", maxdeltastep_val)
                 , scaleposweight=paste0(scaleposweight_val, "-", scaleposweight_val)
                 , nrounds=nrounds_val
-                , number=number_val
+                , number=number
                 , predictor=predictor
                 , early_stopping_rounds=early_stopping_rounds
                 )
@@ -8747,7 +8783,7 @@ bayesMLTable <- function(data
                         #, summary_function=summary_function
                         , train=train
                         , cvrepeats=cvrepeats
-                        , number=OPT_Res$Best_Par["number_val"]
+                        , number=number
                         , Bayes=FALSE
                         , folds=folds
                         , init_points=init_points
@@ -8778,15 +8814,14 @@ bayesMLTable <- function(data
            nrounds_val = as.integer(c(50, nrounds)),
            xgbalpha_val = c(xgbalpha.vec[1], xgbalpha.vec[2]),
            xgbeta_val = c(xgbeta.vec[1], xgbeta.vec[2]),
-           xgblambda_val=c(xgblambda.vec[1], xgblambda.vec[2]),
-           number_val=as.integer(c(1, number)))
+           xgblambda_val=c(xgblambda.vec[1], xgblambda.vec[2]))
         
         qualpart_function <- function(
             xgbalpha_val
             , xgbeta_val
             , xgblambda_val
             , nrounds_val
-            , number_val
+            
             ){
                 cv = autoXGBoostLinear(data=data
                 , variable=variable
@@ -8818,7 +8853,7 @@ bayesMLTable <- function(data
                 , xgbeta=paste0(xgbeta_val, "-", xgbeta_val)
                 , xgblambda=paste0(xgblambda_val, "-", xgblambda_val)
                 , nrounds=as.integer(nrounds_val)
-                , number=as.integer(number_val)
+                , number=number
                 )
                 
                 metricGen(cv=cv, bayes_metric=bayes_metric)
@@ -8853,7 +8888,7 @@ bayesMLTable <- function(data
                         #, summary_function=summary_function
                         , train=train
                         , cvrepeats=cvrepeats
-                        , number=OPT_Res$Best_Par["number_val"]
+                        , number=number
                         , Bayes=FALSE
                         , folds=folds
                         , init_points=init_points
@@ -8878,7 +8913,7 @@ bayesMLTable <- function(data
         qualpart_function <- function(
             try_val
             , trees_val
-            , number_val
+            
             ){
                 cv = autoForest(data=data
                 , variable=variable
@@ -8901,7 +8936,7 @@ bayesMLTable <- function(data
                 , seed=cv_seed
                 , try=try_val
                 , trees=trees_val
-                , number=number_val
+                , number=number
                 , search=FALSE
                 )
                 
@@ -8933,7 +8968,7 @@ bayesMLTable <- function(data
                         #, summary_function=summary_function
                         , train=train
                         , cvrepeats=cvrepeats
-                        , number=OPT_Res$Best_Par["number_val"]
+                        , number=number
                         , save.directory=save.directory
                         , save.name=save.name
                         , parallelMethod=parallelMethod
@@ -8950,12 +8985,11 @@ bayesMLTable <- function(data
         if(type=="svmLinear"){
             svmc.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmc), "-"))), error=function(x) "2-2")
             
-            param_list <- list(svmc_val=c(svmc.vec[1], svmc.vec[2]),
-            number_val=as.integer(c(1, number)))
+            param_list <- list(svmc_val=c(svmc.vec[1], svmc.vec[2]))
             
             qualpart_function <- function(
                 svmc_val
-                , number_val
+                
                 ) {
                     cv = autoSVM(data=data
                     , variable=variable
@@ -8978,7 +9012,7 @@ bayesMLTable <- function(data
                     , scale=scale
                     , seed=cv_seed
                     , svmc=paste0(svmc_val, "-", svmc_val)
-                    , number=number_val
+                    , number=number
                     , search=FALSE
                     )
                     
@@ -9010,7 +9044,7 @@ bayesMLTable <- function(data
                         #, summary_function=summary_function
                         , train=train
                         , cvrepeats=cvrepeats
-                        , number=OPT_Res$Best_Par["number_val"]
+                        , number=number
                         , save.directory=save.directory
                         , save.name=save.name
                         , parallelMethod=parallelMethod
@@ -9030,14 +9064,13 @@ bayesMLTable <- function(data
             param_list <- list(
             svmc_val = c(svmc.vec[1], svmc.vec[2]),
             svmscale_val = c(svmscale.vec[1], svmscale.vec[2]),
-            svmdegree_val = as.integer(c(svmdegree.vec[1], svmdegree.vec[2])),
-            number_val=as.integer(c(1, number)))
+            svmdegree_val = as.integer(c(svmdegree.vec[1], svmdegree.vec[2])))
             
             qualpart_function <- function(
                 svmc_val
                 , svmdegree_val
                 , svmscale_val
-                , number_val
+                
                 ) {
                     svmc_val_vec <- paste0(svmc_val, "-", svmc_val)
                     svmdegree_val_vec <- paste0(svmdegree_val, "-", svmdegree_val)
@@ -9066,7 +9099,7 @@ bayesMLTable <- function(data
                     , svmc=svmc_val_vec
                     , svmdegree=svmdegree_val_vec
                     , svmscale=svmscale_val
-                    , number=number_val
+                    , number=number
                     , search=FALSE
                     )
                     
@@ -9100,7 +9133,7 @@ bayesMLTable <- function(data
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number_val"]
+                            , number=number
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
@@ -9118,13 +9151,12 @@ bayesMLTable <- function(data
 
             param_list <- list(
             svmc_val = seq(svmc.vec[1], svmc.vec[2], 1),
-            svmsigma_val=svmsigma.vec,
-            number_val=as.integer(c(1, number)))
+            svmsigma_val=svmsigma.vec)
             
             qualpart_function <- function(
                 svmc_val
                 , svmsigma_val
-                , number_val
+                
                 ) {
                     cv = autoSVM(data=data
                     , variable=variable
@@ -9148,7 +9180,7 @@ bayesMLTable <- function(data
                     , seed=cv_seed
                     , svmc=paste0(svmc_val, "-", svmc_val)
                     , svmsigma=paste0(svmsigma_val, "-", svmsigma_val)
-                    , number=number_val
+                    , number=number
                     , search=FALSE
                     )
                     
@@ -9181,7 +9213,7 @@ bayesMLTable <- function(data
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number_val"]
+                            , number=number
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
@@ -9196,12 +9228,11 @@ bayesMLTable <- function(data
         } else if(type=="svmRadialCost"){
             svmc.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmc), "-"))), error=function(x) "2-2")
             
-            param_list <- list(svmc_val=c(svmc.vec[1], svmc.vec[2]),
-            number_val=as.integer(c(1, number)))
+            param_list <- list(svmc_val=c(svmc.vec[1], svmc.vec[2]))
             
             qualpart_function <- function(
                 svmc_val
-                , number_val
+                
                 ) {
                     cv = autoXGBoostLinear(data=data
                     , variable=variable
@@ -9224,7 +9255,7 @@ bayesMLTable <- function(data
                     , scale=scale
                     , seed=cv_seed
                     , svmc=paste0(svmc_val, "-", svmc_val)
-                    , number=number_val
+                    , number=number
                     , search=FALSE
                     )
                     
@@ -9256,7 +9287,7 @@ bayesMLTable <- function(data
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number_val"]
+                            , number=number
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
@@ -9274,13 +9305,12 @@ bayesMLTable <- function(data
 
             param_list <- expand.grid(
             svmc_val = seq(svmc.vec[1], svmc.vec[2], 1),
-            svmsigma_val=svmsigma,
-            number_val=as.integer(c(1, number)))
+            svmsigma_val=svmsigma)
             
             qualpart_function <- function(
                 svmc_val
                 , svmsigma_val
-                , number_val
+                
                 ) {
                     cv = autoSVM(data=data
                     , variable=variable
@@ -9304,7 +9334,7 @@ bayesMLTable <- function(data
                     , seed=cv_seed
                     , svmc=paste0(svmc_val, "-", svmc_val)
                     , svmsigma=paste0(svmsigma_val, "-", svmsigma_val)
-                    , number=number_val
+                    , number=number
                     , search=FALSE
                     )
                     
@@ -9337,7 +9367,7 @@ bayesMLTable <- function(data
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number_val"]
+                            , number=number
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
@@ -9355,13 +9385,12 @@ bayesMLTable <- function(data
             
             param_list <- list(
             svmc_val = c(svmc.vec[1], svmc.vec[2]),
-            svmlength_val = c(svmlength.vec[1], svmlength.vec[2]),
-            number_val=as.integer(c(1, number)))
+            svmlength_val = c(svmlength.vec[1], svmlength.vec[2]))
             
             qualpart_function <- function(
                 svmc_val
                 , svmlength_val
-                , number_val
+                
                 ) {
                     cv = autoSVM(data=data
                     , variable=variable
@@ -9385,7 +9414,7 @@ bayesMLTable <- function(data
                     , seed=cv_seed
                     , svmc=paste0(svmc_val, "-", svmc_val)
                     , svmlength=paste0(svmlength_val, "-", svmlength_val)
-                    , number=number_val
+                    , number=number
                     , search=FALSE
                     )
                     
@@ -9418,7 +9447,7 @@ bayesMLTable <- function(data
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number_val"]
+                            , number=number
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
@@ -9436,13 +9465,12 @@ bayesMLTable <- function(data
 
             param_list <- list(
             svmc_val = c(svmc.vec[1], svmc.vec[2]),
-            xgblambda_val = c(xgblambda.vec[1], xgblambda.vec[2]),
-            number_val=as.integer(c(1, number)))
+            xgblambda_val = c(xgblambda.vec[1], xgblambda.vec[2]))
             
             qualpart_function <- function(
                 svmc_val
                 , xgblambda_val
-                , number_val
+                
                 ) {
                     cv = autoSVM(data=data
                     , variable=variable
@@ -9466,7 +9494,7 @@ bayesMLTable <- function(data
                     , seed=cv_seed
                     , svmc=paste0(svmc_val, "-", svmc_val)
                     , xgblambda=paste0(xgblambda_val, "-", xgblambda_val)
-                    , number=number_val
+                    , number=number
                     , search=FALSE
                     )
                     
@@ -9499,7 +9527,7 @@ bayesMLTable <- function(data
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number_val"]
+                            , number=number
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
@@ -9517,13 +9545,12 @@ bayesMLTable <- function(data
 
             param_list <- list(
             svmc_val = c(svmc.vec[1], svmc.vec[2]),
-            xgblambda_val = c(xgblambda.vec[1], xgblambda.vec[2]),
-            number_val=as.integer(c(1, number)))
+            xgblambda_val = c(xgblambda.vec[1], xgblambda.vec[2]))
             
             qualpart_function <- function(
                 svmc_val
                 , xgblambda_val
-                , number_val
+                
                 ) {
                     cv = autoSVM(data=data
                     , variable=variable
@@ -9547,7 +9574,7 @@ bayesMLTable <- function(data
                     , seed=cv_seed
                     , svmc=paste0(svmc_val, "-", svmc_val)
                     , xgblambda=paste0(xgblambda_val, "-", xgblambda_val)
-                    , number=number_val
+                    , number=number
                     , search=FALSE
                     )
                     
@@ -9581,7 +9608,7 @@ bayesMLTable <- function(data
                     #, summary_function=summary_function
                     , train=train
                     , cvrepeats=cvrepeats
-                    , number=OPT_Res$Best_Par["number_val"]
+                    , number=number
                     , save.directory=save.directory
                     , save.name=save.name
                     , parallelMethod=parallelMethod
@@ -9598,12 +9625,11 @@ bayesMLTable <- function(data
         if(type=="bayesNeuralNet"){
             neuralhiddenunits.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(neuralhiddenunits), "-"))), error=function(x) "1-10")
 
-            param_list <- list(neuralhiddenunits_val = c(as.integer(neuralhiddenunits.vec[1]), as.integer(neuralhiddenunits.vec[2])),
-            number_val=as.integer(c(1, number)))
+            param_list <- list(neuralhiddenunits_val = c(as.integer(neuralhiddenunits.vec[1]), as.integer(neuralhiddenunits.vec[2])))
             
             qualpart_function <- function(
                 neuralhiddenunits_val
-                , number_val
+                
                 ) {
                     cv = autoBayes(data=data
                     , variable=variable
@@ -9626,7 +9652,7 @@ bayesMLTable <- function(data
                     , scale=scale
                     , seed=cv_seed
                     , neuralhiddenunits=paste0(neuralhiddenunits_val, "-", neuralhiddenunits_val)
-                    , number=number_val
+                    , number=number
                     , search=FALSE
                     )
                     
@@ -9659,7 +9685,7 @@ bayesMLTable <- function(data
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number_val"]
+                            , number=number
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
@@ -9682,8 +9708,7 @@ bayesMLTable <- function(data
             bartbeta_val = c(bartbeta.vec[1], bartbeta.vec[2]),
             bartnu_val = c(bartnu.vec[1], bartnu.vec[2]),
             bartk_val = c(bartk.vec[1], bartk.vec[2]),
-            trees_val=c(10, trees),
-            number_val=as.integer(c(1, number)))
+            trees_val=c(10, trees))
             
             qualpart_function <- function(
                 xgbalpha_val
@@ -9691,7 +9716,7 @@ bayesMLTable <- function(data
                 , bartnu_val
                 , bartk_val
                 , trees_val
-                , number_val
+                
                 ) {
                     cv = autoBayes(data=data
                     , variable=variable
@@ -9718,7 +9743,7 @@ bayesMLTable <- function(data
                     , bartnu=paste0(bartnu_val, "-", bartnu_val)
                     , bartk=paste0(bartk_val, "-", bartk_val)
                     , trees=trees_val
-                    , number=number_val
+                    , number=number
                     , search=FALSE
                     )
                     
@@ -9754,7 +9779,7 @@ bayesMLTable <- function(data
                             #, summary_function=summary_function
                             , train=train
                             , cvrepeats=cvrepeats
-                            , number=OPT_Res$Best_Par["number_val"]
+                            , number=number
                             , save.directory=save.directory
                             , save.name=save.name
                             , parallelMethod=parallelMethod
@@ -9775,18 +9800,25 @@ bayesMLTable <- function(data
     } else if(!is.null(additional_validation_frame)){
     
 
-    additional_data <- if(scale==FALSE){
+    additional_data <- if(is.data.frame(additional_validation_frame)){
+        if(scale==FALSE){
         dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
-    } else if(scale==TRUE){
-        dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed, y_min=qualpart$ModelData$Data$YMin, y_max=qualpart$ModelData$Data$YMax, mins=qualpart$ModelData$Data$Mins, maxes=qualpart$ModelData$Data$Maxes)
+        } else if(scale==TRUE){
+            dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed, y_min=qualpart$ModelData$Data$YMin, y_max=qualpart$ModelData$Data$YMax, mins=qualpart$ModelData$Data$Mins, maxes=qualpart$ModelData$Data$Maxes)
+        }
+    } else if(!is.data.frame(additional_validation_frame)){
+        additional_validation_frame
     }
     additional_data$Data <- additional_data$Data[order(additional_data$Data$Sample),]
-    
+    additional_data$Data[setdiff(names(qualpart$Model$trainingData), names(additional_data$Data))] <- 0
     
         y_predict <- predict(object=qualpart$Model, newdata=additional_data$Data[,colnames(additional_data$Data) %in% colnames(qualpart$Model$trainingData), drop=FALSE], na.action = na.pass)
         if(scale==TRUE){
-            y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
-            additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+            if(isDataNumeric(data, variable)){
+                y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+                additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+            }
+            
         }
           results.frame <- data.frame(Sample=additional_data$Data$Sample
                                 , Known=additional_data$Data[,variable]
@@ -9795,12 +9827,13 @@ bayesMLTable <- function(data
                                 )
                                 
         qualpart$additionalValidationSet <- results.frame
-        qualpart$mergedValidationSet <- as.data.frame(data.table::rbindlist(list(qualpart$ValidationSet, results.frame), use.names=T))
+        qualpart$ValidationSet$Type <- "2. Test"
+        qualpart$mergedValidationSet <- as.data.frame(data.table::rbindlist(list(qualpart$ValidationSet, results.frame), use.names=T, fill=TRUE))
 
                                 
         if(!is.numeric(additional_data$Data[,variable])){
           if(is.null(PositiveClass)){
-            PositiveClass <- unique(sort(data[,variable]))[1]
+            PositiveClass <- tryCatch(unique(sort(additional_data$Data[,variable]))[1], error=function(e) unique(sort(additional_data$Data[,variable]))[1])
           }
           accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
           merged.accuracy.rate <- confusionMatrix(as.factor(qualpart$mergedValidationSet$Predicted), as.factor(qualpart$mergedValidationSet$Known), positive = PositiveClass)

@@ -2,7 +2,7 @@ source("MachineLearning.R")
 
 #install.packages("https://cran.r-project.org/src/contrib/Archive/keras/keras_2.4.0.tar.gz", repos=NULL, type="source")
 
-list.of.packages <- c("keras", "iml", "lime", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm", "listarrays", "funModeling")
+list.of.packages <- c("keras", "iml", "lime", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlearning_rate", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm", "listarrays", "funModeling")
 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) lapply(new.packages, function(x) install.packages(x, repos="http://cran.rstudio.com/", dep = TRUE))
@@ -67,7 +67,7 @@ kerasAUC <- function(y_true, y_pred){
         #sorting the ground truth values based on the predictions above
     sortedTrue = k_gather(true, indices)
 
-        #getting the ground negative elements (already sorted above)
+        #getting the ground negative elements (alearning_rateeady sorted above)
     negatives = 1 - sortedTrue
 
         #the true positive count per threshold
@@ -1159,17 +1159,17 @@ autoXGBoostTreeGPU <- function(data, variable, predictors=NULL, min.n=5, split=N
     metric <- if(!is.null(metric)){
         metric
     } else if(is.null(metric)){
-        if(!is.numeric(data[,variable])){
+        if(!isDataNumeric(data, variable)){
             "Accuracy"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "RMSE"
         }
     }
     
     #Choose model type based on whether the variable is numeric or not
-    model <- if(!is.numeric(data[,variable])){
+    model <- if(!isDataNumeric(data, variable)){
         classifyXGBoostTreeGPU(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
-    } else if(is.numeric(data[,variable])){
+    } else if(isDataNumeric(data, variable)){
         regressXGBoostTreeGPU(data=data, dependent=variable, predictors=predictors, min.n=min.n, split=split, treedepth=treedepth, xgbgamma=xgbgamma, xgbeta=xgbeta, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, nrounds=nrounds, test_nrounds=test_nrounds, metric=metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod)
     }
     
@@ -1446,7 +1446,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     
     
     #metric_top_3_categorical_accuracy <- custom_metric("top_3_categorical_accuracy", function(y_true, y_pred) {  metric_top_k_categorical_accuracy(y_true, y_pred, k = 3) })
-    #optimizer_sgd(lr=0.001, clipvalue=0.6)
+    #optimizer_sgd(learning_rate=0.001, clipvalue=0.6)
     
     loss_decision <- if(is.null(loss)){
         if(num_classes>2){
@@ -1466,17 +1466,17 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     #loss_decision <- 'sparse_categorical_crossentropy'
     
     optimization <- if(optimizer=="rmsprop"){
-        optimizer_rmsprop(lr=learning.rate, clipvalue=0.5)
+        optimizer_rmsprop(learning_rate=learning.rate, clipvalue=0.5)
     } else if(optimizer=="adam"){
-        optimizer_adam(lr=learning.rate, clipvalue=0.5)
+        optimizer_adam(learning_rate=learning.rate, clipvalue=0.5)
     } else if(optimizer=="adagrad"){
-        optimizer_adagrad(lr=learning.rate, clipvalue=0.5)
+        optimizer_adagrad(learning_rate=learning.rate, clipvalue=0.5)
     } else if(optimizer=="adadelta"){
-        optimizer_adadelta(lr=learning.rate, clipvalue=0.5)
+        optimizer_adadelta(learning_rate=learning.rate, clipvalue=0.5)
     } else if(optimizer=="nadam"){
-        optimizer_nadam(lr=learning.rate, clipvalue=0.5)
+        optimizer_nadam(learning_rate=learning.rate, clipvalue=0.5)
     } else if(optimizer=="sgd"){
-        optimizer_sgd(lr=learning.rate, nesterov=TRUE, momentum=0.9, clipvalue=0.5)
+        optimizer_sgd(learning_rate=learning.rate, nesterov=TRUE, momentum=0.9, clipvalue=0.5)
     }
         
         
@@ -2021,24 +2021,24 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
     }
     
     optimization <- if(optimizer=="rmsprop"){
-        optimizer_rmsprop(lr=learning.rate, clipvalue=0.5)
+        optimizer_rmsprop(learning_rate=learning.rate, clipvalue=0.5)
     } else if(optimizer=="adam"){
-        optimizer_adam(lr=learning.rate, clipvalue=0.5, decay=0.01)
+        optimizer_adam(learning_rate=learning.rate, clipvalue=0.5, decay=0.01)
     } else if(optimizer=="adagrad"){
-        optimizer_adagrad(lr=learning.rate, clipvalue=0.5)
+        optimizer_adagrad(learning_rate=learning.rate, clipvalue=0.5)
     } else if(optimizer=="adadelta"){
-        optimizer_adadelta(lr=learning.rate, clipvalue=0.5)
+        optimizer_adadelta(learning_rate=learning.rate, clipvalue=0.5)
     } else if(optimizer=="nadam"){
-        optimizer_nadam(lr=learning.rate, clipvalue=0.5)
+        optimizer_nadam(learning_rate=learning.rate, clipvalue=0.5)
     } else if(optimizer=="sgd"){
-        optimizer_sgd(lr=learning.rate, nesterov=TRUE, momentum=0.9, clipvalue=0.5)
+        optimizer_sgd(learning_rate=learning.rate, nesterov=TRUE, momentum=0.9, clipvalue=0.5)
     }
     
     #parallel_model <- multi_gpu_model(model, gpus=4)
     
     
     #metric_top_3_categorical_accuracy <- custom_metric("top_3_categorical_accuracy", function(y_true, y_pred) {  metric_top_k_categorical_accuracy(y_true, y_pred, k = 3) })
-    #optimizer_sgd(lr=0.001, clipvalue=0.6)
+    #optimizer_sgd(learning_rate=0.001, clipvalue=0.6)
     
     
 
@@ -2250,17 +2250,17 @@ autoSingleGPUKeras <- function(data, variable, predictors=NULL, min.n=5, split=N
     metric <- if(!is.null(metric)){
         metric
     } else if(is.null(metric)){
-        if(!is.numeric(data[,variable])){
+        if(!isDataNumeric(data, variable)){
             "sparse_categorical_accuracy"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "mae"
         }
     }
     
     #Choose model type based on whether the variable is numeric or not
-    model <- if(!is.numeric(data[,variable])){
+    model <- if(!isDataNumeric(data, variable)){
         kerasSingleGPURunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
-    } else if(is.numeric(data[,variable])){
+    } else if(isDataNumeric(data, variable)){
         kerasSingleGPURunRegress(data=data, dependent=variable, predictors=predictors, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
     }
     
@@ -2567,17 +2567,17 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
         }
         
         optimization <- if(optimizer=="rmsprop"){
-            optimizer_rmsprop(lr=learning.rate)
+            optimizer_rmsprop(learning_rate=learning.rate)
         } else if(optimizer=="adam"){
-            optimizer_adam(lr=learning.rate)
+            optimizer_adam(learning_rate=learning.rate)
         } else if(optimizer=="adagrad"){
-            optimizer_adagrad(lr=learning.rate)
+            optimizer_adagrad(learning_rate=learning.rate)
         } else if(optimizer=="adadelta"){
-            optimizer_adadelta(lr=learning.rate)
+            optimizer_adadelta(learning_rate=learning.rate)
         } else if(optimizer=="nadam"){
-            optimizer_nadam(lr=learning.rate)
+            optimizer_nadam(learning_rate=learning.rate)
         } else if(optimizer=="sgd"){
-            optimizer_sgd(lr=learning.rate)
+            optimizer_sgd(learning_rate=learning.rate)
         }
         
         loss_decision <- if(is.null(loss)){
@@ -2609,7 +2609,7 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
     
     
     #metric_top_3_categorical_accuracy <- custom_metric("top_3_categorical_accuracy", function(y_true, y_pred) {  metric_top_k_categorical_accuracy(y_true, y_pred, k = 3) })
-    #optimizer_sgd(lr=0.001, clipvalue=0.6)
+    #optimizer_sgd(learning_rate=0.001, clipvalue=0.6)
     
     if(num_classes==2){
         y_train_hold <- y_train
@@ -3203,17 +3203,17 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         }
         
         optimization <- if(optimizer=="rmsprop"){
-            optimizer_rmsprop(lr=learning.rate)
+            optimizer_rmsprop(learning_rate=learning.rate)
         } else if(optimizer=="adam"){
-            optimizer_adam(lr=learning.rate)
+            optimizer_adam(learning_rate=learning.rate)
         } else if(optimizer=="adagrad"){
-            optimizer_adagrad(lr=learning.rate)
+            optimizer_adagrad(learning_rate=learning.rate)
         } else if(optimizer=="adadelta"){
-            optimizer_adadelta(lr=learning.rate)
+            optimizer_adadelta(learning_rate=learning.rate)
         } else if(optimizer=="nadam"){
-            optimizer_nadam(lr=learning.rate)
+            optimizer_nadam(learning_rate=learning.rate)
         } else if(optimizer=="sgd"){
-            optimizer_sgd(lr=learning.rate)
+            optimizer_sgd(learning_rate=learning.rate)
         }
         
         loss_decision <- if(is.null(loss)){
@@ -3245,7 +3245,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     
     
     #metric_top_3_categorical_accuracy <- custom_metric("top_3_categorical_accuracy", function(y_true, y_pred) {  metric_top_k_categorical_accuracy(y_true, y_pred, k = 3) })
-    #optimizer_sgd(lr=0.001, clipvalue=0.6)
+    #optimizer_sgd(learning_rate=0.001, clipvalue=0.6)
     
     if(num_classes==2){
         y_train_hold <- y_train
@@ -3812,17 +3812,17 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         #loss_decision <- 'sparse_categorical_crossentropy'
         
         optimization <- if(optimizer=="rmsprop"){
-            optimizer_rmsprop(lr=learning.rate, clipvalue=0.5)
+            optimizer_rmsprop(learning_rate=learning.rate, clipvalue=0.5)
         } else if(optimizer=="adam"){
-            optimizer_adam(lr=learning.rate, clipvalue=0.5)
+            optimizer_adam(learning_rate=learning.rate, clipvalue=0.5)
         } else if(optimizer=="adagrad"){
-            optimizer_adagrad(lr=learning.rate, clipvalue=0.5)
+            optimizer_adagrad(learning_rate=learning.rate, clipvalue=0.5)
         } else if(optimizer=="adadelta"){
-            optimizer_adadelta(lr=learning.rate, clipvalue=0.5)
+            optimizer_adadelta(learning_rate=learning.rate, clipvalue=0.5)
         } else if(optimizer=="nadam"){
-            optimizer_nadam(lr=learning.rate, clipvalue=0.5)
+            optimizer_nadam(learning_rate=learning.rate, clipvalue=0.5)
         } else if(optimizer=="sgd"){
-            optimizer_sgd(lr=learning.rate, nesterov=TRUE, momentum=0.9, clipvalue=0.5)
+            optimizer_sgd(learning_rate=learning.rate, nesterov=TRUE, momentum=0.9, clipvalue=0.5)
         }
             
             
@@ -3845,7 +3845,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     
     
     #metric_top_3_categorical_accuracy <- custom_metric("top_3_categorical_accuracy", function(y_true, y_pred) {  metric_top_k_categorical_accuracy(y_true, y_pred, k = 3) })
-    #optimizer_sgd(lr=0.001, clipvalue=0.6)
+    #optimizer_sgd(learning_rate=0.001, clipvalue=0.6)
     
     if(is.null(weights)){
         if(num_classes > 2){
@@ -4335,7 +4335,7 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
     
     
     #metric_top_3_categorical_accuracy <- custom_metric("top_3_categorical_accuracy", function(y_true, y_pred) {  metric_top_k_categorical_accuracy(y_true, y_pred, k = 3) })
-    #optimizer_sgd(lr=0.001, clipvalue=0.6)
+    #optimizer_sgd(learning_rate=0.001, clipvalue=0.6)
     
     
     
@@ -4490,9 +4490,9 @@ autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, spli
     metric <- if(!is.null(metric)){
         metric
     } else if(is.null(metric)){
-        if(!is.numeric(data[,variable])){
+        if(!isDataNumeric(data, variable)){
             "sparse_categorical_accuracy"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "mae"
         }
     }
@@ -4500,24 +4500,24 @@ autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, spli
     loss <- if(!is.null(loss)){
         loss
     } else if(is.null(loss)){
-        if(!is.numeric(data[,variable])){
+        if(!isDataNumeric(data, variable)){
             NULL
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "mae"
         }
     }
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(n_gpus==1){
-        if(!is.numeric(data[,variable])){
+        if(!isDataNumeric(data, variable)){
             kerasSingleGPURunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             kerasSingleGPURunRegress(data=data, dependent=variable, predictors=predictors, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
         }
     } else if(n_gpus>1){
-        if(!is.numeric(data[,variable])){
+        if(!isDataNumeric(data, variable)){
             kerasMultiGPURunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             kerasMultiGPURunRegress(data=data, dependent=variable, predictors=predictors, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
         }
     }
@@ -5531,9 +5531,9 @@ xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
 xgbTreeNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
 
     if(is.null(save.name)){
-        save.name <- if(!is.numeric(data[,variable])){
+        save.name <- if(!isDataNumeric(data, variable)){
             "classifyXGBModel"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "regressXGBModel"
         }
     }
@@ -5542,15 +5542,15 @@ xgbTreeNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
     metric <- if(!is.null(metric)){
         metric
     } else if(is.null(metric)){
-        if(!is.numeric(data[,variable])){
+        if(!isDataNumeric(data, variable)){
             "ROC"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "RMSE"
         }
     }
     
     #Choose model type based on whether the variable is numeric or not
-    model <- if(!is.numeric(data[,variable])){
+    model <- if(!isDataNumeric(data, variable)){
         xgbTreeNeuralNetClassify(data=data
                             , class=variable
                             , predictors=predictors
@@ -5609,7 +5609,7 @@ xgbTreeNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
                             , predictor=predictor
                             , early_stopping_rounds=early_stopping_rounds
                             )
-    } else if(is.numeric(data[,variable])){
+    } else if(isDataNumeric(data, variable)){
         xgbTreeNeuralNetRegress(data=data
                            , dependent=variable
                            , predictors=predictors
@@ -6701,9 +6701,9 @@ xgbDartNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
 xgbDartNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
 
     if(is.null(save.name)){
-        save.name <- if(!is.numeric(data[,variable])){
+        save.name <- if(!isDataNumeric(data, variable)){
             "classifyXGBModel"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "regressXGBModel"
         }
     }
@@ -6712,15 +6712,15 @@ xgbDartNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
     xgb_metric <- if(!is.null(xgb_metric)){
         xgb_metric
     } else if(is.null(xgb_metric)){
-        if(!is.numeric(data[,variable])){
+        if(!isDataNumeric(data, variable)){
             "ROC"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "RMSE"
         }
     }
     
     #Choose model type based on whether the variable is numeric or not
-    model <- if(!is.numeric(data[,variable])){
+    model <- if(!isDataNumeric(data, variable)){
         xgbDartNeuralNetClassify(data=data
                             , class=variable
                             , predictors=predictors
@@ -6781,7 +6781,7 @@ xgbDartNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
                             , predictor=predictor
                             , early_stopping_rounds=early_stopping_rounds
                             )
-    } else if(is.numeric(data[,variable])){
+    } else if(isDataNumeric(data, variable)){
         xgbDartNeuralNetRegress(data=data
                            , dependent=variable
                            , predictors=predictors
@@ -7660,9 +7660,9 @@ xgbLinearNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5,
 xgbLinearNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, xgbalpha="0.1-0.1", xgbeta="0.1-0.1", xgblambda="0.1-0.1", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
 
     if(is.null(save.name)){
-        save.name <- if(!is.numeric(data[,variable])){
+        save.name <- if(!isDataNumeric(data, variable)){
             "classifyXGBModel"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "regressXGBModel"
         }
     }
@@ -7671,15 +7671,15 @@ xgbLinearNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=N
     xgb_metric <- if(!is.null(xgb_metric)){
         xgb_metric
     } else if(is.null(xgb_metric)){
-        if(!is.numeric(data[,variable])){
+        if(!isDataNumeric(data, variable)){
             "Accuracy"
-        } else if(is.numeric(data[,variable])){
+        } else if(isDataNumeric(data, variable)){
             "RMSE"
         }
     }
     
     #Choose model type based on whether the variable is numeric or not
-    model <- if(!is.numeric(data[,variable])){
+    model <- if(!isDataNumeric(data, variable)){
         xgbLinearNeuralNetClassify(data=data
                               , class=variable
                               , predictors=predictors
@@ -7727,7 +7727,7 @@ xgbLinearNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=N
                               , nthread=nthread
                               , verbose=verbose
                               )
-    } else if(is.numeric(data[,variable])){
+    } else if(isDataNumeric(data, variable)){
         xgbLinearNeuralNetRegress(data=data
                              , dependent=variable
                              , predictors=predictors
@@ -7781,7 +7781,7 @@ xgbLinearNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=N
 autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, additional_split=NULL, split_by_group=NULL, the_group=NULL, type="XGBLinear", tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="2-2", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", maxdeltastep="0-10", scaleposweight="0-10", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, loss=NULL, metric=NULL, xgb_eval_metric="auc", xgb_metric="RMSE", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL, model.split=0, epochs=10, callback="recall", activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, save_plots=FALSE, scale=FALSE, additional_validation_frame=NULL){
     
     if(is.null(additional_validation_frame) & !is.null(additional_split)){
-        new_data_list <- additional_data_split(data=data, split=additional_split)
+        new_data_list <- additional_data_split(data=data, split=additional_split, variable=variable, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
         data <- new_data_list$Data
         additional_validation_frame <- new_data_list$additionalValFrame
     }
@@ -7814,8 +7814,17 @@ autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, ad
     } else if(!is.null(additional_validation_frame)){
     
 
-    additional_data <- dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
+    additional_data <- if(is.data.frame(additional_validation_frame)){
+        if(scale==FALSE){
+        dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
+        } else if(scale==TRUE){
+            dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed, y_min=qualpart$ModelData$Data$YMin, y_max=qualpart$ModelData$Data$YMax, mins=qualpart$ModelData$Data$Mins, maxes=qualpart$ModelData$Data$Maxes)
+        }
+    } else if(!is.data.frame(additional_validation_frame)){
+        additional_validation_frame
+    }
     additional_data$Data <- additional_data$Data[order(additional_data$Data$Sample),]
+    additional_data$Data[setdiff(names(qualpart$Model$trainingData), names(additional_data$Data))] <- 0
     
     if(!type %in% c("xgbTreeNeuralNet", "xgbDartNeuralNet", "xgbLinearNeuralNet")){
         y_predict <- predict(object=qualpart$Model, newdata=additional_data$Data[,colnames(additional_data$Data) %in% colnames(qualpart$Model$trainingData), drop=FALSE], na.action = na.pass)
@@ -7860,12 +7869,13 @@ autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, ad
                                 )
                                 
         qualpart$additionalValidationSet <- results.frame
+        qualpart$ValidationSet$Type <- "2. Test"
         qualpart$mergedValidationSet <- as.data.frame(data.table::rbindlist(list(qualpart$ValidationSet, results.frame), use.names=T))
 
                                 
         if(!is.numeric(additional_data$Data[,variable])){
           if(is.null(PositiveClass)){
-            PositiveClass <- unique(sort(data[,variable]))[1]
+            PositiveClass <- tryCatch(unique(sort(additional_data$Data[,variable]))[1], error=function(e) unique(sort(additional_data$Data[,variable]))[1])
           }
           accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
           merged.accuracy.rate <- confusionMatrix(as.factor(qualpart$mergedValidationSet$Predicted), as.factor(qualpart$mergedValidationSet$Known), positive = PositiveClass)
@@ -7902,7 +7912,8 @@ bayesMLTable <- function(data
                         , the_group=NULL
                         , type="XGBLinear"
                         , tree_method="hist"
-                        , single_precision_histogram=FALSE, predictor="cpu_predictor"
+                        , single_precision_histogram=FALSE
+                        , predictor="cpu_predictor"
                         , early_stopping_rounds=100
                         , treedepth="2-2"
                         , treedrop="0.3-0.3"
@@ -7946,8 +7957,8 @@ bayesMLTable <- function(data
                         , weights=NULL
                         , n_gpus=1
                         , importance=FALSE
-                        , missing=missing
-                        , metric=metric # Metric Options for regressions: "RMSE" "Rsquared"
+                        , missing=NULL
+                        , metric="MAE" # Metric Options for regressions: "RMSE" "Rsquared"
                                         # Metric Options for Classifiers: "ROC" "Sens" "Spec" "AUC" "Precision" "Recall" "F" "Accuracy" "Kappa"
                                         # Metric Options specificaly for Multi_class classifiers: "ROC", "Sensitivity", "Specificity" "logLoss","Pos_Pred_Value", "Neg_Pred_Value", "Detection_Rate","Balanced_Accuracy"
                         #, summary_function="f1"
@@ -7979,11 +7990,11 @@ bayesMLTable <- function(data
                         , xgb_eval_metric="rmse"
                         ){
                         
-                if(is.null(additional_validation_frame) & !is.null(additional_split)){
-                    new_data_list <- additional_data_split(data=data, split=additional_split)
-                    data <- new_data_list$Data
-                    additional_validation_frame <- new_data_list$additionalValFrame
-                }
+                        if(is.null(additional_validation_frame) & !is.null(additional_split)){
+                            new_data_list <- additional_data_split(data=data, split=additional_split, variable=variable, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+                            data <- new_data_list$Data
+                            additional_validation_frame <- new_data_list$additionalValFrame
+                        }
                         
     #Choose model class
     if(type=="xgbTree"){
@@ -9333,7 +9344,7 @@ bayesMLTable <- function(data
                 qual_list <- list()
                 for(i in 1:nrow(qual_grid)){
                     print(paste0("Starting ", i, " of ", nrow(qual_grid), " Loss:", loss=qual_grid[i,"loss"], ", Optimizer:", optimizer=qual_grid[i,"optimizer"], " Activation:", activation=qual_grid[i,"activation"]))
-                    cv <- tryCatch(autoKeras(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=4, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model, seed=cv_seed)
+                    cv <- tryCatch(autoKeras(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=4, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=scale, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model, seed=cv_seed)
                     , error=function(e) NULL)
                     
                     qual_list[[i]] <-list(Index=paste0("Row_", i), Score =  metricGen(cv=cv, bayes_metric=bayes_metric))
@@ -9382,9 +9393,9 @@ bayesMLTable <- function(data
                     , importance=FALSE
                     , model.split=model.split
                     , epochs=epochs_test
-                    , optimizer=qual_frame[1, "optimizer"]
-                    , activation=qual_frame[1, "activation"]
-                    , loss=qual_frame[1, "loss"]
+                    , optimizer=as.character(qual_frame[1, "optimizer"])
+                    , activation=as.character(qual_frame[1, "activation"])
+                    , loss=as.character(qual_frame[1, "loss"])
                     , callback=callback
                     , batch_size=batch_size
                     , model.type=model.type
@@ -9400,7 +9411,7 @@ bayesMLTable <- function(data
                     
                 }
                 
-                OPT_Res <- BayesianOptimization(qualpart_function,
+                OPT_Res <- rBayesianOptimization::BayesianOptimization(qualpart_function,
                                                 bounds = param_list
                                                 , init_grid_dt = NULL
                                                 , init_points = init_points
@@ -9434,9 +9445,9 @@ bayesMLTable <- function(data
                             , importance=importance
                             , model.split=model.split
                             , epochs=epochs
-                            , optimizer=qual_frame[1, "optimizer"]
-                            , activation=qual_frame[1, "activation"]
-                            , loss=qual_frame[1, "loss"]
+                            , optimizer=as.character(qual_frame[1, "optimizer"])
+                            , activation=as.character(qual_frame[1, "activation"])
+                            , loss=as.character(qual_frame[1, "loss"])
                             , callback=callback
                             , batch_size=batch_size
                             , model.type=model.type
@@ -10110,16 +10121,27 @@ bayesMLTable <- function(data
     } else if(!is.null(additional_validation_frame)){
     
 
-    additional_data <- dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
+    additional_data <- if(is.data.frame(additional_validation_frame)){
+        if(scale==FALSE){
+        dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
+        } else if(scale==TRUE){
+            dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed, y_min=qualpart$ModelData$Data$YMin, y_max=qualpart$ModelData$Data$YMax, mins=qualpart$ModelData$Data$Mins, maxes=qualpart$ModelData$Data$Maxes)
+        }
+    } else if(!is.data.frame(additional_validation_frame)){
+        additional_validation_frame
+    }
     additional_data$Data <- additional_data$Data[order(additional_data$Data$Sample),]
     
-    if(!type %in% c("xgbTreeNeuralNet", "xgbDartNeuralNet", "xgbLinearNeuralNet")){
+    
+    if(!type %in% c("xgbTreeNeuralNet", "xgbDartNeuralNet", "xgbLinearNeuralNet", "Keras")){
+        additional_data$Data[setdiff(names(qualpart$Model$trainingData), names(additional_data$Data))] <- 0
         y_predict <- predict(object=qualpart$Model, newdata=additional_data$Data[,colnames(additional_data$Data) %in% colnames(qualpart$Model$trainingData), drop=FALSE], na.action = na.pass)
         if(scale==TRUE){
             y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
             additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
         }
     } else if(type %in% c("xgbTreeNeuralNet", "xgbDartNeuralNet", "xgbLinearNeuralNet")){
+        additional_data$Data[setdiff(names(qualpart$Model$trainingData), names(additional_data$Data))] <- 0
         keras_model <- unserialize_model(qualpart$kerasResults$Model)
         intermediate_layer_model <- keras::keras_model(inputs = keras_model$input, outputs = get_layer(keras_model, "penultimate")$output)
         x_test_pre <- additional_data$Data[, !colnames(additional_data$Data) %in% c("Sample", variable, split_by_group)]
@@ -10147,6 +10169,32 @@ bayesMLTable <- function(data
             additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
         }
         
+    } else if(type=="Keras"){
+        x_test_pre <- additional_data$Data[, !colnames(additional_data$Data) %in% c("Sample", variable, split_by_group)]
+        x_test_pre <- x_test_pre[, colnames(x_test_pre) %in% colnames(data)]
+        tryCatch(x_test_pre[setdiff(names(qualpart$x_train), names(x_test_pre))] <- 0, error=function(e) NULL)
+        
+        x_test_proto <- as.matrix(x_test_pre)
+        x_test <- if(model.type=="Dense" | model.type=="SuperDense"){
+            x_test_proto
+        } else if(model.type=="GRU"){
+            array_reshape(x_test_proto, c(-1, 1, ncol(x_test_proto)))
+        } else if(model.type=="First_CNN"){
+            listarrays::expand_dims(x_test_proto, 3)
+            #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
+        } else if(model.type=="Complex_CNN"){
+            listarrays::expand_dims(x_test_proto, 3)
+            #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
+        } else if(model.type=="Expiremental_CNN"){
+            #array_reshape(x_test_proto, c(-1, 1, ncol(x_test_proto)))
+            listarrays::expand_dims(x_test_proto, 3)
+            #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
+        }
+        y_predict <- predict(qualpart$Model, x_test, batch_size=batch_size, verbose=verbose)
+        if(scale==TRUE){
+            y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+            additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+        }
     }
         
           results.frame <- data.frame(Sample=additional_data$Data$Sample
@@ -10156,12 +10204,13 @@ bayesMLTable <- function(data
                                 )
                                 
         qualpart$additionalValidationSet <- results.frame
+        qualpart$ValidationSet$Type <- "2. Test"
         qualpart$mergedValidationSet <- as.data.frame(data.table::rbindlist(list(qualpart$ValidationSet, results.frame), use.names=T))
 
                                 
         if(!is.numeric(additional_data$Data[,variable])){
           if(is.null(PositiveClass)){
-            PositiveClass <- unique(sort(data[,variable]))[1]
+            PositiveClass <- tryCatch(unique(sort(additional_data$Data[,variable]))[1], error=function(e) unique(sort(additional_data$Data[,variable]))[1])
           }
           accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
           merged.accuracy.rate <- confusionMatrix(as.factor(qualpart$mergedValidationSet$Predicted), as.factor(qualpart$mergedValidationSet$Known), positive = PositiveClass)
