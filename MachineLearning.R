@@ -1398,7 +1398,7 @@ additional_data_split <- function(data, split, variable, predictors=NULL, scale=
     additional_validation_frame <- data[1:cutoff,]
     data <- data[!data$Sample %in% additional_validation_frame$Sample, ]
     new_data_list <- data_list
-    new_data_list$Date <- data
+    new_data_list$Data <- data
     additional_data_list <- data_list
     additional_data_list$Data <- additional_validation_frame
     return(list(Data=new_data_list, additionalValFrame=additional_data_list))
@@ -8370,17 +8370,17 @@ batchCompress <- function(qualpart_directory){
 
 metricGen <- function(cv, bayes_metric){
     if(bayes_metric=="training_r2"){
-        tryCatch(list(Score = summary(cv$trainingAccuracy)$r.squared), error=function(e) list(Score=0))
+        tryCatch(list(Score = as.numeric(summary(cv$trainingAccuracy)$r.squared)), error=function(e) list(Score=0))
     } else if(bayes_metric=="test_r2"){
-        tryCatch(list(Score = summary(cv$testAccuracy)$r.squared), error=function(e) list(Score=0))
+        tryCatch(list(Score = as.numeric(summary(cv$testAccuracy)$r.squared)), error=function(e) list(Score=0))
     } else if(bayes_metric=="train_rmse"){
-        tryCatch(list(Score = Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1), error=function(e) list(Score=0))
+        tryCatch(list(Score = as.numeric(Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1)), error=function(e) list(Score=0))
     } else if(bayes_metric=="test_rmse"){
-        tryCatch(list(Score = Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1), error=function(e) list(Score=0))
+        tryCatch(list(Score = as.numeric(Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1)), error=function(e) list(Score=0))
     } else if(bayes_metric=="train_mae"){
-        tryCatch(list(Score = Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1), error=function(e) list(Score=0))
+        tryCatch(list(Score = as.numeric(Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1)), error=function(e) list(Score=0))
     } else if(bayes_metric=="test_mae"){
-        tryCatch(list(Score = Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1), error=function(e) list(Score=0))
+        tryCatch(list(Score = as.numeric(Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1)), error=function(e) list(Score=0))
     } else if(bayes_metric=="train_accuracy"){
         tryCatch(list(Score = as.numeric(cv$trainAccuracy$overall["Accuracy"])), error=function(e) list(Score=0))
     } else if(bayes_metric=="test_accuracy"){
@@ -9859,9 +9859,29 @@ bayesMLTable <- function(data
 }
 }
 
-just_a_predictor <- function(model, new_data){
+just_a_predictor <- function(qualpart, additional_data, variable=NULL){
+    additional_data <- if(is.data.frame(additional_validation_frame)){
+        if(scale==FALSE){
+        dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
+        } else if(scale==TRUE){
+            dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed, y_min=qualpart$ModelData$Data$YMin, y_max=qualpart$ModelData$Data$YMax, mins=qualpart$ModelData$Data$Mins, maxes=qualpart$ModelData$Data$Maxes)
+        }
+    } else if(!is.data.frame(additional_validation_frame)){
+        additional_validation_frame
+    }
+    additional_data$Data <- additional_data$Data[order(additional_data$Data$Sample),]
+    additional_data$Data[setdiff(names(qualpart$Model$trainingData), names(additional_data$Data))] <- 0
     
+        y_predict <- predict(object=qualpart$Model, newdata=additional_data$Data[,colnames(additional_data$Data) %in% colnames(qualpart$Model$trainingData), drop=FALSE], na.action = na.pass)
+        if(scale==TRUE){
+            if(isDataNumeric(data, variable)){
+                y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+                additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+            }
+            
+        }
     
+    return(y_predict)
 }
 
 sequential_predict <- function(model, model_data, new_data, lag=-1, lag_variable, scale=FALSE){

@@ -2,7 +2,7 @@ source("MachineLearning.R")
 
 #install.packages("https://cran.r-project.org/src/contrib/Archive/keras/keras_2.4.0.tar.gz", repos=NULL, type="source")
 
-list.of.packages <- c("keras", "iml", "lime", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlearning_rate", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm", "listarrays", "funModeling")
+list.of.packages <- c("keras", "iml", "lime", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization",  "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm", "listarrays", "funModeling")
 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) lapply(new.packages, function(x) install.packages(x, repos="http://cran.rstudio.com/", dep = TRUE))
@@ -1180,7 +1180,7 @@ autoXGBoostTreeGPU <- function(data, variable, predictors=NULL, min.n=5, split=N
 ###Keras Classification
 
 
-kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss=NULL, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, seed=NULL){
+kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss=NULL, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, seed=NULL){
     if(eager==TRUE){tf$executing_eagerly()}
     
 
@@ -1234,8 +1234,8 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     }
     
     
-    y_train <- as.numeric(y_train_pre)-1
-    if(!is.null(split)){y_test <- as.numeric(y_test_pre)-1}
+    y_train <- as.numeric(y_train_pre)
+    if(!is.null(split)){y_test <- as.numeric(y_test_pre)}
     
     num_classes <- if(is.null(split)){
         length(unique(y_train_pre))
@@ -1379,10 +1379,10 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     } else if(model.type=="First_CNN"){
         keras_model_sequential() %>%
         #layer_dropout(rate=0.5) %>%
-        layer_conv_1d(filters = 32, kernel_size = c(2), activation = activation,
+        layer_conv_1d(filters = filters, kernel_size = c(2), activation = activation,
         input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
-        layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
-        layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.6, 0), activation = activation) %>%
+        layer_conv_1d(filters = filters*2, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
+        layer_conv_1d(filters = filters*4, kernel_size = round(start_kernel*0.6, 0), activation = activation) %>%
         layer_max_pooling_1d(pool_size = c(2)) %>%
         bidirectional(layer_lstm(units=128, return_sequences=TRUE, dropout=0.2, recurrent_dropout=0, activation="tanh", recurrent_activation="sigmoid", unroll=FALSE, use_bias=TRUE)) %>%
         bidirectional(layer_lstm(units=128, return_sequences=TRUE,  dropout=0.2, recurrent_dropout=0, activation="tanh", recurrent_activation="sigmoid", unroll=FALSE, use_bias=TRUE)) %>%
@@ -1397,12 +1397,12 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     } else if(model.type=="Complex_CNN"){
         keras_model_sequential() %>%
         #layer_dropout(rate=0.1) %>%
-        layer_conv_1d(filters = 32, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
+        layer_conv_1d(filters = filters, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
         keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
-        layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
+        layer_conv_1d(filters = filters*2, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
-        layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
+        layer_conv_1d(filters = filters*4, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
         keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
         #bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
@@ -1423,10 +1423,10 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
         keras_model_sequential() %>%
         #layer_dropout(rate=0.5) %>%
         #layer_dropout(0.2) %>%
-        layer_conv_1d(filters = channels, kernel_size = c(3), activation = activation,
+        layer_conv_1d(filters = filters, kernel_size = c(3), activation = activation,
         input_shape = c(channels, 1), kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
-        layer_conv_1d(filters = channels, kernel_size = c(3), activation = activation) %>%
-        layer_conv_1d(filters = 128, kernel_size = c(3), activation = activation) %>%
+        layer_conv_1d(filters = filters*2, kernel_size = c(3), activation = activation) %>%
+        layer_conv_1d(filters = filters*4, kernel_size = c(3), activation = activation) %>%
         bidirectional(layer_gru(units=128, activation="tanh", recurrent_activation="sigmoid", recurrent_dropout=0, use_bias=TRUE, reset_after=FALSE, return_sequences=TRUE, kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
         layer_max_pooling_1d(pool_size = c(2)) %>%
         #layer_dropout(rate = 0.25) %>%
@@ -1593,12 +1593,12 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     result <- if(!is.null(second_metric)){
         if(simple.split>0){
             model %>% fit(
-            x_train, y_train,
+            x_train, as.numeric(y_train),
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
             #class_weight = l_weights,
-            validation_data=list(x_test, y_test),
+            validation_data=list(x_test, as.numeric(y_test)),
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
@@ -1606,7 +1606,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
             )
         } else if(simple.split==0){
             model %>% fit(
-            x_train, y_train,
+            x_train, as.numeric(y_train),
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
@@ -1620,12 +1620,12 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     } else if(is.null(second_metric)){
         if(simple.split>0){
             model %>% fit(
-            x_train, y_train,
+            x_train, as.numeric(y_train),
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
             #class_weight = l_weights,
-            validation_data=list(x_test, y_test),
+            validation_data=list(x_test, as.numeric(y_test)),
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
@@ -1633,7 +1633,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
             )
         } else if(simple.split==0){
             model %>% fit(
-            x_train, y_train,
+            x_train, as.numeric(y_train),
             batch_size = batch_size,
             epochs = epochs,
             validation_split = model.split,
@@ -1670,7 +1670,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     predictions.train <- levels(as.factor(data$Class))[predictions.train.pre]
     
     train.results.frame <- data.frame(Sample=data.train$Sample, Known=as.vector(data.train$Class), Predicted=predictions.train)
-    train.accuracy.rate <- confusionMatrix(as.factor(train.results.frame$Predicted), as.factor(train.results.frame$Known))
+    train.accuracy.rate <- confusionMatrix(as.factor(train.results.frame$Predicted), as.factor(train.results.frame$Known), positive = PositiveClass)
     
     #predictor$data$X <- x_train
     if(importance==TRUE){
@@ -1682,13 +1682,13 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
         
         if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN"){
             batch.size <- batch_size
-            predict_CNN <- function(model, newdata, batch_size=batch.size, verbose=1){
+            predict_CNN <- function(model, newdata, batch_size=batch.size){
                 data_wrap <- listarrays::expand_dims(as.matrix(newdata), 3)
-                predict_classes(object=model, x=data_wrap, batch_size=batch_size, verbose=verbose)
+                predict_classes(object=model, x=data_wrap, batch_size=batch_size)
             }
             predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_pre), y = y_train, type = "prob", predict.function=predict_CNN), error=function(e) NULL)
             imp = tryCatch(FeatureImp$new(predictor, loss = "ce"), error=function(e) NULL)
-            imp_plot <- tryCatch(plot_importance(imp), error=function(e) NULL)
+            imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
         }
     } else if(importance==FALSE){
         imp <- NULL
@@ -1705,7 +1705,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
             predictions.test <- levels(y_train_pre)[predictions.test.pre]
             
             test.results.frame <- data.frame(Sample=as.vector(data.test$Sample), Known=as.vector(data.test$Class), Predicted=predictions.test)
-            test.accuracy.rate <- confusionMatrix(as.factor(test.results.frame$Predicted), as.factor(test.results.frame$Known))
+            test.accuracy.rate <- confusionMatrix(as.factor(test.results.frame$Predicted), as.factor(test.results.frame$Known), positive = PositiveClass)
             
             KnownSet <- data.frame(Sample=data.train$Sample, Known=data.train[,"Class"], Predicted=predictions.train, stringsAsFactors=FALSE)
             KnownSet$Type <- rep("1. Train", nrow(KnownSet))
@@ -1721,12 +1721,12 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
             #theme_light()
                     
             
-            results <- list(Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre, y_test_pre=y_test_pre), y_train=y_train, x_train=x_train, y_test=y_test, x_test=x_test,  Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, testAccuracy=test.accuracy.rate, testAccuracyFrame=test.results.frame, intermediateOutput_train=intermediate_output, intermediateOutput_test=intermediate_output_test)
+            results <- list(Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre, y_test_pre=y_test_pre, Data=data), y_train=y_train, x_train=x_train, y_test=y_test, x_test=x_test,  Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, testAccuracy=test.accuracy.rate, testAccuracyFrame=test.results.frame, intermediateOutput_train=intermediate_output, intermediateOutput_test=intermediate_output_test)
         } else if(split==0){
-            results <- list(Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre), y_train=y_train, x_train=x_train, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output)
+            results <- list(Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre, Data=data), y_train=y_train, x_train=x_train, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output)
         }
     } else if(is.null(split) & is.null(split_by_group)){
-        results <- list(Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre), y_train=y_train, x_train=x_train, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output)
+        results <- list(Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre, Data=data), y_train=y_train, x_train=x_train, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output)
     }
     
     
@@ -1734,7 +1734,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spl
     
 }
 
-kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, scale=FALSE, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss="mae", metric=c("mae", "mse"), start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, seed=NULL){
+kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, scale=FALSE, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss="mae", metric=c("mae", "mse"), start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, seed=NULL){
     if(eager==TRUE){tensorflow::tfe_enable_eager_execution(device_policy = "silent")}
     
 
@@ -1931,10 +1931,10 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
     } else if(model.type=="First_CNN"){
         keras_model_sequential() %>%
         #layer_dropout(rate=0.5) %>%
-        layer_conv_1d(filters = 32, kernel_size = c(2), activation = activation,
+        layer_conv_1d(filters = filters, kernel_size = c(2), activation = activation,
         input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
-        layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
-        layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.6, 0), activation = activation) %>%
+        layer_conv_1d(filters = filters*2, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
+        layer_conv_1d(filters = filters*4, kernel_size = round(start_kernel*0.6, 0), activation = activation) %>%
         layer_max_pooling_1d(pool_size = c(2)) %>%
         bidirectional(layer_lstm(units=128, return_sequences=TRUE, dropout=0.2, recurrent_dropout=0, activation="tanh", recurrent_activation="sigmoid", unroll=FALSE, use_bias=TRUE)) %>%
         bidirectional(layer_lstm(units=128, return_sequences=TRUE,  dropout=0.2, recurrent_dropout=0, activation="tanh", recurrent_activation="sigmoid", unroll=FALSE, use_bias=TRUE)) %>%
@@ -1949,12 +1949,12 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
     } else if(model.type=="Complex_CNN"){
         keras_model_sequential() %>%
         #layer_dropout(rate=0.1) %>%
-        layer_conv_1d(filters = 32, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
+        layer_conv_1d(filters = filters, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
         keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
-        layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
+        layer_conv_1d(filters = filters*2, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
-        layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
+        layer_conv_1d(filters = filters*4, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
         keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
         #bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
@@ -1974,12 +1974,12 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
     } else if(model.type=="Expiremental_CNN"){
         keras_model_sequential() %>%
         #layer_dropout(rate=0.1) %>%
-        layer_conv_1d(filters = 32, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
+        layer_conv_1d(filters = filters, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
         keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
-        layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
+        layer_conv_1d(filters = filters*2, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
-        layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
+        layer_conv_1d(filters = filters*4, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
         keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
         bidirectional(layer_gru(units=128, activation="tanh", recurrent_activation="sigmoid", recurrent_dropout=0, use_bias=TRUE, reset_after=TRUE, return_sequences=TRUE, unroll=FALSE)) %>%
@@ -2000,7 +2000,7 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
     } else if(model.type=="Expiremental_CNN_1"){
         keras_model_sequential() %>%
         #layer_dropout(rate=0.1) %>%
-        layer_conv_1d(filters = 32, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
+        layer_conv_1d(filters = filters, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
         keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
         layer_max_pooling_1d(pool_size = pool_size) %>%
         bidirectional(layer_lstm(units=128, activation="tanh", recurrent_activation="sigmoid", recurrent_dropout=0, use_bias=TRUE, return_sequences=TRUE, unroll=FALSE)) %>%
@@ -2180,9 +2180,9 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
             batch.size <- batch_size
             predict_CNN <- function(model, newdata, batch_size=batch.size, verbose=verbose){
                 data_wrap <- listarrays::expand_dims(as.matrix(newdata), 3)
-                predict(object=model, x=data_wrap, batch_size=batch_size, verbose=verbose)
+                predict(object=model, x=x_train, batch_size=batch_size, verbose=verbose)
             }
-            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train_pre), y = y_train, predict.function=predict_CNN), error=function(e) NULL)
+            predictor = tryCatch(Predictor$new(model, data =  as.data.frame(x_train), y = y_train, predict.function=predict_CNN), error=function(e) NULL)
             imp = tryCatch(FeatureImp$new(predictor, loss = loss), error=function(e) NULL)
             imp_plot <- tryCatch(plot_importance(imp), error=function(e) NULL)
         }
@@ -2244,7 +2244,7 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, split=NUL
 
  
 ###This function wrapper will use the classification or regression model based on whether your choosen variable is numeric or not
-autoSingleGPUKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, seed=NULL){
+autoSingleGPUKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, seed=NULL){
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -2259,9 +2259,9 @@ autoSingleGPUKeras <- function(data, variable, predictors=NULL, min.n=5, split=N
     
     #Choose model type based on whether the variable is numeric or not
     model <- if(!isDataNumeric(data, variable)){
-        kerasSingleGPURunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
+        kerasSingleGPURunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
     } else if(isDataNumeric(data, variable)){
-        kerasSingleGPURunRegress(data=data, dependent=variable, predictors=predictors, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
+        kerasSingleGPURunRegress(data=data, dependent=variable, predictors=predictors, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, metric=metric, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
     }
     
     return(model)
@@ -2906,7 +2906,7 @@ kerasMultiGPURunClassifyDevelopment <- function(data, class, predictors=NULL, mi
 }
 
 
-kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss=NULL, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previou.model=NULL, eager=FALSE, importance=TRUE, seed=NULL){
+kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss=NULL, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previou.model=NULL, eager=FALSE, importance=TRUE, seed=NULL){
     use_implementation("tensorflow")
     library(tensorflow)
     if(eager==TRUE){tf$executing_eagerly()}
@@ -3145,9 +3145,9 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         } else if(model.type=="First_CNN"){
             keras_model_sequential() %>%
             #layer_dropout(rate=0.5) %>%
-            layer_conv_1d(filters = 32, kernel_size = c(3), activation = activation,
+            layer_conv_1d(filters = filters, kernel_size = c(3), activation = activation,
             input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
-            layer_conv_1d(filters = 64, kernel_size = c(3), activation = activation) %>%
+            layer_conv_1d(filters = filters*2, kernel_size = c(3), activation = activation) %>%
             layer_max_pooling_1d(pool_size = c(2)) %>%
             #bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
             layer_dropout(rate = 0.25) %>%
@@ -3158,12 +3158,12 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         } else if(model.type=="Complex_CNN"){
             keras_model_sequential() %>%
             #layer_dropout(rate=0.1) %>%
-            layer_conv_1d(filters = 32, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
+            layer_conv_1d(filters = filters, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
             keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
             layer_max_pooling_1d(pool_size = pool_size) %>%
-            layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
+            layer_conv_1d(filters = filters*2, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
             layer_max_pooling_1d(pool_size = pool_size) %>%
-            layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
+            layer_conv_1d(filters = filters*4, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
             keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
             layer_max_pooling_1d(pool_size = pool_size) %>%
             #bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
@@ -3184,10 +3184,10 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             keras_model_sequential() %>%
             #layer_dropout(rate=0.5) %>%
             #layer_dropout(0.2) %>%
-            layer_conv_1d(filters = channels, kernel_size = c(3), activation = activation,
+            layer_conv_1d(filters = filters, kernel_size = c(3), activation = activation,
             input_shape = c(channels, 1), kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
-            layer_conv_1d(filters = channels, kernel_size = c(3), activation = activation) %>%
-            layer_conv_1d(filters = 128, kernel_size = c(3), activation = activation) %>%
+            layer_conv_1d(filters = filters*2, kernel_size = c(3), activation = activation) %>%
+            layer_conv_1d(filters = filters*4, kernel_size = c(3), activation = activation) %>%
             bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
             layer_max_pooling_1d(pool_size = c(2)) %>%
             #layer_dropout(rate = 0.25) %>%
@@ -3532,7 +3532,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
 
 
 
-kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss=NULL, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, seed=NULL){
+kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss=NULL, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, seed=NULL, PositiveClass=NULL, NegativeClass=NULL){
     use_implementation("tensorflow")
     library(tensorflow)
     if(eager==TRUE){tf$executing_eagerly()}
@@ -3554,6 +3554,17 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     
     y_full <- data$Class
     
+    if(is.null(PositiveClass)){
+        PositiveClass <- unique(sort(data[,"Class"]))[1]
+    }
+    if(is.null(NegativeClass)){
+        NegativeClass <- unique(sort(data[,"Class"]))[2]
+    }
+    ### Fix Negative and Positive class if needed
+    if(PositiveClass == "1" | PositiveClass == "0" | PositiveClass == "2"){
+      PositiveClass <- paste0('X', PositiveClass)
+      NegativeClass <- paste0('X',NegativeClass)
+    }
     
     if(!is.null(split) | !is.null(split_by_group)){
         a <- data$Sample %in% as.vector(sample(data$Sample, size=(1-split)*length(data$Sample)))
@@ -3590,8 +3601,8 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     }
     
     
-    y_train <- as.numeric(y_train_pre)-1
-    if(!is.null(split)){y_test <- as.numeric(y_test_pre)-1}
+    y_train <- as.numeric(y_train_pre)
+    if(!is.null(split)){y_test <- as.numeric(y_test_pre)}
     
     num_classes <- if(is.null(split) & is.null(split_by_group)){
         length(unique(y_train_pre))
@@ -3737,9 +3748,9 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         } else if(model.type=="First_CNN"){
             keras_model_sequential() %>%
             #layer_dropout(rate=0.5) %>%
-            layer_conv_1d(filters = 32, kernel_size = c(3), activation = activation,
+            layer_conv_1d(filters = filters, kernel_size = c(3), activation = activation,
             input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
-            layer_conv_1d(filters = 64, kernel_size = c(3), activation = activation) %>%
+            layer_conv_1d(filters = filters*2, kernel_size = c(3), activation = activation) %>%
             layer_max_pooling_1d(pool_size = c(2)) %>%
             #bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
             layer_dropout(rate = 0.25) %>%
@@ -3750,12 +3761,12 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
         } else if(model.type=="Complex_CNN"){
             keras_model_sequential() %>%
             #layer_dropout(rate=0.1) %>%
-            layer_conv_1d(filters = 32, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
+            layer_conv_1d(filters = filters, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
             keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
             layer_max_pooling_1d(pool_size = pool_size) %>%
-            layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
+            layer_conv_1d(filters = filters*2, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
             layer_max_pooling_1d(pool_size = pool_size) %>%
-            layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
+            layer_conv_1d(filters = filters*4, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
             keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
             layer_max_pooling_1d(pool_size = pool_size) %>%
             #bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
@@ -3776,10 +3787,10 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             keras_model_sequential() %>%
             #layer_dropout(rate=0.5) %>%
             #layer_dropout(0.2) %>%
-            layer_conv_1d(filters = channels, kernel_size = c(3), activation = activation,
+            layer_conv_1d(filters = filters, kernel_size = c(3), activation = activation,
             input_shape = c(channels, 1), kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
-            layer_conv_1d(filters = channels, kernel_size = c(3), activation = activation) %>%
-            layer_conv_1d(filters = 128, kernel_size = c(3), activation = activation) %>%
+            layer_conv_1d(filters = filters*2, kernel_size = c(3), activation = activation) %>%
+            layer_conv_1d(filters = filters*4, kernel_size = c(3), activation = activation) %>%
             bidirectional(layer_gru(units=128, activation="tanh", recurrent_activation="sigmoid", recurrent_dropout=0, use_bias=TRUE, reset_after=FALSE, return_sequences=TRUE, kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
             layer_max_pooling_1d(pool_size = c(2)) %>%
             #layer_dropout(rate = 0.25) %>%
@@ -3848,20 +3859,10 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     #optimizer_sgd(learning_rate=0.001, clipvalue=0.6)
     
     if(is.null(weights)){
-        if(num_classes > 2){
-               counter=funModeling::freq(y_train, plot=F) %>% dplyr::select(var, frequency)
-               majority=max(counter$frequency)
-               counter$weight=pracma::ceil(majority/counter$frequency)
-               l_weights=setNames(as.list(counter$weight), counter$var)
-           } else if(num_classes == 2){
-               weight_2 <- as.numeric(round(table(y_train_hold)[1]/table(y_train_hold)[2], 0))
-               weight_1 <- as.numeric(round(table(y_train_hold)[2]/table(y_train_hold)[1], 0))
-               if(weight_1==0 | weight_2==0){
-                   weight_1 <- weight_1+1
-                   weight_2 <- weight_2+1
-               }
-               l_weights=list("0"=weight_1, "1"=weight_2)
-           }
+        counter=funModeling::freq(as.numeric(y_train), plot=F) %>% dplyr::select(var, frequency)
+        majority=max(counter$frequency)
+        counter$weight=pracma::ceil(majority/counter$frequency)
+        l_weights=setNames(as.list(counter$weight), counter$var)
     } else if(!is.null(weights)){
         l_weights=weights
     }
@@ -3942,12 +3943,12 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     result <- if(!is.null(second_metric)){
         if(simple.split>0){
             model %>% fit(
-            x_train, y_train,
+            x_train, as.numeric(y_train),
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
-            #class_weight = l_weights,
-            validation_data=list(x_test, y_test),
+            class_weight = l_weights,
+            validation_data=list(x_test, as.numeric(y_test)),
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
@@ -3955,11 +3956,11 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             )
         } else if(simple.split==0){
             model %>% fit(
-            x_train, y_train,
+            x_train, as.numeric(y_train),
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
-            #class_weight = l_weights,
+            class_weight = l_weights,
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
@@ -3969,12 +3970,12 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     } else if(is.null(second_metric)){
         if(simple.split>0){
             model %>% fit(
-            x_train, y_train,
+            x_train, as.numeric(y_train),
             batch_size = batch_size,
             epochs = epochs,
             verbose=verbose,
-            #class_weight = l_weights,
-            validation_data=list(x_test, y_test),
+            class_weight = l_weights,
+            validation_data=list(x_test, as.numeric(y_test)),
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
@@ -3982,12 +3983,12 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             )
         } else if(simple.split==0){
             model %>% fit(
-            x_train, y_train,
+            x_train, as.numeric(y_train),
             batch_size = batch_size,
             epochs = epochs,
             validation_split = model.split,
             verbose=verbose,
-            #class_weight = l_weights,
+            class_weight = l_weights,
             #steps_per_epoch=2,
             #validation_steps=2,
             shuffle=TRUE,
@@ -4015,13 +4016,13 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     history_plot <- plot(result) + theme_light()
     
     predictions.train.proto <- predict_classes(model, x_train, batch_size=batch_size, verbose=verbose)
-    predictions.train.pre <- predictions.train.proto + 1
+    predictions.train.pre <- predictions.train.proto+1
     #predictions.train.pre <- ramify::argmax(predictions.train.proto)
     predictions.train <- levels(as.factor(data$Class))[predictions.train.pre]
     
     train.results.frame <- data.frame(Sample=data.train$Sample, Known=as.vector(data.train$Class), Predicted=predictions.train)
-    train.accuracy.rate <- rfUtilities::accuracy(x=train.results.frame$Known, y=train.results.frame$Predicted)
-    
+    train.accuracy.rate <- confusionMatrix(as.factor(train.results.frame$Predicted), as.factor(train.results.frame$Known), positive = PositiveClass)
+
     #predictor$data$X <- x_train
     if(importance==TRUE){
         if(model.type=="Dense" | model.type=="SuperDense" | model.type=="EvenDense"){
@@ -4055,8 +4056,8 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             predictions.test <- levels(y_train_pre)[predictions.test.pre]
             
             test.results.frame <- data.frame(Sample=as.vector(data.test$Sample), Known=as.vector(data.test$Class), Predicted=predictions.test)
-            test.accuracy.rate <- rfUtilities::accuracy(x=test.results.frame$Known, y=test.results.frame$Predicted)
-            
+            test.accuracy.rate <- confusionMatrix(as.factor(test.results.frame$Predicted), as.factor(test.results.frame$Known), positive = PositiveClass)
+
             KnownSet <- data.frame(Sample=data.train$Sample, Known=data.train[,"Class"], Predicted=predictions.train, stringsAsFactors=FALSE)
             KnownSet$Type <- rep("1. Train", nrow(KnownSet))
             test.results.frame$Type <- rep("2. Test", nrow(test.results.frame))
@@ -4071,12 +4072,12 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
             theme_light()
                     
             
-            results <- list(DataTrain=data.train, DataTest=data.test, Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, y_test=y_test, x_test=x_test, model.data=data_list, y_train_pre=y_train_pre, y_test_pre=y_test_pre), ResultPlot=ResultPlot, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, testAccuracy=test.accuracy.rate, testAccuracyFrame=test.results.frame, intermediateOutput_train=intermediate_output, intermediateOutput_test=intermediate_output_test)
+            results <- list(DataTrain=data.train, DataTest=data.test, Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, y_test=y_test, x_test=x_test, model.data=data_list, y_train_pre=y_train_pre, y_test_pre=y_test_pre, Data=data), ResultPlot=ResultPlot, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, testAccuracy=test.accuracy.rate, testAccuracyFrame=test.results.frame, intermediateOutput_train=intermediate_output, intermediateOutput_test=intermediate_output_test)
         } else if(split==0){
-            results <- list(DataTrain=data.train, Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, model.data=data_list, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, y_train_pre=y_train_pre), trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output)
+            results <- list(DataTrain=data.train, Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, model.data=data_list, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, y_train_pre=y_train_pre, Data=data), trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output)
         }
     } else if(is.null(split) & is.null(split_by_group)){
-        results <- list(DataTrain=data.train, Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, model.data=data_list, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, y_train_pre=y_train_pre), trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output)
+        results <- list(DataTrain=data.train, Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, model.data=data_list, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, y_train_pre=y_train_pre, Data=data), trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output)
     }
     
     
@@ -4085,7 +4086,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, min.n=5, spli
     
 }
 
-kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, scale=FALSE, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss="mae", metric=c("mae", "mse"), start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, seed=NULL){
+kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, scale=FALSE, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss="mae", metric=c("mae", "mse"), start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, seed=NULL){
     use_implementation("tensorflow")
     library(tensorflow)
     if(eager==TRUE){tf$executing_eagerly()}
@@ -4254,9 +4255,9 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
         } else if(model.type=="First_CNN"){
             keras_model_sequential() %>%
             #layer_dropout(rate=0.5) %>%
-            layer_conv_1d(filters = 32, kernel_size = c(3), activation = activation,
+            layer_conv_1d(filters = filters, kernel_size = c(3), activation = activation,
             input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
-            layer_conv_1d(filters = 64, kernel_size = c(3), activation = activation) %>%
+            layer_conv_1d(filters = filters*2, kernel_size = c(3), activation = activation) %>%
             layer_max_pooling_1d(pool_size = c(2)) %>%
             #bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
             layer_dropout(rate = 0.25) %>%
@@ -4267,36 +4268,37 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
         } else if(model.type=="Complex_CNN"){
             keras_model_sequential() %>%
             #layer_dropout(rate=0.1) %>%
-            layer_conv_1d(filters = 32, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
+            layer_conv_1d(filters = filters, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
+            keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
             layer_max_pooling_1d(pool_size = pool_size) %>%
-            layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
+            layer_conv_1d(filters = filters*2, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
             layer_max_pooling_1d(pool_size = pool_size) %>%
-            layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
-            #layer_batch_normalization(center=TRUE, scale=TRUE) %>%
+            layer_conv_1d(filters = filters*4, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
+            keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
             layer_max_pooling_1d(pool_size = pool_size) %>%
             #bidirectional(layer_gru(units=128, dropout=0.2, recurrent_dropout=0.5, activation=activation, return_sequences=TRUE,kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104))) %>%
             layer_dropout(rate = dropout) %>%
             layer_flatten() %>%
             #layer_batch_normalization(center=TRUE, scale=TRUE) %>%
-            layer_dense(64, activation=activation) %>%
+            layer_dense(512, activation=activation) %>%
             layer_dropout(rate = dropout) %>%
             #layer_batch_normalization(center=TRUE, scale=TRUE) %>%
-            layer_dense(32, activation=activation) %>%
+            layer_dense(256, activation=activation) %>%
             layer_dropout(rate = dropout) %>%
-            layer_dense(16, activation=activation) %>%
+            layer_dense(128, activation=activation) %>%
             layer_dropout(rate = dropout) %>%
             #layer_batch_normalization(center=TRUE, scale=TRUE) %>%
-            layer_dense(12, activation=activation, name="penultimate") %>%
+            layer_dense(64, activation=activation, name="penultimate") %>%
             layer_dense(1, activation='linear')
         } else if(model.type=="Expiremental_CNN"){
             keras_model_sequential() %>%
             #layer_dropout(rate=0.1) %>%
-            layer_conv_1d(filters = 32, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
+            layer_conv_1d(filters = filters, kernel_size = start_kernel, activation = activation, input_shape = c(channels, 1),kernel_initializer=initializer_random_uniform(minval = -0.05, maxval = 0.05, seed = 104)) %>%
             keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
             layer_max_pooling_1d(pool_size = pool_size) %>%
-            layer_conv_1d(filters = 64, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
+            layer_conv_1d(filters = filters*2, kernel_size = round(start_kernel*0.8, 0), activation = activation) %>%
             layer_max_pooling_1d(pool_size = pool_size) %>%
-            layer_conv_1d(filters = 128, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
+            layer_conv_1d(filters = filters*4, kernel_size = round(start_kernel*0.5, 0), activation = activation) %>%
             keras::layer_batch_normalization(center=TRUE, scale=TRUE) %>%
             layer_max_pooling_1d(pool_size = pool_size) %>%
             bidirectional(layer_gru(units=128, activation="tanh", recurrent_activation="sigmoid", recurrent_dropout=0, use_bias=TRUE, reset_after=TRUE, return_sequences=TRUE, unroll=FALSE)) %>%
@@ -4362,18 +4364,65 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
     
     #x_train <- data.matrix(x_train)
     
-    result <- model %>% fit(
-    x_train, y_train,
-    batch_size = batch_size,
-    epochs = epochs,
-    validation_split = model.split,
-    verbose=verbose,
-    ##class_weight = l_weights,
-    #steps_per_epoch=2,
-    #validation_steps=2,
-    shuffle=TRUE,
-    callbacks = save_callback
-    )
+    second_metric <- NULL
+    simple.split <- if(is.null(split) & is.null(split_by_group)){
+        0
+    } else if(!is.null(split) | !is.null(split_by_group)){
+        split
+    }
+    
+    result <- if(!is.null(second_metric)){
+        if(simple.split>0){
+            model %>% fit(
+            x_train, y_train,
+            batch_size = batch_size,
+            epochs = epochs,
+            verbose=verbose,
+            validation_data=list(x_test, y_test),
+            #steps_per_epoch=2,
+            #validation_steps=2,
+            shuffle=TRUE,
+            callbacks = callback_list
+            )
+        } else if(simple.split==0){
+            model %>% fit(
+            x_train, y_train,
+            batch_size = batch_size,
+            epochs = epochs,
+            verbose=verbose,
+            #steps_per_epoch=2,
+            #validation_steps=2,
+            shuffle=TRUE,
+            callbacks = callback_list
+            )
+        }
+    } else if(is.null(second_metric)){
+        if(simple.split>0){
+            model %>% fit(
+            x_train, y_train,
+            batch_size = batch_size,
+            epochs = epochs,
+            verbose=verbose,
+            validation_data=list(x_test, y_test),
+            #steps_per_epoch=2,
+            #validation_steps=2,
+            shuffle=TRUE,
+            callbacks = callback_list
+            )
+        } else if(simple.split==0){
+            model %>% fit(
+            x_train, y_train,
+            batch_size = batch_size,
+            epochs = epochs,
+            validation_split = model.split,
+            verbose=verbose,
+            #steps_per_epoch=2,
+            #validation_steps=2,
+            shuffle=TRUE,
+            callbacks = callback_list
+            )
+        }
+    }
     
     if(!is.null(save.directory)){
         tryCatch(model <- load_model_weights_hdf5(object=model, filepath=paste0(save.directory, save.name, ".hdf5")), error=function(e) NULL)
@@ -4455,7 +4504,7 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
         theme_light()
         
         
-        model.list <- list(ModelData=list(DataTrain=data.train, DataTest=data.test, predictors=predictors), Data=data_list, x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test, Model=serialize_model(model),  ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, ImportancePlot=imp_plot, trainAccuracy=correction.lm, testAccuracy=accuracy.rate, intermediateOutput_train=intermediate_output, intermediateOutput_test=intermediate_output_test)
+        model.list <- list(ModelData=list(DataTrain=data.train, DataTest=data.test, predictors=predictors), Data=data_list, x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test, Model=serialize_model(model),  ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, ImportancePlot=imp_plot, trainAccuracy=correction.lm, testAccuracy=accuracy.rate, intermediateOutput_train=intermediate_output_train, intermediateOutput_test=intermediate_output_test)
     } else if(is.null(split) & is.null(split_by_group)){
            #all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
            #train.frame <- all.data
@@ -4484,7 +4533,7 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, split=NULL
 
 
 ###This function wrapper will use the classification or regression model based on whether your choosen variable is numeric or not
-autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, seed=NULL){
+autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, seed=NULL, PositiveClass=NULL, NegativeClass=NULL){
     
     #Choose default metric based on whether the variable is numeric or not
     metric <- if(!is.null(metric)){
@@ -4510,15 +4559,15 @@ autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, spli
     #Choose model type based on whether the variable is numeric or not
     model <- if(n_gpus==1){
         if(!isDataNumeric(data, variable)){
-            kerasSingleGPURunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
+            kerasSingleGPURunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
         } else if(isDataNumeric(data, variable)){
-            kerasSingleGPURunRegress(data=data, dependent=variable, predictors=predictors, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
+            kerasSingleGPURunRegress(data=data, dependent=variable, predictors=predictors, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
         }
     } else if(n_gpus>1){
         if(!isDataNumeric(data, variable)){
-            kerasMultiGPURunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
+            kerasMultiGPURunClassify(data=data, class=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed, PositiveClass=PositiveClass, NegativeClass=NegativeClass)
         } else if(isDataNumeric(data, variable)){
-            kerasMultiGPURunRegress(data=data, dependent=variable, predictors=predictors, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
+            kerasMultiGPURunRegress(data=data, dependent=variable, predictors=predictors, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale, seed=seed)
         }
     }
     
@@ -4526,9 +4575,9 @@ autoKeras <- function(data, variable, predictors=NULL, min.n=5, split=NULL, spli
 }
 
 
-xgbTreeNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta="0.1-0.1", xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
+xgbTreeNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta="0.1-0.1", xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
 
-    keras_results <- autoKeras(data=data, variable=class, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
+    keras_results <- autoKeras(data=data, variable=class, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
     gc()
     
     data_list <- keras_results$Data
@@ -5062,9 +5111,9 @@ if(is.null(xgb_eval_metric)){
 
 }
 
-xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, save_plots=FALSE){
+xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, save_plots=FALSE){
 
-    keras_results <- autoKeras(data=data, variable=dependent, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
+    keras_results <- autoKeras(data=data, variable=dependent, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
     gc()
     
     data_list <- keras_results$Data
@@ -5528,7 +5577,7 @@ xgbTreeNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
 
 }
 
-xgbTreeNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
+xgbTreeNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
 
     if(is.null(save.name)){
         save.name <- if(!isDataNumeric(data, variable)){
@@ -5564,6 +5613,7 @@ xgbTreeNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
                             , loss=loss
                             , metric=metric
                             , start_kernel=start_kernel
+                            , filters=filters
                             , pool_size=pool_size
                             , batch_size=batch_size
                             , model.type=model.type
@@ -5623,6 +5673,7 @@ xgbTreeNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
                            , loss=loss
                            , metric=metric
                            , start_kernel=start_kernel
+                           , filters=filters
                            , pool_size=pool_size
                            , batch_size=batch_size
                            , model.type=model.type
@@ -5670,9 +5721,9 @@ xgbTreeNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
 
 }
 
-xgbDartNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
+xgbDartNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
 
-    keras_results <- autoKeras(data=data, variable=class, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
+    keras_results <- autoKeras(data=data, variable=class, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
     gc()
     
     data_list <- keras_results$Data
@@ -6224,9 +6275,9 @@ if(is.null(xgb_eval_metric)){
 
 }
 
-xgbDartNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, save_plots=FALSE){
+xgbDartNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, save_plots=FALSE){
 
-    keras_results <- autoKeras(data=data, variable=dependent, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
+    keras_results <- autoKeras(data=data, variable=dependent, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
     gc()
     
     data_list <- keras_results$Data
@@ -6698,7 +6749,7 @@ xgbDartNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, s
 
 }
 
-xgbDartNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
+xgbDartNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbeta=0.1, xgbsubsample="0.7-0.7", xgbcolsample="0.7-0.7", xgbminchild="1-1", xgblambda="0-100", xgbalpha="0-10", maxdeltastep="0-10", scaleposweight="0-10", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
 
     if(is.null(save.name)){
         save.name <- if(!isDataNumeric(data, variable)){
@@ -6734,6 +6785,7 @@ xgbDartNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
                             , loss=loss
                             , metric=metric
                             , start_kernel=start_kernel
+                            , filters=filters
                             , pool_size=pool_size
                             , batch_size=batch_size
                             , model.type=model.type
@@ -6795,6 +6847,7 @@ xgbDartNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
                            , loss=loss
                            , metric=metric
                            , start_kernel=start_kernel
+                           , filters=filters
                            , pool_size=pool_size
                            , batch_size=batch_size
                            , model.type=model.type
@@ -6844,9 +6897,9 @@ xgbDartNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NUL
 
 }
 
-xgbLinearNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, xgbalpha="0.1-0.1", xgbeta="0.1-0.1", xgblambda="0.1-0.1", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
+xgbLinearNeuralNetClassify <- function(data, class, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, xgbalpha="0.1-0.1", xgbeta="0.1-0.1", xgblambda="0.1-0.1", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
 
-    keras_results <- autoKeras(data=data, variable=class, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
+    keras_results <- autoKeras(data=data, variable=class, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
     
     data_list <- keras_results$Data
     data.train <- keras_results$ModelData$DataTrain
@@ -7279,9 +7332,9 @@ if(is.null(xgb_eval_metric)){
 
 }
 
-xgbLinearNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, xgbalpha="0.1-0.1", xgbeta="0.1-0.1", xgblambda="0.1-0.1", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, save_plots=FALSE){
+xgbLinearNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, xgbalpha="0.1-0.1", xgbeta="0.1-0.1", xgblambda="0.1-0.1", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, save_plots=FALSE){
 
-    keras_results <- autoKeras(data=data, variable=dependent, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
+    keras_results <- autoKeras(data=data, variable=dependent, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
     gc()
     
     data_list <- keras_results$Data
@@ -7657,7 +7710,7 @@ xgbLinearNeuralNetRegress <- function(data, dependent, predictors=NULL, min.n=5,
 
 }
 
-xgbLinearNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, xgbalpha="0.1-0.1", xgbeta="0.1-0.1", xgblambda="0.1-0.1", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
+xgbLinearNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0, epochs=10, activation='relu', loss=NULL, dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, metric=NULL, callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, nthread=-1, xgb_eval_metric=NULL, xgb_metric=NULL, train="cv", number=10, cvrepeats=10, xgbalpha="0.1-0.1", xgbeta="0.1-0.1", xgblambda="0.1-0.1", nrounds=1000, test_nrounds=100, Bayes=FALSE, folds=5, init_points=20, n_iter=5, parallelMethod=NULL, seed=NULL, PositiveClass=NULL, NegativeClass=NULL, save_plots=FALSE){
 
     if(is.null(save.name)){
         save.name <- if(!isDataNumeric(data, variable)){
@@ -7696,6 +7749,7 @@ xgbLinearNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=N
                               , loss=loss
                               , metric=metric
                               , start_kernel=start_kernel
+                              , filters=filters
                               , pool_size=pool_size
                               , batch_size=batch_size
                               , model.type=model.type
@@ -7744,6 +7798,7 @@ xgbLinearNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=N
                              , loss=loss
                              , metric=metric
                              , start_kernel=start_kernel
+                             , filters=filters
                              , pool_size=pool_size
                              , batch_size=batch_size
                              , model.type=model.type
@@ -7778,7 +7833,7 @@ xgbLinearNeuralNet <- function(data, variable, predictors=NULL, min.n=5, split=N
 }
 
 
-autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, additional_split=NULL, split_by_group=NULL, the_group=NULL, type="XGBLinear", tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="2-2", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", maxdeltastep="0-10", scaleposweight="0-10", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, loss=NULL, metric=NULL, xgb_eval_metric="auc", xgb_metric="RMSE", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL, model.split=0, epochs=10, callback="recall", activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, start_kernel=7, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, save_plots=FALSE, scale=FALSE, additional_validation_frame=NULL){
+autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, additional_split=NULL, split_by_group=NULL, the_group=NULL, type="XGBLinear", tree_method="hist", single_precision_histogram=FALSE, predictor="cpu_predictor", early_stopping_rounds=100, treedepth="2-2", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbalpha="0-0", xgbeta="0.1-0.1", xgbgamma="0-0", xgblambda="0-0", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="1-1", maxdeltastep="0-10", scaleposweight="0-10", nrounds=500, test_nrounds=100, try=10, trees=500, svmc="1-5", svmdegree="1-5", svmscale="1-5", svmsigma="1-5", svmlength="1-5", svmgammavector=NULL, neuralhiddenunits="1-10", bartk="1-2", bartbeta="1-2", bartnu="1-2", missing=missing, loss=NULL, metric=NULL, xgb_eval_metric="auc", xgb_metric="RMSE", train="repeatedcv", cvrepeats=5, number=30, Bayes=FALSE, folds=15, init_points=100, n_iter=5, parallelMethod=NULL, model.split=0, epochs=10, callback="recall", activation='relu', dropout=0.1, optimizer='rmsprop', learning.rate=0.0001, start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, n_gpus=1, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, save_plots=FALSE, scale=FALSE, additional_validation_frame=NULL){
     
     if(is.null(additional_validation_frame) & !is.null(additional_split)){
         new_data_list <- additional_data_split(data=data, split=additional_split, variable=variable, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
@@ -7800,13 +7855,13 @@ autoMLTable <- function(data, variable, predictors=NULL, min.n=5, split=NULL, ad
     } else if(type=="bayesLinear" | type=="bayesTree" | type=="bayesNeuralNet"){
         autoBayes(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, type=type, trees=trees, neuralhiddenunits=neuralhiddenunits, xgbalpha=xgbalpha, bartk=bartk, bartbeta=bartbeta, bartnu=bartnu, missing=missing, metric=metric, train=train, cvrepeats=cvrepeats, number=number, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale)
     } else if(type=="Keras"){
-        autoKeras(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
+        autoKeras(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, scale=scale)
     } else if(type=="xgbTreeNeuralNet"){
-        xgbTreeNeuralNet(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, tree_method=tree_method, single_precision_histogram=single_precision_histogram, predictor=predictor, early_stopping_rounds=early_stopping_rounds, treedepth=treedepth, xgbgamma=xgbgamma, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, maxdeltastep=maxdeltastep, scaleposweight=scaleposweight, nrounds=nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale)
+        xgbTreeNeuralNet(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, tree_method=tree_method, single_precision_histogram=single_precision_histogram, predictor=predictor, early_stopping_rounds=early_stopping_rounds, treedepth=treedepth, xgbgamma=xgbgamma, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, maxdeltastep=maxdeltastep, scaleposweight=scaleposweight, nrounds=nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale)
     } else if(type=="xgbLinearNeuralNet"){
-        xgbLinearNeuralNet(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale)
+        xgbLinearNeuralNet(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, nrounds=nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale)
     }  else if(type=="xgbDartNeuralNet"){
-        xgbDartNeuralNet(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, tree_method=tree_method, single_precision_histogram=single_precision_histogram, predictor=predictor, early_stopping_rounds=early_stopping_rounds, treedepth=treedepth, treedrop=treedrop, skipdrop=skipdrop, xgbgamma=xgbgamma, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, maxdeltastep=maxdeltastep, scaleposweight=scaleposweight, nrounds=nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale)
+        xgbDartNeuralNet(data=data, variable=variable, predictors=predictors, min.n=min.n, split=split, split_by_group=split_by_group, the_group=the_group, model.split=model.split, epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, verbose=verbose, model.type=model.type, weights=weights, n_gpus=n_gpus, save.directory=save.directory, save.name=save.name, previous.model=previous.model, eager=eager, importance=importance, tree_method=tree_method, single_precision_histogram=single_precision_histogram, predictor=predictor, early_stopping_rounds=early_stopping_rounds, treedepth=treedepth, treedrop=treedrop, skipdrop=skipdrop, xgbgamma=xgbgamma, xgbalpha=xgbalpha, xgbeta=xgbeta, xgblambda=xgblambda, xgbcolsample=xgbcolsample, xgbsubsample=xgbsubsample, xgbminchild=xgbminchild, maxdeltastep=maxdeltastep, scaleposweight=scaleposweight, nrounds=nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=number, Bayes=Bayes, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, save_plots=save_plots, scale=scale)
     }
     
     if(is.null(additional_validation_frame)){
@@ -7951,6 +8006,7 @@ bayesMLTable <- function(data
                         , optimizer_vector=c("rmsprop", "sgd", "adam", "nadam", "adadelta", "adamax")
                         , learning.rate=0.0001
                         , start_kernel=7
+                        , filters=32
                         , pool_size=2
                         , batch_size=4
                         , model.type="Dense"
@@ -9331,6 +9387,7 @@ bayesMLTable <- function(data
         } else if(type=="Keras"){
             #Set ranges of L1 regularization
             start_kernel_vec <- as.integer(c(3, start_kernel))
+            filters_vec <- as.integer(c(4, filters))
             pool_size_vec <- as.integer(c(2, pool_size))
             dropout_vec <- c(0.01, dropout)
             learning_rate_vec <- c(0.000001, learning.rate)
@@ -9344,12 +9401,13 @@ bayesMLTable <- function(data
                 qual_list <- list()
                 for(i in 1:nrow(qual_grid)){
                     print(paste0("Starting ", i, " of ", nrow(qual_grid), " Loss:", loss=qual_grid[i,"loss"], ", Optimizer:", optimizer=qual_grid[i,"optimizer"], " Activation:", activation=qual_grid[i,"activation"]))
-                    cv <- tryCatch(autoKeras(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=4, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=scale, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model, seed=cv_seed)
+                    cv <- tryCatch(autoKeras(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=4, filters=32, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=scale, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model, seed=cv_seed)
                     , error=function(e) NULL)
                     
                     qual_list[[i]] <-list(Index=paste0("Row_", i), Score =  metricGen(cv=cv, bayes_metric=bayes_metric))
                     print(paste0(bayes_metric, ": ", round(metricGen(cv=cv, bayes_metric=bayes_metric)$Score, 3)))
-
+                    cv <- NULL
+                    gc()
                     }
                 
                 qual_frame <- merge(qual_grid, as.data.frame(data.table::rbindlist(qual_list)), by="Index")
@@ -9364,12 +9422,14 @@ bayesMLTable <- function(data
             
             param_list <- list(
                 start_kernel_val = as.integer(start_kernel_vec),
+                filters_val = as.integer(filters_vec),
                 pool_size_val = as.integer(pool_size_vec),
                 dropout_val=as.numeric(dropout_vec),
                 learning_rate_val=as.numeric(learning_rate_vec))
                 
             qualpart_function <- function(
                 start_kernel_val
+                , filters_val
                 , pool_size_val
                 , dropout_val
                 , learning_rate_val
@@ -9402,6 +9462,7 @@ bayesMLTable <- function(data
                     , n_gpus=n_gpus
                     , weights=weights
                     , start_kernel=start_kernel_val
+                    , filters=filters_val
                     , pool_size=pool_size_val
                     , dropout=dropout_val
                     , learning.rate=learning_rate_val
@@ -9430,6 +9491,7 @@ bayesMLTable <- function(data
                             , split_by_group=split_by_group
                             , the_group=the_group
                             , start_kernel=OPT_Res$Best_Par["start_kernel_val"]
+                            , filters=OPT_Res$Best_Par["filters_val"]
                             , pool_size=OPT_Res$Best_Par["pool_size_val"]
                             , dropout=OPT_Res$Best_Par["dropout_val"]
                             , learning.rate=OPT_Res$Best_Par["learning_rate_val"]
@@ -9481,6 +9543,7 @@ bayesMLTable <- function(data
             
             #Set ranges of L1 regularization
             start_kernel_vec <- as.integer(c(3, start_kernel))
+            filters_vec <- as.integer(c(4, filters))
             pool_size_vec <- as.integer(c(2, pool_size))
             dropout_vec <- c(0.01, dropout)
             learning_rate_vec <- c(0.000001, learning.rate)
@@ -9494,7 +9557,7 @@ bayesMLTable <- function(data
                 qual_list <- list()
                 for(i in 1:nrow(qual_grid)){
                     print(paste0("Starting ", i, " of ", nrow(qual_grid), " Loss:", loss=qual_grid[i,"loss"], ", Optimizer:", optimizer=qual_grid[i,"optimizer"], " Activation:", activation=qual_grid[i,"activation"]))
-                    cv <- tryCatch(xgbTreeNeuralNet(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=4, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=scale, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model, tree_method=tree_method, single_precision_histogram=single_precision_histogram, predictor=predictor, early_stopping_rounds=early_stopping_rounds, treedepth="5-5", xgbgamma="0-0", xgbalpha="0-0", xgbeta="0.3-0.3", xgblambda="0.9-0.9", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="0-0", maxdeltastep="0-0", scaleposweight="0-0", nrounds=test_nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=5, Bayes=FALSE, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, PositiveClass= PositiveClass, NegativeClass = NegativeClass, seed=cv_seed)
+                    cv <- tryCatch(xgbTreeNeuralNet(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=4, filters=32, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=scale, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model, tree_method=tree_method, single_precision_histogram=single_precision_histogram, predictor=predictor, early_stopping_rounds=early_stopping_rounds, treedepth="5-5", xgbgamma="0-0", xgbalpha="0-0", xgbeta="0.3-0.3", xgblambda="0.9-0.9", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="0-0", maxdeltastep="0-0", scaleposweight="0-0", nrounds=test_nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=5, Bayes=FALSE, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, PositiveClass= PositiveClass, NegativeClass = NegativeClass, seed=cv_seed)
                     , error=function(e) NULL)
                     
                     qual_list[[i]] <-list(Index=paste0("Row_", i), Score =  metricGen(cv=cv, bayes_metric=bayes_metric))
@@ -9514,6 +9577,7 @@ bayesMLTable <- function(data
             param_list <- list(
                 start_kernel_val = as.integer(start_kernel_vec)
                 , pool_size_val = as.integer(pool_size_vec)
+                , filters_val = as.integer(filters_vec)
                 , dropout_val=as.numeric(dropout_vec)
                 , learning_rate_val=as.numeric(learning_rate_vec)
                 , nrounds_val = as.integer(c(50, nrounds))
@@ -9532,6 +9596,7 @@ bayesMLTable <- function(data
             qualpart_function <- function(
                 start_kernel_val
                 , pool_size_val
+                , filters_val
                 , dropout_val
                 , learning_rate_val
                 , treedepth_val
@@ -9578,6 +9643,7 @@ bayesMLTable <- function(data
                     , n_gpus=n_gpus
                     , weights=weights
                     , start_kernel=start_kernel_val
+                    , filters=filters_val
                     , pool_size=pool_size_val
                     , dropout=dropout_val
                     , learning.rate=learning_rate_val
@@ -9629,6 +9695,7 @@ bayesMLTable <- function(data
                             , split_by_group=split_by_group
                             , the_group=the_group
                             , start_kernel=OPT_Res$Best_Par["start_kernel_val"]
+                            , filters=OPT_Res$Best_Par["filters_val"]
                             , pool_size=OPT_Res$Best_Par["pool_size_val"]
                             , dropout=OPT_Res$Best_Par["dropout_val"]
                             , learning.rate=OPT_Res$Best_Par["learning_rate_val"]
@@ -9715,6 +9782,7 @@ bayesMLTable <- function(data
             
             #Set ranges of L1 regularization
             start_kernel_vec <- as.integer(c(3, start_kernel))
+            filters_vec <- as.integer(c(4, filters))
             pool_size_vec <- as.integer(c(2, pool_size))
             dropout_vec <- c(0.01, dropout)
             learning_rate_vec <- c(0.000001, learning.rate)
@@ -9728,7 +9796,7 @@ bayesMLTable <- function(data
                 qual_list <- list()
                 for(i in 1:nrow(qual_grid)){
                     print(paste0("Starting ", i, " of ", nrow(qual_grid), " Loss:", loss=qual_grid[i,"loss"], ", Optimizer:", optimizer=qual_grid[i,"optimizer"], " Activation:", activation=qual_grid[i,"activation"]))
-                    cv <- tryCatch(xgbDartNeuralNet(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=4, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model, tree_method=tree_method, single_precision_histogram=single_precision_histogram, predictor=predictor, early_stopping_rounds=early_stopping_rounds, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbalpha="0-0", xgbeta="0.3-0.3", xgblambda="0.9-0.9", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="0-0", maxdeltastep="0-0", scaleposweight="0-0", nrounds=test_nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=5, Bayes=FALSE, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, seed=cv_seed)
+                    cv <- tryCatch(xgbDartNeuralNet(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=4, filters=32, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model, tree_method=tree_method, single_precision_histogram=single_precision_histogram, predictor=predictor, early_stopping_rounds=early_stopping_rounds, treedepth="5-5", treedrop="0.3-0.3", skipdrop="0.3-0.3", xgbgamma="0-0", xgbalpha="0-0", xgbeta="0.3-0.3", xgblambda="0.9-0.9", xgbcolsample="0.7-0.7", xgbsubsample="0.7-0.7", xgbminchild="0-0", maxdeltastep="0-0", scaleposweight="0-0", nrounds=test_nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=5, Bayes=FALSE, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, seed=cv_seed)
                     , error=function(e) NULL)
                     
                     qual_list[[i]] <-list(Index=paste0("Row_", i), Score =  metricGen(cv=cv, bayes_metric=bayes_metric))
@@ -9748,6 +9816,7 @@ bayesMLTable <- function(data
             param_list <- list(
                 start_kernel_val = as.integer(start_kernel_vec)
                 , pool_size_val = as.integer(pool_size_vec)
+                , filters_val=as.integer(filters_vec)
                 , dropout_val=as.numeric(dropout_vec)
                 , learning_rate_val=as.numeric(learning_rate_vec)
                 , nrounds_val = as.integer(c(50, nrounds))
@@ -9767,6 +9836,7 @@ bayesMLTable <- function(data
                 
             qualpart_function <- function(
                 start_kernel_val
+                , filters_val
                 , pool_size_val
                 , dropout_val
                 , learning_rate_val
@@ -9815,6 +9885,7 @@ bayesMLTable <- function(data
                     , n_gpus=n_gpus
                     , weights=weights
                     , start_kernel=start_kernel_val
+                    , filters=filters_val
                     , pool_size=pool_size_val
                     , dropout=dropout_val
                     , learning.rate=learning_rate_val
@@ -9870,6 +9941,7 @@ bayesMLTable <- function(data
                             , split_by_group=split_by_group
                             , the_group=the_group
                             , start_kernel=OPT_Res$Best_Par["start_kernel_val"]
+                            , filters=OPT_Res$Best_Par["filters_val"]
                             , pool_size=OPT_Res$Best_Par["pool_size_val"]
                             , dropout=OPT_Res$Best_Par["dropout_val"]
                             , learning.rate=OPT_Res$Best_Par["learning_rate_val"]
@@ -9938,6 +10010,7 @@ bayesMLTable <- function(data
            
             #Set ranges of L1 regularization
             start_kernel_vec <- as.integer(c(3, start_kernel))
+            filters_vec <- as.integer(c(4, filters))
             pool_size_vec <- as.integer(c(2, pool_size))
             dropout_vec <- c(0.01, dropout)
             learning_rate_vec <- c(0.000001, learning.rate)
@@ -9951,8 +10024,8 @@ bayesMLTable <- function(data
                 qual_list <- list()
                 for(i in 1:nrow(qual_grid)){
                     print(paste0("Starting ", i, " of ", nrow(qual_grid), " Loss:", loss=qual_grid[i,"loss"], ", Optimizer:", optimizer=qual_grid[i,"optimizer"], " Activation:", activation=qual_grid[i,"activation"]))
-                    cv <- tryCatch(xgbLinearNeuralNet(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=4, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model,  xgbalpha="0-0", xgbeta="0.3-0.3", xgblambda="0.9-0.9",  nrounds=test_nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=5, Bayes=FALSE, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, seed=cv_seed)
-                    , error=function(e) NULL)
+                    cv <- xgbLinearNeuralNet(data=data, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=4, filters=32, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model,  xgbalpha="0-0", xgbeta="0.3-0.3", xgblambda="0.9-0.9",  nrounds=test_nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=5, Bayes=FALSE, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, seed=cv_seed)
+                    #, error=function(e) NULL)
                     
                     qual_list[[i]] <-list(Index=paste0("Row_", i), Score =  metricGen(cv=cv, bayes_metric=bayes_metric))
                     print(paste0(bayes_metric, ": ", round(metricGen(cv=cv, bayes_metric=bayes_metric)$Score, 3)))
@@ -9970,6 +10043,7 @@ bayesMLTable <- function(data
             
             param_list <- list(
                 start_kernel_val = as.integer(start_kernel_vec)
+                , filters_val=as.integer(filters_vec)
                 , pool_size_val = as.integer(pool_size_vec)
                 , dropout_val=as.numeric(dropout_vec)
                 , learning_rate_val=as.numeric(learning_rate_vec)
@@ -9981,6 +10055,7 @@ bayesMLTable <- function(data
                 
             qualpart_function <- function(
                 start_kernel_val
+                , filters_val
                 , pool_size_val
                 , dropout_val
                 , learning_rate_val
@@ -10021,6 +10096,7 @@ bayesMLTable <- function(data
                     , n_gpus=n_gpus
                     , weights=weights
                     , start_kernel=start_kernel_val
+                    , filters=filters_val
                     , pool_size=pool_size_val
                     , dropout=dropout_val
                     , learning.rate=learning_rate_val
@@ -10067,6 +10143,7 @@ bayesMLTable <- function(data
                             , split_by_group=split_by_group
                             , the_group=the_group
                             , start_kernel=OPT_Res$Best_Par["start_kernel_val"]
+                            , filters=OPT_Res$Best_Par["filters_val"]
                             , pool_size=OPT_Res$Best_Par["pool_size_val"]
                             , dropout=OPT_Res$Best_Par["dropout_val"]
                             , learning.rate=OPT_Res$Best_Par["learning_rate_val"]
@@ -10144,8 +10221,8 @@ bayesMLTable <- function(data
         additional_data$Data[setdiff(names(qualpart$Model$trainingData), names(additional_data$Data))] <- 0
         keras_model <- unserialize_model(qualpart$kerasResults$Model)
         intermediate_layer_model <- keras::keras_model(inputs = keras_model$input, outputs = get_layer(keras_model, "penultimate")$output)
-        x_test_pre <- additional_data$Data[, !colnames(additional_data$Data) %in% c("Sample", variable, split_by_group)]
-        x_test_pre <- x_test_pre[, colnames(x_test_pre) %in% colnames(data)]
+        additional_data$Data <- additional_data$Data[, !colnames(additional_data$Data) %in% c("Sample", variable, split_by_group)]
+        x_test_pre <- additional_data$Data[, colnames(additional_data$Data) %in% colnames(data$Data)]
         x_test_proto <- as.matrix(x_test_pre)
         x_test <- if(model.type=="Dense" | model.type=="SuperDense"){
             x_test_proto
@@ -10172,10 +10249,10 @@ bayesMLTable <- function(data
     } else if(type=="Keras"){
     
     keras_model <- unserialize_model(qualpart$Model)
+        #x_test_pre <- x_test_pre[, colnames(x_test_pre) %in% colnames(data)]
+        tryCatch(additional_data$Data[setdiff(names(additional_data$Data), names(data$Data))] <- 0, error=function(e) NULL)
         x_test_pre <- additional_data$Data[, !colnames(additional_data$Data) %in% c("Sample", variable, split_by_group)]
-        x_test_pre <- x_test_pre[, colnames(x_test_pre) %in% colnames(data)]
-        tryCatch(x_test_pre[setdiff(names(qualpart$x_train), names(x_test_pre))] <- 0, error=function(e) NULL)
-        
+
         x_test_proto <- as.matrix(x_test_pre)
         x_test <- if(model.type=="Dense" | model.type=="SuperDense"){
             x_test_proto
@@ -10192,11 +10269,18 @@ bayesMLTable <- function(data
             listarrays::expand_dims(x_test_proto, 3)
             #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
         }
-        y_predict <- predict(keras_model, x_test, batch_size=batch_size, verbose=verbose)
-        if(scale==TRUE){
-            y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
-            additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+        if(is.numeric(additional_data$Data[,variable])){
+            y_predict <- predict(keras_model, x_test, batch_size=batch_size, verbose=verbose)
+            if(scale==TRUE){
+                y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+                additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+            }
+        } else if(!is.numeric(additional_data$Data[,variable])){
+            predictions.test.proto <- predict_classes(keras_model, x_test, batch_size=batch_size, verbose=verbose)
+            predictions.test.pre <- predictions.test.proto + 1
+            y_predict <- levels(qualpart$Decode$y_train_pre)[predictions.test.pre]
         }
+
     }
         
           results.frame <- data.frame(Sample=additional_data$Data$Sample
@@ -10236,4 +10320,177 @@ bayesMLTable <- function(data
     
     return(qualpart)
 }
+}
+
+just_a_predictor <- function(qualpart, additional_data, variable=NULL, type=NULL){
+    
+    if(is.null(variable)){
+        variable <- qualpart$Basics$Variable
+    }
+    
+    additional_data <- if(is.data.frame(additional_validation_frame)){
+        if(scale==FALSE){
+        dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
+        } else if(scale==TRUE){
+            dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed, y_min=qualpart$ModelData$Data$YMin, y_max=qualpart$ModelData$Data$YMax, mins=qualpart$ModelData$Data$Mins, maxes=qualpart$ModelData$Data$Maxes)
+        }
+    } else if(!is.data.frame(additional_validation_frame)){
+        additional_validation_frame
+    }
+    additional_data$Data <- additional_data$Data[order(additional_data$Data$Sample),]
+    
+    
+    if(!type %in% c("xgbTreeNeuralNet", "xgbDartNeuralNet", "xgbLinearNeuralNet", "Keras")){
+        additional_data$Data[setdiff(names(qualpart$Model$trainingData), names(additional_data$Data))] <- 0
+        y_predict <- predict(object=qualpart$Model, newdata=additional_data$Data[,colnames(additional_data$Data) %in% colnames(qualpart$Model$trainingData), drop=FALSE], na.action = na.pass)
+        if(scale==TRUE){
+            y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+            additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+        }
+    } else if(type %in% c("xgbTreeNeuralNet", "xgbDartNeuralNet", "xgbLinearNeuralNet")){
+        additional_data$Data[setdiff(names(qualpart$Model$trainingData), names(additional_data$Data))] <- 0
+        keras_model <- unserialize_model(qualpart$kerasResults$Model)
+        intermediate_layer_model <- keras::keras_model(inputs = keras_model$input, outputs = get_layer(keras_model, "penultimate")$output)
+        additional_data$Data <- additional_data$Data[, !colnames(additional_data$Data) %in% c("Sample", variable, split_by_group)]
+        x_test_pre <- additional_data$Data[, colnames(additional_data$Data) %in% colnames(data$Data)]
+        x_test_proto <- as.matrix(x_test_pre)
+        x_test <- if(model.type=="Dense" | model.type=="SuperDense"){
+            x_test_proto
+        } else if(model.type=="GRU"){
+            array_reshape(x_test_proto, c(-1, 1, ncol(x_test_proto)))
+        } else if(model.type=="First_CNN"){
+            listarrays::expand_dims(x_test_proto, 3)
+            #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
+        } else if(model.type=="Complex_CNN"){
+            listarrays::expand_dims(x_test_proto, 3)
+            #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
+        } else if(model.type=="Expiremental_CNN"){
+            #array_reshape(x_test_proto, c(-1, 1, ncol(x_test_proto)))
+            listarrays::expand_dims(x_test_proto, 3)
+            #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
+        }
+        intermediate_output_additional <- predict(intermediate_layer_model, x_test, verbose=verbose)
+        y_predict <- predict(object=qualpart$Model, newdata=intermediate_output_additional, na.action = na.pass)
+        if(scale==TRUE){
+            y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+            additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+        }
+        
+    } else if(type=="Keras"){
+    
+    keras_model <- unserialize_model(qualpart$Model)
+        #x_test_pre <- x_test_pre[, colnames(x_test_pre) %in% colnames(data)]
+        tryCatch(additional_data$Data[setdiff(names(additional_data$Data), names(data$Data))] <- 0, error=function(e) NULL)
+        x_test_pre <- additional_data$Data[, !colnames(additional_data$Data) %in% c("Sample", variable, split_by_group)]
+
+        x_test_proto <- as.matrix(x_test_pre)
+        x_test <- if(model.type=="Dense" | model.type=="SuperDense"){
+            x_test_proto
+        } else if(model.type=="GRU"){
+            array_reshape(x_test_proto, c(-1, 1, ncol(x_test_proto)))
+        } else if(model.type=="First_CNN"){
+            listarrays::expand_dims(x_test_proto, 3)
+            #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
+        } else if(model.type=="Complex_CNN"){
+            listarrays::expand_dims(x_test_proto, 3)
+            #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
+        } else if(model.type=="Expiremental_CNN"){
+            #array_reshape(x_test_proto, c(-1, 1, ncol(x_test_proto)))
+            listarrays::expand_dims(x_test_proto, 3)
+            #array_reshape(nrow(x_test_proto), ncol(x_train_proto), 1)
+        }
+        if(is.numeric(additional_data$Data[,variable])){
+            y_predict <- predict(keras_model, x_test, batch_size=batch_size, verbose=verbose)
+            if(scale==TRUE){
+                y_predict <- (y_predict*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+                additional_data$Data[,variable] <- (additional_data$Data[,variable]*(additional_data$YMax-additional_data$YMin)) + additional_data$YMin
+            }
+        } else if(!is.numeric(additional_data$Data[,variable])){
+            predictions.test.proto <- predict_classes(keras_model, x_test, batch_size=batch_size, verbose=verbose)
+            predictions.test.pre <- predictions.test.proto + 1
+            y_predict <- levels(qualpart$Decode$y_train_pre)[predictions.test.pre]
+        }
+
+    }
+    
+    return(y_predict)
+}
+
+qualpart_lime <- function(qualpart, additional_data, variable=NULL, type=NULL){
+    
+    
+    
+}
+
+
+kerasImportanceRegress <- function(keras_object, model.type="Complex_CNN", newdata=NULL, y_train=NULL, batch_size=3000, verbose=TRUE){
+    model <- unserialize_model(keras_object$Model)
+    
+    if(is.null(newdata)){
+        newdata <- keras_object$ModelData$DataTrain
+        newdata <- newdata[,!colnames(newdata) %in% c("Sample", "Dependent")]
+    }
+    
+    if(is.null(y_train)){
+        y_train <- keras_object$ModelData$DataTrain$Dependent
+    }
+    
+    loss <- as.character(keras_object$Qual_Res[1,"loss"])
+    
+    if(model.type=="Dense" | model.type=="SuperDense" | model.type=="EvenDense"){
+        predictor = tryCatch(Predictor$new(model, data =  as.data.frame(newdata), y = y_train, type = "prob"), error=function(e) NULL)
+        imp = tryCatch(FeatureImp$new(predictor, loss = "mae"), error=function(e) NULL)
+        imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+    }
+    
+    if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN" | model.type=="Expiremental_CNN_1"){
+        batch.size <- batch_size
+        predict_CNN <- function(model, newdata, batch_size=batch.size){
+            data_wrap <- listarrays::expand_dims(as.matrix(newdata), 3)
+            predict(object=model, x=data_wrap, batch_size=batch_size)
+        }
+        predictor = Predictor$new(model, data =  as.data.frame(newdata), y = y_train, predict.function=predict_CNN)
+        imp = FeatureImp$new(predictor, loss = loss)
+        imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+    }
+    
+    return(list(Plot=imp_plot, Importance=imp))
+    
+}
+
+kerasImportanceClassLegacy <- function(keras_object, model.type="Complex_CNN", newdata=NULL, y_train=NULL, batch_size=3000, verbose=TRUE){
+    model <- unserialize_model(keras_object$Model)
+    
+    data_og <- keras_object$Decode$Date
+    
+    if(is.null(newdata)){
+        newdata <- keras_object$ModelData$DataTrain
+        newdata <- newdata[,!colnames(newdata) %in% c("Sample", "Dependent")]
+    }
+    
+    if(is.null(y_train)){
+        y_train <- keras_object$ModelData$DataTrain$Dependent
+    }
+    
+    loss <- as.character(keras_object$Qual_Res[1,"loss"])
+    
+    if(model.type=="Dense" | model.type=="SuperDense" | model.type=="EvenDense"){
+        predictor = tryCatch(Predictor$new(model, data =  as.data.frame(newdata), y = y_train, type = "prob"), error=function(e) NULL)
+        imp = tryCatch(FeatureImp$new(predictor, loss = "mae"), error=function(e) NULL)
+        imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+    }
+    
+    if(model.type=="First_CNN" | model.type=="Complex_CNN" | model.type=="Expiremental_CNN" | model.type=="Expiremental_CNN_1"){
+        batch.size <- batch_size
+        predict_CNN <- function(model, newdata, batch_size=batch.size){
+            data_wrap <- listarrays::expand_dims(as.matrix(newdata), 3)
+            predict_classes(object=model, x=data_wrap, batch_size=batch_size)
+        }
+        predictor = Predictor$new(model, data =  as.data.frame(newdata), y = y_train, predict.function=predict_CNN)
+        imp = FeatureImp$new(predictor, loss = loss)
+        imp_plot <- tryCatch(plot(imp), error=function(e) NULL)
+    }
+    
+    return(list(Plot=imp_plot, Importance=imp))
+    
 }

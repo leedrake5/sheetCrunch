@@ -1,9 +1,17 @@
+reticulate::use_condaenv("tf2p4alt", required=TRUE)
+
+
+
 reticulate::use_virtualenv("/Users/lee/tensorflow-metal", required=TRUE)
 
-source("~/GitHub/sheetCrunch/gpuMachineLearning.r", chdir=T)
+
+
+source("~/GitHub/sheetCrunch/gpuMachineLearning.R", chdir=T)
 library(ISLR)
 data = Default[1:2000,]
-variable="income"
+variable="student"
+dependent=variable
+class=variable
 predictors=NULL
 min.n=5
 split=0.15
@@ -95,12 +103,12 @@ split_by_group="Group"
 the_group="Parameter_Val"
 type="xgbTreeNeuralNet"
 model.split=0
-epochs=10000
+epochs=100
 metric=c("mse", "mae")
 start_kernel=5
 pool_size=3
 batch_size=64
-model.type="First_CNN"
+model.type="Complex_CNN"
 n_gpus=1
 epochs_test=50
 activation_vector=c("relu", "elu", "sigmoid", "tanh", "selu")
