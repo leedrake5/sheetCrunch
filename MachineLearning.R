@@ -650,7 +650,7 @@ xgb_cv_opt_tree <- function (data
                              , nthread = -1
                              , verbose = 1
                              , predictor="cpu_predictor"
-                             , early_stopping_rounds=100
+                             , early_stopping_rounds=NULL
                              )
 {
     
@@ -852,7 +852,7 @@ xgb_cv_opt_dart <- function (data
                              , nthread = -1
                              , verbose = 1
                              , predictor="cpu_predictor"
-                             , early_stopping_rounds=100
+                             , early_stopping_rounds=NULL
                              )
 {
     
@@ -1453,7 +1453,7 @@ classifyXGBoostTree <- function(data
                                 , nthread = -1
                                 , verbose = 1
                                 , predictor="cpu_predictor"
-                                , early_stopping_rounds=100
+                                , early_stopping_rounds=NULL
                                 ){
     
     ###Prepare the data
@@ -2086,7 +2086,7 @@ regressXGBoostTree <- function(data
                                , nthread=-1
                                , verbose=1
                                , predictor="cpu_predictor"
-                               , early_stopping_rounds=100
+                               , early_stopping_rounds=NULL
                                ){
     
     ###Prepare the data
@@ -2670,7 +2670,7 @@ autoXGBoostTree <- function(data
                             , nthread=-1
                             , verbose=1
                             , predictor="cpu_predictor"
-                            , early_stopping_rounds=100
+                            , early_stopping_rounds=NULL
                             ){
     
     if(is.null(save.name)){
@@ -2835,7 +2835,7 @@ classifyXGBoostDart <- function(data
                                 , nthread=-1
                                 , verbose=1
                                 , predictor="cpu_predictor"
-                                , early_stopping_rounds=100
+                                , early_stopping_rounds=NULL
                                 ){
     
     ###Prepare the data
@@ -3484,7 +3484,7 @@ regressXGBoostDart <- function(data
                                , nthread=-1
                                , verbose=1
                                , predictor="cpu_predictor"
-                               , early_stopping_rounds=100
+                               , early_stopping_rounds=NULL
                                ){
     
     ###Prepare the data
@@ -4081,7 +4081,7 @@ autoXGBoostDart <- function(data
                             , nthread=-1
                             , verbose=1
                             , predictor="cpu_predictor"
-                            , early_stopping_rounds=100
+                            , early_stopping_rounds=NULL
                             ){
     
     if(is.null(save.name)){
@@ -8003,7 +8003,7 @@ autoMLTable <- function(data
                         , verbose=1
                         , search=FALSE
                         , predictor="cpu_predictor"
-                        , early_stopping_rounds=100
+                        , early_stopping_rounds=NULL
                         ){
                             
     if(is.null(additional_validation_frame) & !is.null(additional_split)){
@@ -8470,7 +8470,7 @@ bayesMLTable <- function(data
                         , verbose=1
                         , bayes_metric="test_r2"
                         , predictor="cpu_predictor"
-                        , early_stopping_rounds=100
+                        , early_stopping_rounds=NULL
                         ){
                         
                 if(is.null(additional_validation_frame) & !is.null(additional_split)){
