@@ -921,7 +921,7 @@ xgb_cv_opt_dart <- function (data
                          , eval_metric = eval_met
                          , tree_method = tree_method
                          , single_precision_histogram = single_precision_histogram
-                         , nthread=-1
+                         , nthread=nthread
                          , data = dtrain
                          , folds = cv_folds
                          , watchlist = xg_watchlist
@@ -983,7 +983,7 @@ xgb_cv_opt_dart <- function (data
                          , eval_metric = eval_met
                          , tree_method = tree_method
                          , single_precision_histogram = single_precision_histogram
-                         , nthread=-1
+                         , nthread=nthread
                          , data = dtrain
                          , folds = cv_folds
                          , watchlist = xg_watchlist
@@ -1097,7 +1097,7 @@ xgb_cv_opt_linear <- function (data
                                        
                                        )
                          , booster = "gblinear"
-                         , nthread=-1
+                         , nthread=nthread
                          , objective = object_fun
                          , eval_metric = eval_met
                          , data = dtrain
@@ -1238,7 +1238,7 @@ scaleDecode <- function(values, y_min, y_max){
 
 # Prepare the data for machine learning. Data is the imported data, variable is the name of the variable you want to analyize. 
 # This function will automatically prepare qualitative data for analysis if needed.
-dataPrepCore <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE, seed=NULL, split_by_group=NULL, y_min=NULL, y_max=NULL, mins=NULL, maxes=NULL){
+dataPrepCore <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE, seed=NULL, reorder=TRUE, split_by_group=NULL, y_min=NULL, y_max=NULL, mins=NULL, maxes=NULL){
     
     ###Remove any columns that don't have more than one value
     data <- data[,sapply(data, function(x) length(unique(x))>1)]
@@ -1348,20 +1348,20 @@ dataPrepCore <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FA
     }
     
     if(!is.null(seed)){set.seed(seed)}
-    results.final$RandXXX <- rnorm(nrow(results.final), 1, 0.2)
-    results.final <- results.final[order(results.final$RandXXX),!colnames(results.final) %in% "RandXXX"]
+    if(reorder==TRUE){results.final$RandXXX <- rnorm(nrow(results.final), 1, 0.2)}
+    if(reorder==TRUE){results.final <- results.final[order(results.final$RandXXX),!colnames(results.final) %in% "RandXXX"]}
     results.final <- results.final[,sapply(results.final, function(x) length(unique(x))>1)]
     results.final <- results.final[complete.cases(results.final),]
     
     return(list(Data=results.final, YMin=y_min, YMax=y_max, Mins=mins, Maxes=maxes))
 }
 
-dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE, seed=NULL, split_by_group=NULL, y_min=NULL, y_max=NULL, mins=NULL, maxes=NULL){
+dataPrep <- function(data, variable, predictors=NULL, scale=FALSE, reduce=FALSE, seed=NULL, split_by_group=NULL, y_min=NULL, y_max=NULL, mins=NULL, maxes=NULL, reorder=TRUE){
     
     if(!is.data.frame(data)){
         return(data)
     } else if(is.data.frame(data)){
-        return(dataPrepCore(data=data, variable=variable, predictors=predictors, scale=scale, reduce=reduce, seed=seed, split_by_group=split_by_group, y_min=y_min, y_max=y_max, mins=mins, maxes=maxes))
+        return(dataPrepCore(data=data, variable=variable, predictors=predictors, scale=scale, reduce=reduce, seed=seed, reorder=reorder, split_by_group=split_by_group, y_min=y_min, y_max=y_max, mins=mins, maxes=maxes))
     }
     
 }
@@ -1375,7 +1375,7 @@ isDataNumeric <- function(data, variable){
     }
 }
 
-additional_data_split <- function(data, split, variable, predictors=NULL, scale=FALSE, reduce=FALSE, seed=NULL, split_by_group=NULL, y_min=NULL, y_max=NULL, mins=NULL, maxes=NULL){
+additional_data_split <- function(data, split, variable, predictors=NULL, scale=FALSE, reduce=FALSE, seed=NULL, split_by_group=NULL, y_min=NULL, y_max=NULL, mins=NULL, maxes=NULL, reorder=TRUE){
     
     #Create a Sample ID column if one doesn't exist yet
     if(!"Sample" %in% colnames(data)){
@@ -1385,7 +1385,7 @@ additional_data_split <- function(data, split, variable, predictors=NULL, scale=
     }
     
     raw_data <- data
-    data_list <- dataPrep(data=data, variable=variable, predictors=predictors, scale=scale, reduce=reduce, seed=seed, split_by_group=split_by_group, y_min=y_min, y_max=y_max, mins=mins, maxes=maxes)
+    data_list <- dataPrep(data=data, variable=variable, predictors=predictors, scale=scale, reduce=reduce, seed=seed, split_by_group=split_by_group, y_min=y_min, y_max=y_max, mins=mins, maxes=maxes, reorder=reorder)
     data <- data_list$Data
     
     data$RandXXX <- rnorm(nrow(data), 1, 0.2)
@@ -1414,6 +1414,7 @@ additional_data_split <- function(data, split, variable, predictors=NULL, scale=
 classifyXGBoostTree <- function(data
                                 , class
                                 , predictors=NULL
+                                , reorder=TRUE
                                 , min.n=5
                                 , split=NULL
                                 , split_by_group=NULL
@@ -1457,7 +1458,7 @@ classifyXGBoostTree <- function(data
                                 ){
     
     ###Prepare the data
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
     data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
@@ -2050,6 +2051,7 @@ if(is.null(eval_metric)){
 regressXGBoostTree <- function(data
                                , dependent
                                , predictors=NULL
+                               , reorder=TRUE
                                , merge.by=NULL
                                , min.n=5
                                , split=NULL
@@ -2090,7 +2092,7 @@ regressXGBoostTree <- function(data
                                ){
     
     ###Prepare the data
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
     data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
@@ -2631,6 +2633,7 @@ regressXGBoostTree <- function(data
 autoXGBoostTree <- function(data
                             , variable
                             , predictors=NULL
+                            , reorder=TRUE
                             , min.n=5
                             , split=NULL
                             , split_by_group=NULL
@@ -2697,6 +2700,7 @@ autoXGBoostTree <- function(data
         classifyXGBoostTree(data=data
                             , class=variable
                             , predictors=predictors
+                            , reorder=reorder
                             , min.n=min.n
                             , split=split
                             , split_by_group=split_by_group
@@ -2742,6 +2746,7 @@ autoXGBoostTree <- function(data
         regressXGBoostTree(data=data
                            , dependent=variable
                            , predictors=predictors
+                           , reorder=reorder
                            , min.n=min.n
                            , split=split
                            , split_by_group=split_by_group
@@ -2794,6 +2799,7 @@ autoXGBoostTree <- function(data
 classifyXGBoostDart <- function(data
                                 , class
                                 , predictors=NULL
+                                , reorder=TRUE
                                 , min.n=5
                                 , split=NULL
                                 , split_by_group=NULL
@@ -2839,7 +2845,7 @@ classifyXGBoostDart <- function(data
                                 ){
     
     ###Prepare the data
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
     data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
@@ -3446,6 +3452,7 @@ if(is.null(eval_metric)){
 regressXGBoostDart <- function(data
                                , dependent
                                , predictors=NULL
+                               , reorder=TRUE
                                , merge.by=NULL
                                , min.n=5
                                , split=NULL
@@ -3488,7 +3495,7 @@ regressXGBoostDart <- function(data
                                ){
     
     ###Prepare the data
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
     data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
@@ -4040,6 +4047,7 @@ regressXGBoostDart <- function(data
 autoXGBoostDart <- function(data
                             , variable
                             , predictors=NULL
+                            , reorder=TRUE
                             , min.n=5
                             , split=NULL
                             , split_by_group=NULL
@@ -4108,6 +4116,7 @@ autoXGBoostDart <- function(data
         classifyXGBoostDart(data=data
                             , class=variable
                             , predictors=predictors
+                            , reorder=reorder
                             , min.n=min.n
                             , split=split
                             , split_by_group=split_by_group
@@ -4155,6 +4164,7 @@ autoXGBoostDart <- function(data
         regressXGBoostDart(data=data
                            , dependent=variable
                            , predictors=predictors
+                           , reorder=reorder
                            , min.n=min.n
                            , split=split
                            , split_by_group=split_by_group
@@ -4208,6 +4218,7 @@ autoXGBoostDart <- function(data
 classifyXGBoostLinear <- function(data
                                   , class
                                   , predictors=NULL
+                                  , reorder=TRUE
                                   , min.n=5
                                   , split=NULL
                                   , split_by_group=NULL
@@ -4240,7 +4251,7 @@ classifyXGBoostLinear <- function(data
                                   ){
     
     ###Prepare the data
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
     data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
@@ -4757,6 +4768,7 @@ if(is.null(eval_metric)){
 regressXGBoostLinear <- function(data
                                  , dependent
                                  , predictors=NULL
+                                 , reorder=TRUE
                                  , merge.by=NULL
                                  , min.n=5
                                  , split=NULL
@@ -4787,7 +4799,7 @@ regressXGBoostLinear <- function(data
                                  ){
     
     ###Prepare the data
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
     data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
@@ -5243,6 +5255,7 @@ regressXGBoostLinear <- function(data
 autoXGBoostLinear <- function(data
                               , variable
                               , predictors=NULL
+                              , reorder=TRUE
                               , min.n=5
                               , split=NULL
                               , split_by_group=NULL
@@ -5300,6 +5313,7 @@ autoXGBoostLinear <- function(data
         classifyXGBoostLinear(data=data
                               , class=variable
                               , predictors=predictors
+                              , reorder=reorder
                               , min.n=min.n
                               , split=split
                               , split_by_group=split_by_group
@@ -5334,6 +5348,7 @@ autoXGBoostLinear <- function(data
         regressXGBoostLinear(data=data
                              , dependent=variable
                              , predictors=predictors
+                             , reorder=reorder
                              , split=split
                              , split_by_group=split_by_group
                              , the_group=the_group
@@ -5372,6 +5387,7 @@ autoXGBoostLinear <- function(data
 classifyForest <- function(data
                            , class
                            , predictors=NULL
+                           , reorder=TRUE
                            , min.n=5
                            , split=NULL
                            , split_by_group=NULL
@@ -5394,7 +5410,7 @@ classifyForest <- function(data
                            ){
     
     ###Prepare the data
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
     data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
@@ -5696,6 +5712,7 @@ classifyForest <- function(data
 regressForest <- function(data
                           , dependent
                           , predictors=NULL
+                          , reorder=TRUE
                           , merge.by=NULL
                           , min.n=5
                           , split=NULL
@@ -5721,7 +5738,7 @@ regressForest <- function(data
                           ){
     
     ###Prepare the data
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
     data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
@@ -5980,6 +5997,7 @@ regressForest <- function(data
 autoForest<- function(data
                       , variable
                       , predictors=NULL
+                      , reorder=TRUE
                       , min.n=5
                       , split=NULL
                       , split_by_group=NULL
@@ -6026,6 +6044,7 @@ autoForest<- function(data
         classifyForest(data=data
                        , class=variable
                        , predictors=predictors
+                       , reorder=reorder
                        , min.n=min.n
                        , split=split
                        , split_by_group=split_by_group
@@ -6051,6 +6070,7 @@ autoForest<- function(data
         regressForest(data=data
                       , dependent=variable
                       , predictors=predictors
+                      , reorder=reorder
                       , min.n=min.n
                       , split=split
                       , split_by_group=split_by_group
@@ -6079,6 +6099,7 @@ autoForest<- function(data
 classifySVM <- function(data
                         , class
                         , predictors=NULL
+                        , reorder=TRUE
                         , min.n=5
                         , split=NULL
                         , split_by_group=NULL
@@ -6109,7 +6130,7 @@ classifySVM <- function(data
                         ){
     
     ###Prepare the data
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
     data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
@@ -6517,6 +6538,7 @@ classifySVM <- function(data
 regressSVM <- function(data
                        , dependent
                        , predictors=NULL
+                       , reorder=TRUE
                        , merge.by=NULL
                        , min.n=5
                        , split=NULL
@@ -6545,7 +6567,7 @@ regressSVM <- function(data
                        ){
     
     ###Prepare the data
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
     data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
@@ -6906,6 +6928,7 @@ regressSVM <- function(data
 autoSVM <- function(data
                     , variable
                     , predictors=NULL
+                    , reorder=TRUE
                     , min.n=5
                     , split=NULL
                     , split_by_group=NULL
@@ -6959,6 +6982,7 @@ autoSVM <- function(data
         classifySVM(data=data
                     , class=variable
                     , predictors=predictors
+                    , reorder=reorder
                     , min.n=min.n
                     , split=split
                     , split_by_group=split_by_group
@@ -6991,6 +7015,7 @@ autoSVM <- function(data
         regressSVM(data=data
                    , dependent=variable
                    , predictors=predictors
+                   , reorder=reorder
                    , min.n=min.n
                    , split=split
                    , split_by_group=split_by_group
@@ -7027,6 +7052,7 @@ autoSVM <- function(data
 classifyBayes <- function(data
                           , class
                           , predictors=NULL
+                          , reorder=TRUE
                           , min.n=5
                           , split=NULL
                           , split_by_group=NULL
@@ -7057,7 +7083,7 @@ classifyBayes <- function(data
                           ){
     
     ###Prepare the data
-    data_list <- dataPrep(data=data, variable=class, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
     data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
@@ -7430,6 +7456,7 @@ classifyBayes <- function(data
 regressBayes <- function(data
                          , dependent
                          , predictors=NULL
+                         , reorder=TRUE
                          , merge.by=NULL
                          , min.n=5
                          , split=NULL
@@ -7458,7 +7485,7 @@ regressBayes <- function(data
                          ){
     
     ###Prepare the data
-    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
     data <- data_list$Data
     if(!is.null(split_by_group)){
         split_string <- as.vector(data[,split_by_group])
@@ -7822,6 +7849,7 @@ regressBayes <- function(data
 autoBayes <- function(data
                       , variable
                       , predictors=NULL
+                      , reorder=TRUE
                       , min.n=5
                       , split=NULL
                       , split_by_group=NULL
@@ -7875,6 +7903,7 @@ autoBayes <- function(data
         classifyBayes(data=data
                       , class=variable
                       , predictors=predictors
+                      , reorder=reorder
                       , min.n=min.n
                       , split=split
                       , split_by_group=split_by_group
@@ -7907,6 +7936,7 @@ autoBayes <- function(data
         regressBayes(data=data
                      , dependent=variable
                      , predictors=predictors
+                     , reorder=reorder
                      , min.n=min.n
                      , split=split
                      , split_by_group=split_by_group
@@ -7943,6 +7973,7 @@ autoBayes <- function(data
 autoMLTable <- function(data
                         , variable
                         , predictors=NULL
+                        , reorder=TRUE
                         , min.n=5
                         , split=NULL
                         , additional_split=NULL
@@ -8007,7 +8038,7 @@ autoMLTable <- function(data
                         ){
                             
     if(is.null(additional_validation_frame) & !is.null(additional_split)){
-        new_data_list <- additional_data_split(data=data, split=additional_split, variable=variable, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+        new_data_list <- additional_data_split(data=data, split=additional_split, variable=variable, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
         data <- new_data_list$Data
         additional_validation_frame <- new_data_list$additionalValFrame
     }
@@ -8017,6 +8048,7 @@ autoMLTable <- function(data
         autoXGBoostTree(data=data
                         , variable=variable
                         , predictors=predictors
+                        , reorder=reorder
                         , min.n=min.n
                         , split=split
                         , split_by_group=split_by_group
@@ -8063,6 +8095,7 @@ autoMLTable <- function(data
         autoXGBoostDart(data=data
                         , variable=variable
                         , predictors=predictors
+                        , reorder=reorder
                         , min.n=min.n
                         , split=split
                         , split_by_group=split_by_group
@@ -8110,6 +8143,7 @@ autoMLTable <- function(data
         autoXGBoostLinear(data=data
                           , variable=variable
                           , predictors=predictors
+                          , reorder=reorder
                           , min.n=min.n
                           , split=split
                           , split_by_group=split_by_group
@@ -8144,6 +8178,7 @@ autoMLTable <- function(data
         autoForest(data=data
                    , variable=variable
                    , predictors=predictors
+                   , reorder=reorder
                    , min.n=min.n
                    , split=split
                    , split_by_group=split_by_group
@@ -8170,6 +8205,7 @@ autoMLTable <- function(data
         autoSVM(data=data,
                 variable=variable
                 , predictors=predictors
+                , reorder=reorder
                 , min.n=min.n
                 , split=split
                 , split_by_group=split_by_group
@@ -8202,6 +8238,7 @@ autoMLTable <- function(data
         autoBayes(data=data
                   , variable=variable
                   , predictors=predictors
+                  , reorder=reorder
                   , min.n=min.n
                   , split=split
                   , split_by_group=split_by_group
@@ -8233,6 +8270,8 @@ autoMLTable <- function(data
          
     }
     
+    qualpart$Basics <- list(Variable=variable, Predictors=predictors, MinN=min.n, Split=split, AddSplit=additional_split, SplitByGroup=split_by_group, TheGroup=the_group, type=type, Scale=scale, Seed=seed)
+
     if(is.null(additional_validation_frame)){
       return(qualpart)
     } else if(!is.null(additional_validation_frame)){
@@ -8409,6 +8448,7 @@ metricGen <- function(cv, bayes_metric){
 bayesMLTable <- function(data
                         , variable
                         , predictors=NULL
+                        , reorder=TRUE
                         , min.n=5
                         , split=NULL
                         , additional_split=NULL
@@ -8474,7 +8514,7 @@ bayesMLTable <- function(data
                         ){
                         
                 if(is.null(additional_validation_frame) & !is.null(additional_split)){
-                    new_data_list <- additional_data_split(data=data, split=additional_split, variable=variable, predictors=predictors, scale=scale, seed=seed, split_by_group=split_by_group)
+                    new_data_list <- additional_data_split(data=data, split=additional_split, variable=variable, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
                     data <- new_data_list$Data
                     additional_validation_frame <- new_data_list$additionalValFrame
                 }
@@ -8534,6 +8574,7 @@ bayesMLTable <- function(data
                 cv = autoXGBoostTree(data=data
                 , variable=variable
                 , predictors=predictors
+                , reorder=reorder
                 , min.n=min.n
                 , split=split
                 , split_by_group=split_by_group
@@ -8593,6 +8634,7 @@ bayesMLTable <- function(data
         qualpart <- autoXGBoostTree(data=data
                         , variable=variable
                         , predictors=predictors
+                        , reorder=reorder
                         , min.n=min.n
                         , split=split
                         , split_by_group=split_by_group
@@ -8697,6 +8739,7 @@ bayesMLTable <- function(data
                 cv = autoXGBoostDart(data=data
                 , variable=variable
                 , predictors=predictors
+                , reorder=reorder
                 , min.n=min.n
                 , split=split
                 , split_by_group=split_by_group
@@ -8758,6 +8801,7 @@ bayesMLTable <- function(data
         qualpart <- autoXGBoostDart(data=data
                         , variable=variable
                         , predictors=predictors
+                        , reorder=reorder
                         , min.n=min.n
                         , split=split
                         , split_by_group=split_by_group
@@ -8826,6 +8870,7 @@ bayesMLTable <- function(data
                 cv = autoXGBoostLinear(data=data
                 , variable=variable
                 , predictors=predictors
+                , reorder=reorder
                 , min.n=min.n
                 , split=split
                 , split_by_group=split_by_group
@@ -8874,6 +8919,7 @@ bayesMLTable <- function(data
         qualpart <- autoXGBoostLinear(data=data
                         , variable=variable
                         , predictors=predictors
+                        , reorder=reorder
                         , min.n=min.n
                         , split=split
                         , split_by_group=split_by_group
@@ -8918,6 +8964,7 @@ bayesMLTable <- function(data
                 cv = autoForest(data=data
                 , variable=variable
                 , predictors=predictors
+                , reorder=reorder
                 , min.n=min.n
                 , split=split
                 , split_by_group=split_by_group
@@ -8958,6 +9005,7 @@ bayesMLTable <- function(data
         qualpart <- autoForest(data=data
                         , variable=variable
                         , predictors=predictors
+                        , reorder=reorder
                         , min.n=min.n
                         , split=split
                         , split_by_group=split_by_group
@@ -8994,6 +9042,7 @@ bayesMLTable <- function(data
                     cv = autoSVM(data=data
                     , variable=variable
                     , predictors=predictors
+                    , reorder=reorder
                     , min.n=min.n
                     , type=type
                     , split=split
@@ -9034,6 +9083,7 @@ bayesMLTable <- function(data
         qualpart <- autoSVM(data=data
                         , variable=variable
                         , predictors=predictors
+                        , reorder=reorder
                         , type=type
                         , min.n=min.n
                         , split=split
@@ -9079,6 +9129,7 @@ bayesMLTable <- function(data
                     cv = autoSVM(data=data
                     , variable=variable
                     , predictors=predictors
+                    , reorder=reorder
                     , min.n=min.n
                     , type=type
                     , split=split
@@ -9121,6 +9172,7 @@ bayesMLTable <- function(data
             qualpart <- autoSVM(data=data
                             , variable=variable
                             , predictors=predictors
+                            , reorder=reorder
                             , min.n=min.n
                             , type=type
                             , split=split
@@ -9161,6 +9213,7 @@ bayesMLTable <- function(data
                     cv = autoSVM(data=data
                     , variable=variable
                     , predictors=predictors
+                    , reorder=reorder
                     , min.n=min.n
                     , type=type
                     , split=split
@@ -9202,6 +9255,7 @@ bayesMLTable <- function(data
             qualpart <- autoSVM(data=data
                             , variable=variable
                             , predictors=predictors
+                            , reorder=reorder
                             , min.n=min.n
                             , type=type
                             , split=split
@@ -9237,6 +9291,7 @@ bayesMLTable <- function(data
                     cv = autoXGBoostLinear(data=data
                     , variable=variable
                     , predictors=predictors
+                    , reorder=reorder
                     , min.n=min.n
                     , type=type
                     , split=split
@@ -9277,6 +9332,7 @@ bayesMLTable <- function(data
             qualpart <- autoSVM(data=data
                             , variable=variable
                             , predictors=predictors
+                            , reorder=reorder
                             , min.n=min.n
                             , type=type
                             , split=split
@@ -9315,6 +9371,7 @@ bayesMLTable <- function(data
                     cv = autoSVM(data=data
                     , variable=variable
                     , predictors=predictors
+                    , reorder=reorder
                     , min.n=min.n
                     , type=type
                     , split=split
@@ -9356,6 +9413,7 @@ bayesMLTable <- function(data
             qualpart <- autoSVM(data=data
                             , variable=variable
                             , predictors=predictors
+                            , reorder=reorder
                             , min.n=min.n
                             , type=type
                             , split=split
@@ -9395,6 +9453,7 @@ bayesMLTable <- function(data
                     cv = autoSVM(data=data
                     , variable=variable
                     , predictors=predictors
+                    , reorder=reorder
                     , min.n=min.n
                     , type=type
                     , split=split
@@ -9436,6 +9495,7 @@ bayesMLTable <- function(data
             qualpart <- autoSVM(data=data
                             , variable=variable
                             , predictors=predictors
+                            , reorder=reorder
                             , min.n=min.n
                             , type=type
                             , split=split
@@ -9475,6 +9535,7 @@ bayesMLTable <- function(data
                     cv = autoSVM(data=data
                     , variable=variable
                     , predictors=predictors
+                    , reorder=reorder
                     , min.n=min.n
                     , type=type
                     , split=split
@@ -9516,6 +9577,7 @@ bayesMLTable <- function(data
             qualpart <- autoSVM(data=data
                             , variable=variable
                             , predictors=predictors
+                            , reorder=reorder
                             , min.n=min.n
                             , type=type
                             , split=split
@@ -9555,6 +9617,7 @@ bayesMLTable <- function(data
                     cv = autoSVM(data=data
                     , variable=variable
                     , predictors=predictors
+                    , reorder=reorder
                     , min.n=min.n
                     , type=type
                     , split=split
@@ -9597,6 +9660,7 @@ bayesMLTable <- function(data
         qualpart <- autoSVM(data=data
                     , variable=variable
                     , predictors=predictors
+                    , reorder=reorder
                     , min.n=min.n
                     , type=type
                     , split=split
@@ -9634,6 +9698,7 @@ bayesMLTable <- function(data
                     cv = autoBayes(data=data
                     , variable=variable
                     , predictors=predictors
+                    , reorder=reorder
                     , min.n=min.n
                     , type=type
                     , split=split
@@ -9674,6 +9739,7 @@ bayesMLTable <- function(data
                 qualpart <- autoBayes(data=data
                             , variable=variable
                             , predictors=predictors
+                            , reorder=reorder
                             , min.n=min.n
                             , type=type
                             , split=split
@@ -9721,6 +9787,7 @@ bayesMLTable <- function(data
                     cv = autoBayes(data=data
                     , variable=variable
                     , predictors=predictors
+                    , reorder=reorder
                     , min.n=min.n
                     , type=type
                     , split=split
@@ -9765,6 +9832,7 @@ bayesMLTable <- function(data
                 qualpart <- autoBayes(data=data
                             , variable=variable
                             , predictors=predictors
+                            , reorder=reorder
                             , min.n=min.n
                             , type=type
                             , split=split
@@ -9794,6 +9862,7 @@ bayesMLTable <- function(data
             }
         }
         
+        qualpart$Basics <- list(Variable=variable, Predictors=predictors, MinN=min.n, Split=split, AddSplit=additional_split, SplitByGroup=split_by_group, TheGroup=the_group, type=type, Scale=scale, Seed=seed)
 
     if(is.null(additional_validation_frame)){
       return(qualpart)
@@ -9859,17 +9928,26 @@ bayesMLTable <- function(data
 }
 }
 
-just_a_predictor <- function(qualpart, additional_data, variable=NULL){
+just_a_predictor <- function(qualpart, additional_validation_frame, variable=NULL, scale=NULL, predictors=NULL, seed=NULL){
+    
+    if(is.null(variable)){
+        variable <- qualpart$Basics$Variable
+    }
+    
+    if(is.null(scale)){
+        scale <- qualpart$Basics$Scale
+    }
+    
     additional_data <- if(is.data.frame(additional_validation_frame)){
         if(scale==FALSE){
-        dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed)
+        dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed, reorder=FALSE)
         } else if(scale==TRUE){
-            dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed, y_min=qualpart$ModelData$Data$YMin, y_max=qualpart$ModelData$Data$YMax, mins=qualpart$ModelData$Data$Mins, maxes=qualpart$ModelData$Data$Maxes)
+            dataPrep(data=additional_validation_frame, variable=variable, predictors=predictors, scale=scale, seed=seed, reorder=FALSE, y_min=qualpart$ModelData$Data$YMin, y_max=qualpart$ModelData$Data$YMax, mins=qualpart$ModelData$Data$Mins, maxes=qualpart$ModelData$Data$Maxes)
         }
     } else if(!is.data.frame(additional_validation_frame)){
         additional_validation_frame
     }
-    additional_data$Data <- additional_data$Data[order(additional_data$Data$Sample),]
+    #additional_data$Data <- additional_data$Data[order(additional_data$Data$Sample),]
     additional_data$Data[setdiff(names(qualpart$Model$trainingData), names(additional_data$Data))] <- 0
     
         y_predict <- predict(object=qualpart$Model, newdata=additional_data$Data[,colnames(additional_data$Data) %in% colnames(qualpart$Model$trainingData), drop=FALSE], na.action = na.pass)
@@ -9884,27 +9962,30 @@ just_a_predictor <- function(qualpart, additional_data, variable=NULL){
     return(y_predict)
 }
 
-sequential_predict <- function(model, model_data, new_data, lag=-1, lag_variable, scale=FALSE){
+sequential_predict <- function(qualpart, model_data, new_data, variable, scale=FALSE, lag=-1, lag_variable){
     
-    model_data_predictions <- predict(object=model$Model, newdata=model_data[,colnames(model$Model$trainingData[,-1])])
+    model_data_predictions <- just_a_predictor(qualpart=qualpart, additional_validation_frame=model_data, variable=variable, scale=scale)
     
+    new_data <- new_data[,!colnames(new_data) %in% lag_variable]
     starting_new_data <- new_data[1,]
     starting_new_data$Hold <- model_data_predictions[length(model_data_predictions)]
-    colnames(starting_new_data) <- c(colnames(new_data), lag_variable)
+    colnames(starting_new_data)[length(starting_new_data)] <- lag_variable
     
     new_data$Hold <- 1
-    colnames(new_data) <- c(colnames(new_data), lag_variable)
+    colnames(new_data)[length(new_data)] <- lag_variable
 
 
     
     new_data[1,] <- starting_new_data
     new_data_predictions_list <- list()
     for(i in 1:nrow(new_data)){
-        new_data_predictions_list[[i]] <- predict(object=model, newdata[i, colnames(model$Model$trainingData[,-1])])
+        new_data_predictions_list[[i]] <- predict(object=qualpart$Model, new_data[i, colnames(qualpart$Model$trainingData[,-1])])
         if(i!=nrow(new_data)){
-            new_data[i+1,]$hold <- new_data_predictions_list[[i]]
+            new_data[i+1,lag_variable] <- new_data_predictions_list[[i]]
         }
     }
     
-    return(new_data)
+    predictions <- c(unlist(new_data_predictions_list))
+    
+    return(predictions)
     }
