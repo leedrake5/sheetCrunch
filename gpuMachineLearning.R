@@ -1344,6 +1344,45 @@ data_generator <- function(data, lookback, delay, min_index, max_index,
   }
 }
 
+kerasize_data <- function(data, x = FALSE, lookback = 12, pred = 1) {
+  lag <- lookback
+  if (x) {
+    
+    temp <- sapply(
+      1:(length(data) - lag - pred + 1)
+      ,function(x) data[x:(x + lag - 1), 1]
+    ) %>% t()
+    
+    out <- array(
+      temp %>% unlist() %>% as.numeric()
+      ,dim = c(nrow(temp), lag, 1)
+    )
+    
+  }  else {
+    
+    temp <- sapply(
+      (1 + lag):(length(data) - pred + 1)
+      ,function(x) data[x:(x + lag - 1), 1]
+    ) %>% t()
+    
+    out <- array(
+      temp %>% unlist() %>% as.numeric()
+      ,dim = c(nrow(temp), pred, 1)
+    )
+    
+  }
+  
+  return(out)
+  
+}
+
+kerasize_pred_input <- function(data, lag = 12, pred = 12){
+  temp <- data[(length(data) - pred + 1):length(data)]
+  temp <- normalize_data(temp, get_scaling_factors(data))
+  out <- array(temp, c(1, lag, 1))
+  return(out)
+}
+
 
 keras_data_gen_regress_static <- function(model.type, data, dependent, predictors=NULL, scale=FALSE, seed=NULL, split=NULL, split_by_group=NULL, the_group=NULL, reorder=TRUE){
     
@@ -8097,6 +8136,8 @@ bayesMLTable <- function(data
                     
                     qual_list[[i]] <-list(Index=paste0("Row_", i), Score =  metricGen(cv=cv, bayes_metric=bayes_metric))
                     print(paste0(bayes_metric, ": ", round(metricGen(cv=cv, bayes_metric=bayes_metric)$Score, 3)))
+                    cv <- NULL
+                    gc()
                     }
                 
                 qual_frame <- merge(qual_grid, as.data.frame(data.table::rbindlist(qual_list)), by="Index")
@@ -8356,7 +8397,8 @@ bayesMLTable <- function(data
                     
                     qual_list[[i]] <-list(Index=paste0("Row_", i), Score =  metricGen(cv=cv, bayes_metric=bayes_metric))
                     print(paste0(bayes_metric, ": ", round(metricGen(cv=cv, bayes_metric=bayes_metric)$Score, 3)))
-
+                    cv <- NULL
+                    gc()
                 }
                 qual_frame <- merge(qual_grid, as.data.frame(data.table::rbindlist(qual_list)), by="Index")
                 qual_frame$Score <- as.numeric(qual_frame$Score)

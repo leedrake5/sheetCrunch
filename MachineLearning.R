@@ -8413,11 +8413,11 @@ metricGen <- function(cv, bayes_metric){
     } else if(bayes_metric=="test_r2"){
         tryCatch(list(Score = as.numeric(summary(cv$testAccuracy)$r.squared)), error=function(e) list(Score=0))
     } else if(bayes_metric=="train_rmse"){
-        tryCatch(list(Score = as.numeric(Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1)), error=function(e) list(Score=0))
+        tryCatch(list(Score = as.numeric(Metrics::rmse(actual=cv$TrainingSet$Known, predicted=cv$TrainingSet$Predicted)*-1)), error=function(e) list(Score=0))
     } else if(bayes_metric=="test_rmse"){
         tryCatch(list(Score = as.numeric(Metrics::rmse(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1)), error=function(e) list(Score=0))
     } else if(bayes_metric=="train_mae"){
-        tryCatch(list(Score = as.numeric(Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$ValidaitonSet$Predicted)*-1)), error=function(e) list(Score=0))
+        tryCatch(list(Score = as.numeric(Metrics::mae(actual=cv$TrainingSet$Known, predicted=cv$TrainingSet$Predicted)*-1)), error=function(e) list(Score=0))
     } else if(bayes_metric=="test_mae"){
         tryCatch(list(Score = as.numeric(Metrics::mae(actual=cv$ValidationSet$Known, predicted=cv$ValidationSet$Predicted)*-1)), error=function(e) list(Score=0))
     } else if(bayes_metric=="train_accuracy"){
@@ -9989,3 +9989,56 @@ sequential_predict <- function(qualpart, model_data, new_data, variable, scale=F
     
     return(predictions)
     }
+
+
+model_stats_class <- function(qualpart, name="model"){
+    
+    train_frame <- data.frame(Model=name, Accuracy=qualpart$trainAccuracy$overall["Accuracy"], BalancedAccuracy=qualpart$trainAccuracy$byClass["Balanced Accuracy"], Kappa=qualpart$trainAccuracy$overall["Kappa"], Sensitivity=qualpart$trainAccuracy$byClass["Sensitivity"], Specificity=qualpart$trainAccuracy$byClass["Specificity"])
+    rownames(train_frame) <- NULL
+    results <- list(Train=train_frame)
+    if("testAccuracy" %in% names(qualpart)){
+        test_frame <- data.frame(Model=name, Accuracy=qualpart$testAccuracy$overall["Accuracy"], BalancedAccuracy=qualpart$testAccuracy$byClass["Balanced Accuracy"], Kappa=qualpart$testAccuracy$overall["Kappa"], Sensitivity=qualpart$testAccuracy$byClass["Sensitivity"], Specificity=qualpart$testAccuracy$byClass["Specificity"])
+        rownames(test_frame) <- NULL
+    } else {
+        test_frame <- NULL
+    }
+    
+    if("additionalAccuracy" %in% names(qualpart)){
+        additional_frame <- data.frame(Model=name, Accuracy=qualpart$additionalAccuracy$overall["Accuracy"], BalancedAccuracy=qualpart$additionalAccuracy$byClass["Balanced Accuracy"], Kappa=qualpart$additionalAccuracy$overall["Kappa"], Sensitivity=qualpart$additionalAccuracy$byClass["Sensitivity"], Specificity=qualpart$additionalAccuracy$byClass["Specificity"])
+        rownames(test_frame) <- NULL
+    } else {
+        additional_frame <- NULL
+    }
+    
+    return(list(Train=train_frame, Test=test_frame, Additional=additional_frame))
+    
+}
+
+model_stats_regress <- function(qualpart, name="model"){
+    
+    train_frame <- data.frame(Model=name, r2=summary(qualpart$trainAccuracy)$r.squared, RMSE=as.numeric(Metrics::rmse(actual=qualpart$TrainingSet$Known, predicted=qualpart$TrainingSet$Predicted)), MAE=as.numeric(Metrics::mae(actual=qualpart$TrainingSet$Known, predicted=qualpart$TrainingSet$Predicted)))
+    rownames(train_frame) <- NULL
+    results <- list(Train=train_frame)
+    if("testAccuracy" %in% names(qualpart)){
+        test_frame <- data.frame(Model=name, r2=summary(qualpart$testAccuracy)$r.squared, RMSE=as.numeric(Metrics::rmse(actual=qualpart$ValidationSet$Known, predicted=qualpart$ValidationSet$Predicted)), MAE=as.numeric(Metrics::mae(actual=qualpart$ValidationSet$Known, predicted=qualpart$ValidationSet$Predicted)))
+        rownames(test_frame) <- NULL
+    } else {
+        test_frame <- NULL
+    }
+    
+    if("additionalAccuracy" %in% names(qualpart)){
+        additional_frame <- data.frame(Model=name, r2=summary(qualpart$testAccuracy)$r.squared, RMSE=as.numeric(Metrics::rmse(actual=qualpart$additionalValidationSet$Known, predicted=qualpart$additionalValidationSet$Predicted)), MAE=as.numeric(Metrics::mae(actual=qualpart$additionalValidationSet$Known, predicted=qualpart$additionalValidationSet$Predicted)))
+        rownames(test_frame) <- NULL
+    } else {
+        additional_frame <- NULL
+    }
+    
+    return(list(Train=train_frame, Test=test_frame, Additional=additional_frame))
+    
+}
+
+model_stats <- function(qualpart, name="model"){
+    tryCatch(model_stats_class(qualpart=qualpart, name=name), error=function(e) model_stats_regress(qualpart=qualpart, name=name))
+}
+
+
