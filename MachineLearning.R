@@ -3191,7 +3191,7 @@ if(is.null(eval_metric)){
                    )
                    
         best_param <- list(
-            booster = "gbtree"
+            booster = "dart"
             , nrounds=OPT_Res$Best_Par["nrounds_opt"]
             , eval.metric = metric.mod
             , objective = objective.mod
@@ -7522,7 +7522,7 @@ regressBayes <- function(data
     } else if(is.null(split)){
         #This just puts placeholders for the whole data set
         data.train <- data
-        y_train <- data$Dependent
+        y_train <- as.numeric(data$Dependent)
         x_train <- data[, !colnames(data) %in% c("Sample", "Dependent")]
     }
     
@@ -7531,8 +7531,8 @@ regressBayes <- function(data
         data.train <- data[a,]
         data.test <- data[!a,]
         #Set y_train and x_train for later
-        y_train <- data.train$Class
-        y_test <- data.test$Class
+        y_train <- data.train$Dependent
+        y_test <- data.test$Dependent
         x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
         x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
     }
@@ -7611,14 +7611,14 @@ regressBayes <- function(data
         caret::trainControl(
         method = train
         , number = number
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         )
     } else if(train=="repeatedcv" && parallel_method=="linux"){
         caret::trainControl(
         method = train
         , number = number
         , repeats = cvrepeats
-        , verboseIter = TRUE
+        , verboseIter = FALSE
         )
     }
     
@@ -7649,7 +7649,7 @@ regressBayes <- function(data
                                             , metric=metric
                                             , method=bayes_type
                                             , na.action=na.omit
-                                            , verboseIter=TRUE
+                                            , verboseIter=FALSE
                                             , allowParallel=TRUE
                                             )
                 parallelStop()
@@ -7709,7 +7709,7 @@ regressBayes <- function(data
                                             , metric=metric
                                             , method=bayes_type
                                             , na.action=na.omit
-                                            , verboseIter=TRUE
+                                            , verboseIter=FALSE
                                             , allowParallel=TRUE
                                             )
                 parallelStop()
