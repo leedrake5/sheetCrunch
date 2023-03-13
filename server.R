@@ -29,9 +29,12 @@ shinyServer(function(input, output, session) {
         } else if(input$filetype=="Net") {
             fileInput('file1', 'Choose Net Counts', multiple=TRUE,
             accept=c(".csv"))
-        }  else if(dataType()=="Spreadsheet") {
+        }  else if(input$filetype=="Excel Spreadsheet") {
             fileInput('file1', 'Choose Spreadsheet', multiple=TRUE,
             accept=c(".xlsx"))
+        }  else if(input$filetype=="CSV Spreadsheet") {
+            fileInput('file1', 'Choose Spreadsheet', multiple=TRUE,
+            accept=c(".csv"))
         }  else if(input$filetype=="Artax Excel") {
             fileInput('file1', 'Choose Spreadsheet', multiple=TRUE,
             accept=c(".xlsx"))
@@ -52,9 +55,12 @@ shinyServer(function(input, output, session) {
         } else if(input$filetype=="Net") {
             fileInput('file2', 'Choose Net Counts', multiple=TRUE,
             accept=c(".csv"))
-        }  else if(dataType()=="Spreadsheet") {
+        }  else if(input$filetype=="Excel Spreadsheet") {
             fileInput('file2', 'Choose Spreadsheet', multiple=TRUE,
             accept=c(".xlsx"))
+        }  else if(input$filetype=="CSV Spreadsheet") {
+            fileInput('file2', 'Choose Spreadsheet', multiple=TRUE,
+            accept=c(".csv"))
         }  else if(input$filetype=="Artax Excel") {
             fileInput('file2', 'Choose Spreadsheet', multiple=TRUE,
             accept=c(".xlsx"))
@@ -74,9 +80,12 @@ shinyServer(function(input, output, session) {
         } else if(input$filetype=="Net") {
             fileInput('file3', 'Choose Net Counts', multiple=TRUE,
             accept=c(".csv"))
-        }  else if(dataType()=="Spreadsheet") {
+        }  else if(input$filetype=="Excel Spreadsheet") {
             fileInput('file3', 'Choose Spreadsheet', multiple=TRUE,
             accept=c(".xlsx"))
+        }  else if(input$filetype=="CSV Spreadsheet") {
+            fileInput('file3', 'Choose Spreadsheet', multiple=TRUE,
+            accept=c(".csv"))
         }  else if(input$filetype=="Artax Excel") {
             fileInput('file3', 'Choose Spreadsheet', multiple=TRUE,
             accept=c(".xlsx"))
@@ -202,7 +211,9 @@ dataType <- reactive({
         "Spectra"
     } else if(input$filetype=="Net"){
         "Net"
-    } else if (input$filetype=="Spreadsheet"){
+    } else if(input$filetype=="Excel Spreadsheet"){
+        "Spreadsheet"
+    } else if(input$filetype=="CSV Spreadsheet"){
         "Spreadsheet"
     } else if (input$filetype=="Artax Excel"){
         "Artax Excel"
@@ -368,7 +379,20 @@ dataType <- reactive({
 
     })
     
-    qualExcelData <- reactive({
+    sheetCSVData <- reactive({
+        inFile <- input$file1
+        if (is.null(inFile)) return(NULL)
+
+        just.fish <- read.csv(inFile$datapath)
+        just.fish[,1] <- as.character(just.fish[,1])
+        quant.fish <- as.data.frame(just.fish[, sapply(just.fish, is.numeric)])
+        qual.fish <- as.data.frame(just.fish[, !sapply(just.fish, is.numeric)])
+        
+        data.frame(Spectrum=qual.fish[,1], quant.fish)
+
+    })
+    
+    qualExcelDataPre <- reactive({
         inFile <- input$file1
         if (is.null(inFile)) return(NULL)
 
@@ -381,6 +405,16 @@ dataType <- reactive({
             data.frame(Spectrum=qual.fish[,1], qual.fish[,2:length(qual.fish)])
         } else if(length(qual.fish)==1){
             data.frame(Spectrum=qual.fish[,1], Qualitative1=qual.fish[,1])
+        }
+        
+    })
+    
+    qualExcelData <- reactive({
+        
+        if(input$filetype=="Excel Spreadsheet"){
+            qualExcelDataPre()
+        } else if(input$filetype=="CSV Spreadsheet"){
+            sheetCSVData()
         }
         
     })
@@ -606,14 +640,11 @@ dataType <- reactive({
     
     
     importSpreadsheet <- reactive({
-        inFile <- input$file1
-        if (is.null(inFile)) return(NULL)
-        
-        sheet <- read.csv(file=inFile$datapath, sep=",")
-        sheet
+        qualExcelData()
         
     })
     
+    #input$otherdata <- FALSE
     
     #is.null(input$file1)==FALSE
     
@@ -626,8 +657,10 @@ dataType <- reactive({
                 fullSpectra1()
             } else if(input$filetype=="Net"){
                 netCounts1()
-            } else if(dataType()=="Spreadsheet"){
+            } else if(input$filetype=="Excel Spreadsheet"){
                 ExcelData()
+            } else if(input$filetype=="CSV Spreadsheet"){
+                sheetCSVData()
             } else if(input$filetype=="Artax Excel"){
                 artaxExcelData()
             }
@@ -1906,11 +1939,22 @@ spectral.plot
        
 
          })
+         
+         
+        corrPlot <- reactive({
+             
+             #data_table <-  myData()[,sapply(myData(), is.numeric)]
+             data_table <- select_if(dataMerge(), is.numeric)
+             correlations <- cor(data_table, use="pairwise.complete.obs")
+             corrplot::corrplot(correlations, method="circle")
+             
+         })
+
 
 
         output$distPlot <- renderPlot({
 
-print(plotInput())
+            print(corrPlot())
 
 
         })
@@ -1954,7 +1998,7 @@ print(plotInput())
          
          dataMerge <- reactive({
              
-             if(input$filetype!="Spreadsheet"){
+             if(dataType()!="Spreadsheet"){
                  
                  first.instrument <- if(dataType()=="Spectra" && input$usecalfile==FALSE){
                      spectra.line.fn(myData1())

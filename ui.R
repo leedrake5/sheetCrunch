@@ -15,7 +15,7 @@ sidebarPanel(
 
 
 actionButton("actionprocess", label = "Process Data"),
-actionButton("actionplot", label = "Plot Spectrum"),
+actionButton("actionplot", label = "Plot Covariance"),
 downloadButton('downloadPlot', "Plot"),
 
 
@@ -24,7 +24,7 @@ tags$hr(),
 uiOutput('filegrab'),
 
 
-selectInput("filetype", label=NULL, c("PDZ","CSV", "Net", "Spreadsheet", "Artax Excel"), selected="Spreadsheet"),
+selectInput("filetype", label=NULL, c("PDZ","CSV", "Net", "Excel Spreadsheet", "CSV Spreadsheet", "Artax Excel"), selected="Excel Spreadsheet"),
 
 tags$hr(),
 
@@ -346,6 +346,7 @@ tabPanel("Table", DT::dataTableOutput('xrfpcatable'))
 ))
 
 )),
+
 
 tabPanel("Match",
 div(class="outer",
