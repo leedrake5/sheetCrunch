@@ -32,7 +32,7 @@ tryCatch(library(brnn), error=function(e) NULL)
 tryCatch(library(arm), error=function(e) NULL)
 library(doParallel)
 library(rBayesianOptimization)
-library(tidyverse)
+tryCatch(library(tidyverse), error=function(e) NULL)
 library(mlr)
 library(parallelMap)
 library(magrittr)
@@ -8511,9 +8511,11 @@ bayesMLTable <- function(data
                         , bayes_metric="test_r2"
                         , predictor="cpu_predictor"
                         , early_stopping_rounds=NULL
+                        , full_data_backup=FALSE
                         ){
                         
                 if(is.null(additional_validation_frame) & !is.null(additional_split)){
+                    input_data <- data
                     new_data_list <- additional_data_split(data=data, split=additional_split, variable=variable, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
                     data <- new_data_list$Data
                     additional_validation_frame <- new_data_list$additionalValFrame
@@ -9865,6 +9867,9 @@ bayesMLTable <- function(data
         qualpart$Basics <- list(Variable=variable, Predictors=predictors, MinN=min.n, Split=split, AddSplit=additional_split, SplitByGroup=split_by_group, TheGroup=the_group, type=type, Scale=scale, Seed=seed)
 
     if(is.null(additional_validation_frame)){
+        if(full_data_backup==TRUE){
+            qualpart$FullDataBackup <- list(origionalData=input_data, trainData=data)
+        }
       return(qualpart)
     } else if(!is.null(additional_validation_frame)){
     
@@ -9921,8 +9926,9 @@ bayesMLTable <- function(data
     tryCatch(qualpart$Model$finalModel$formula <- butcher::axe_env(qualpart$Model$finalModel$formula), error=function(e) NULL)
     tryCatch(qualpart$Model$finalModel$proximity <- butcher::axe_env(qualpart$Model$finalModel$proximity), error=function(e) NULL)
     
-    
-
+    if(full_data_backup==TRUE){
+        qualpart$FullDataBackup <- list(origionalData=input_data, trainData=data, additionalData=additional_validation_frame)
+    }
     
     return(qualpart)
 }
@@ -10042,3 +10048,81 @@ model_stats <- function(qualpart, name="model"){
 }
 
 
+model_stats_batch <- function(directory, pattern=".rdata", recursive=FALSE){
+    
+    filenames <- gsub(pattern, "", list.files(path=directory, pattern=pattern, recursive=recursive, full.names=FALSE))
+
+    qualitative_list <- list()
+    quantitative_list <- list()
+    
+    for(i in filenames){
+        print(paste0("Preparing ", i))
+        temp_part <- readRDS(paste0(directory, i, pattern))
+        temp_result <- list(Performance=model_stats(temp_part), Importance=importanceBarFrame(temp_part$Model)[1:10,"Variable"])
+        if("r2" %in% names(temp_result$Performance$Train)){
+            quantitative_list[[i]] <- temp_result
+        } else if("Kappa" %in% names(temp_result$Performance$Train)){
+            qualitative_list[[i]] <- temp_result
+        }
+    }
+    
+    bundle <- list(Qual=qualitative_list, Quant=quantitative_list)
+    return(bundle)
+}
+
+result_bundle <- function(result_list, name="model", val_type="Additional", qual_vars = c("Specificity", "Sensitivity", "Accuracy"), quant_vars=c("r2", "MAE")){
+    
+    result_selected <- result_list$Performance[[val_type]]
+    if("r2" %in% names(result_list$Performance$Train)){
+        result_selected <- result_selected[quant_vars]
+    } else if("Kappa" %in% names(result_list$Performance$Train)){
+        result_selected <- result_selected[qual_vars]
+    }
+    
+    result_frame <- t(data.frame(result_selected))
+    colnames(result_frame) <- name
+    
+    importance_frame <- as.data.frame(result_list$Importance)
+    colnames(importance_frame) <- name
+    
+    results_all <- rbind(result_frame, importance_frame)
+    
+    
+    return(results_all)
+    
+}
+
+model_sheet_gen <- function(directory, pattern=".rdata", recursive=FALSE, val_type="Additional", qual_vars = c("Accuracy", "Specificity", "Sensitivity", quant_vars=c("r2", "MAE"))){
+    
+    filenames <- gsub(pattern, "", list.files(path=directory, pattern=pattern, recursive=recursive, full.names=FALSE))
+
+    qualitative_list <- list()
+    quantitative_list <- list()
+    qualitative_results <- list()
+    quantitative_results <- list()
+    
+    for(i in filenames){
+        print(paste0("Preparing ", i))
+        temp_part <- readRDS(paste0(directory, i, pattern))
+        temp_result <- list(Performance=model_stats(temp_part), Importance=importanceBarFrame(temp_part$Model)[1:10,"Variable"])
+        if("r2" %in% names(temp_result$Performance$Train)){
+            quantitative_list[[i]] <- temp_result
+            quantitative_results[[i]] <- tryCatch(result_bundle(result_list=temp_result, name=i, val_type=val_type), error=function(e) NULL)
+        } else if("Kappa" %in% names(temp_result$Performance$Train)){
+            qualitative_list[[i]] <- temp_result
+            qualitative_results[[i]] <- tryCatch(result_bundle(result_list=temp_result, name=i, val_type=val_type), error=function(e) NULL)
+        }
+    }
+    
+    qualitative_sheet <- do.call("cbind", qualitative_results)
+    write.csv(qualitative_sheet, paste0(directory, "0_qualitative.csv"))
+    quantitative_sheet <- do.call("cbind", quantitative_results)
+    write.csv(quantitative_sheet, paste0(directory, "0_quantitative.csv"))
+
+    
+    bundle <- list(Qual=qualitative_list, Quant=quantitative_list, Qual_Results = qualitative_sheet, Quant_Results = quantitative_sheet)
+
+    return(bundle)
+    
+    
+}
