@@ -1772,6 +1772,8 @@ keras_model_gen <- function(model.type, channels, activation="relu", dropout=0.2
 kerasSingleGPURunClassify <- function(data, class, predictors=NULL, reorder=TRUE, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss=NULL, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, seed=NULL){
     if(eager==TRUE){tf$executing_eagerly()}
     
+    paramter_bundle <- data.frame(epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, model.type=model.type, scale=scale, seed=seed)
+    
     all_data_list <- keras_data_gen_classify(model.type=model.type, data=data, predictors=predictors, class=class, split=split, scale=scale, split_by_group=split_by_group, the_group=the_group, seed=seed, reorder=reorder)
     data_list <- all_data_list$data_list
     data.orig <- all_data_list$data.orig
@@ -2097,12 +2099,12 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, reorder=TRUE
             #theme_light()
                     
             
-            results <- list(Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre, y_test_pre=y_test_pre, Data=data), y_train=y_train, x_train=x_train, y_test=y_test, x_test=x_test,  Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, testAccuracy=test.accuracy.rate, testAccuracyFrame=test.results.frame, intermediateOutput_train=intermediate_output, intermediateOutput_test=intermediate_output_test)
+            results <- list(Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre, y_test_pre=y_test_pre, Data=data), y_train=y_train, x_train=x_train, y_test=y_test, x_test=x_test,  Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, testAccuracy=test.accuracy.rate, testAccuracyFrame=test.results.frame, intermediateOutput_train=intermediate_output, intermediateOutput_test=intermediate_output_test, bestTune=paramter_bundle)
         } else if(split==0){
-            results <- list(Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre, Data=data), y_train=y_train, x_train=x_train, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output)
+            results <- list(Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre, Data=data), y_train=y_train, x_train=x_train, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output, bestTune=paramter_bundle)
         }
     } else if(is.null(split) & is.null(split_by_group)){
-        results <- list(Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre, Data=data), y_train=y_train, x_train=x_train, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output)
+        results <- list(Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train_pre=y_train_pre, Data=data), y_train=y_train, x_train=x_train, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output, bestTune=paramter_bundle)
     }
     
     
@@ -2113,6 +2115,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, reorder=TRUE
 kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, reorder=TRUE, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, scale=FALSE, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss="mae", metric=c("mae", "mse"), start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, seed=NULL, lookback=NULL, delay=2, train_min_index=1, train_max_index=50, test_min_index=51, test_max_index=100, additional_min_index=101, additional_max_index=151, step=1){
     if(eager==TRUE){tensorflow::tfe_enable_eager_execution(device_policy = "silent")}
     
+    paramter_bundle <- data.frame(epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, model.type=model.type, scale=scale, seed=seed)
 
     all_data_list <- keras_data_gen_regress(model.type=model.type, data=data, dependent=dependent, predictors=predictors, scale=scale, split=split, split_by_group=split_by_group, the_group=the_group, seed=seed, reorder=reorder, lookback=lookback, delay=delay, train_min_index=train_min_index, train_max_index=train_max_index, test_min_index=test_min_index, test_max_index=test_max_index, additional_min_index=additional_min_index, additional_max_index=additional_max_index, step=step)
     data_list <- all_data_list$data_list
@@ -2344,7 +2347,7 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, reorder=T
         theme_light()
         
         
-        model.list <- list(ModelData=list(DataTrain=data.train, DataTest=data.test, predictors=predictors), Data=data_list, Model=serialize_model(model), x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test, x_additional=x_additional, y_additional=y_additional,  ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, ImportancePlot=imp_plot, trainAccuracy=correction.lm, testAccuracy=accuracy.rate, intermediateOutput_train=intermediate_output, intermediateOutput_test=intermediate_output_test)
+        model.list <- list(ModelData=list(DataTrain=data.train, DataTest=data.test, predictors=predictors), Data=data_list, Model=serialize_model(model), x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test, x_additional=x_additional, y_additional=y_additional,  ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, ImportancePlot=imp_plot, trainAccuracy=correction.lm, testAccuracy=accuracy.rate, intermediateOutput_train=intermediate_output, intermediateOutput_test=intermediate_output_test, bestTune=paramter_bundle)
     } else if(is.null(split) & is.null(split_by_group)){
            #all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
            #train.frame <- all.data
@@ -2361,7 +2364,7 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, reorder=T
            stat_smooth(method="lm") +
            theme_light()
            
-           model.list <- list(ModelData=list(DataTrain=data.train, predictors=predictors), Data=data_list, Model=serialize_model(model), x_train=x_train, y_train=y_train, AllData=All, ResultPlot=ResultPlot, ImportancePlot=imp_plot, trainAccuracy=correction.lm, intermediateOutput=intermediate_output)
+           model.list <- list(ModelData=list(DataTrain=data.train, predictors=predictors), Data=data_list, Model=serialize_model(model), x_train=x_train, y_train=y_train, AllData=All, ResultPlot=ResultPlot, ImportancePlot=imp_plot, trainAccuracy=correction.lm, intermediateOutput=intermediate_output, bestTune=paramter_bundle)
     }
     
     
@@ -2404,6 +2407,8 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, reorder=TRUE,
     strategy <- tf$distribute$MirroredStrategy()
     strategy$num_replicas_in_sync
     
+    paramter_bundle <- data.frame(epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, model.type=model.type, scale=scale, seed=seed)
+
 
     all_data_list <- keras_data_gen_classify(model.type=model.type, data=data, predictors=predictors, class=class, scale=scale, split=split, split_by_group=split_by_group, the_group=the_group, seed=seed, reorder=reorder)
     data_list <- all_data_list$data_list
@@ -2711,12 +2716,12 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, reorder=TRUE,
             theme_light()
                     
             
-            results <- list(DataTrain=data.train, DataTest=data.test, Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, y_test=y_test, x_test=x_test, model.data=data_list, y_train_pre=y_train_pre, y_test_pre=y_test_pre, Data=data), ResultPlot=ResultPlot, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, testAccuracy=test.accuracy.rate, testAccuracyFrame=test.results.frame, intermediateOutput_train=intermediate_output, intermediateOutput_test=intermediate_output_test)
+            results <- list(DataTrain=data.train, DataTest=data.test, Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, y_test=y_test, x_test=x_test, model.data=data_list, y_train_pre=y_train_pre, y_test_pre=y_test_pre, Data=data), ResultPlot=ResultPlot, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, testAccuracy=test.accuracy.rate, testAccuracyFrame=test.results.frame, intermediateOutput_train=intermediate_output, intermediateOutput_test=intermediate_output_test, bestTune=paramter_bundle)
         } else if(split==0){
-            results <- list(DataTrain=data.train, Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, model.data=data_list, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, y_train_pre=y_train_pre, Data=data), trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output)
+            results <- list(DataTrain=data.train, Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, model.data=data_list, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, y_train_pre=y_train_pre, Data=data), trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output, bestTune=paramter_bundle)
         }
     } else if(is.null(split) & is.null(split_by_group)){
-        results <- list(DataTrain=data.train, Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, model.data=data_list, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, y_train_pre=y_train_pre, Data=data), trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output)
+        results <- list(DataTrain=data.train, Model=serialize_model(model), Data=data_list, Result=result, Decode=list(levels=levels(y_train_pre), y_train=y_train, x_train=x_train, model.data=data_list, Importance=imp, ImportancePlot=imp_plot, historyPlot=history_plot, y_train_pre=y_train_pre, Data=data), trainAccuracy=train.accuracy.rate, trainAccuracyFrame=train.results.frame, intermediateOutput_train=intermediate_output, bestTune=paramter_bundle)
     }
     
     
@@ -2732,6 +2737,8 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, reorder=TR
     #strategy <- tf$distribute$MirroredStrategy()
     #strategy$num_replicas_in_sync
      
+     paramter_bundle <- data.frame(epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, model.type=model.type, scale=scale, seed=seed)
+
     
     all_data_list <- keras_data_gen_regress(model.type=model.type, data=data, predictors=predictors, dependent=dependent, scale=scale, split=split, split_by_group=split_by_group, the_group=the_group, seed=seed, reorder=reorder, lookback=lookback, delay=delay, train_min_index=train_min_index, train_max_index=train_max_index, test_min_index=test_min_index, test_max_index=test_max_index, additional_min_index=additional_min_index, additional_max_index=additional_max_index, step=step)
     data_list <- all_data_list$data_list
@@ -2951,7 +2958,7 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, reorder=TR
         theme_light()
         
         
-        model.list <- list(ModelData=list(DataTrain=data.train, DataTest=data.test, predictors=predictors), Data=data_list, x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test, x_additional=x_additional, y_additional=y_additional, Model=serialize_model(model),  ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, ImportancePlot=imp_plot, trainAccuracy=correction.lm, testAccuracy=accuracy.rate, intermediateOutput_train=intermediate_output_train, intermediateOutput_test=intermediate_output_test)
+        model.list <- list(ModelData=list(DataTrain=data.train, DataTest=data.test, predictors=predictors), Data=data_list, x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test, x_additional=x_additional, y_additional=y_additional, Model=serialize_model(model),  ValidationSet=results.frame, AllData=All, ResultPlot=ResultPlot, ImportancePlot=imp_plot, trainAccuracy=correction.lm, testAccuracy=accuracy.rate, intermediateOutput_train=intermediate_output_train, intermediateOutput_test=intermediate_output_test, bestTune=paramter_bundle)
     } else if(is.null(split) & is.null(split_by_group)){
            #all.data <- dataPrep(data=data.orig, variable=dependent, predictors=predictors)
            #train.frame <- all.data
@@ -2968,7 +2975,7 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, reorder=TR
            stat_smooth(method="lm") +
            theme_light()
            
-           model.list <- list(ModelData=list(DataTrain=data.train, predictors=predictors), Data=data_list, x_train=x_train, y_train=y_train, Model=serialize_model(model), AllData=All, ResultPlot=ResultPlot, ImportancePlot=imp_plot, trainAccuracy=correction.lm, intermediateOutput_train=intermediate_output)
+           model.list <- list(ModelData=list(DataTrain=data.train, predictors=predictors), Data=data_list, x_train=x_train, y_train=y_train, Model=serialize_model(model), AllData=All, ResultPlot=ResultPlot, ImportancePlot=imp_plot, trainAccuracy=correction.lm, intermediateOutput_train=intermediate_output, bestTune=paramter_bundle)
     }
     
     
