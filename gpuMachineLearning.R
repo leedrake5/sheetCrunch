@@ -1,4 +1,4 @@
-source("MachineLearning.R")
+tryCatch(source("MachineLearning.R"), error=function(e) source("https://raw.githubusercontent.com/leedrake5/sheetCrunch/master/MachineLearning.R"))
 
 #install.packages("https://cran.r-project.org/src/contrib/Archive/keras/keras_2.4.0.tar.gz", repos=NULL, type="source")
 
@@ -1772,7 +1772,7 @@ keras_model_gen <- function(model.type, channels, activation="relu", dropout=0.2
 kerasSingleGPURunClassify <- function(data, class, predictors=NULL, reorder=TRUE, min.n=5, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss=NULL, metric="sparse_categorical_accuracy", callback="recall", start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", weights=NULL, save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, scale=FALSE, seed=NULL){
     if(eager==TRUE){tf$executing_eagerly()}
     
-    paramter_bundle <- data.frame(epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, model.type=model.type, scale=scale, seed=seed)
+    paramter_bundle <- data.frame(epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=paste(metric, collapse=","), start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, model.type=model.type, scale=scale)
     
     all_data_list <- keras_data_gen_classify(model.type=model.type, data=data, predictors=predictors, class=class, split=split, scale=scale, split_by_group=split_by_group, the_group=the_group, seed=seed, reorder=reorder)
     data_list <- all_data_list$data_list
@@ -2115,7 +2115,7 @@ kerasSingleGPURunClassify <- function(data, class, predictors=NULL, reorder=TRUE
 kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, reorder=TRUE, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, scale=FALSE, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss="mae", metric=c("mae", "mse"), start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, seed=NULL, lookback=NULL, delay=2, train_min_index=1, train_max_index=50, test_min_index=51, test_max_index=100, additional_min_index=101, additional_max_index=151, step=1){
     if(eager==TRUE){tensorflow::tfe_enable_eager_execution(device_policy = "silent")}
     
-    paramter_bundle <- data.frame(epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, model.type=model.type, scale=scale, seed=seed)
+    paramter_bundle <- data.frame(epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=paste(metric, collapse=","), start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, model.type=model.type, scale=scale)
 
     all_data_list <- keras_data_gen_regress(model.type=model.type, data=data, dependent=dependent, predictors=predictors, scale=scale, split=split, split_by_group=split_by_group, the_group=the_group, seed=seed, reorder=reorder, lookback=lookback, delay=delay, train_min_index=train_min_index, train_max_index=train_max_index, test_min_index=test_min_index, test_max_index=test_max_index, additional_min_index=additional_min_index, additional_max_index=additional_max_index, step=step)
     data_list <- all_data_list$data_list
@@ -2407,7 +2407,7 @@ kerasMultiGPURunClassify <- function(data, class, predictors=NULL, reorder=TRUE,
     strategy <- tf$distribute$MirroredStrategy()
     strategy$num_replicas_in_sync
     
-    paramter_bundle <- data.frame(epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, model.type=model.type, scale=scale, seed=seed)
+    paramter_bundle <- data.frame(epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=paste(metric, collapse=","), start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, model.type=model.type, scale=scale)
 
 
     all_data_list <- keras_data_gen_classify(model.type=model.type, data=data, predictors=predictors, class=class, scale=scale, split=split, split_by_group=split_by_group, the_group=the_group, seed=seed, reorder=reorder)
@@ -2737,7 +2737,7 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, reorder=TR
     #strategy <- tf$distribute$MirroredStrategy()
     #strategy$num_replicas_in_sync
      
-     paramter_bundle <- data.frame(epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=metric, callback=callback, start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, model.type=model.type, scale=scale, seed=seed)
+     paramter_bundle <- data.frame(epochs=epochs, activation=activation, dropout=dropout, optimizer=optimizer, learning.rate=learning.rate, loss=loss, metric=paste(metric, collapse=","), start_kernel=start_kernel, filters=filters, pool_size=pool_size, batch_size=batch_size, model.type=model.type, scale=scale)
 
     
     all_data_list <- keras_data_gen_regress(model.type=model.type, data=data, predictors=predictors, dependent=dependent, scale=scale, split=split, split_by_group=split_by_group, the_group=the_group, seed=seed, reorder=reorder, lookback=lookback, delay=delay, train_min_index=train_min_index, train_max_index=train_max_index, test_min_index=test_min_index, test_max_index=test_max_index, additional_min_index=additional_min_index, additional_max_index=additional_max_index, step=step)
@@ -8648,8 +8648,8 @@ bayesMLTable <- function(data
                 qual_list <- list()
                 for(i in 1:nrow(qual_grid)){
                     print(paste0("Starting ", i, " of ", nrow(qual_grid), " Loss:", loss=qual_grid[i,"loss"], ", Optimizer:", optimizer=qual_grid[i,"optimizer"], " Activation:", activation=qual_grid[i,"activation"]))
-                    cv <- tryCatch(xgbLinearNeuralNet(data=data, predictors=predictors, reorder=reorder, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=4, filters=32, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model,  xgbalpha="0-0", xgbeta="0.3-0.3", xgblambda="0.9-0.9",  nrounds=test_nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=5, Bayes=FALSE, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, seed=cv_seed, lookback=lookback, delay=delay, train_min_index=train_min_index, train_max_index=train_max_index, test_min_index=test_min_index, test_max_index=test_max_index, additional_min_index=additional_min_index, additional_max_index=additional_max_index, step=step)
-                    , error=function(e) NULL)
+                    cv <- xgbLinearNeuralNet(data=data, predictors=predictors, reorder=reorder, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=4, filters=32, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model,  xgbalpha="0-0", xgbeta="0.3-0.3", xgblambda="0.9-0.9",  nrounds=test_nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=5, Bayes=FALSE, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, seed=cv_seed, lookback=lookback, delay=delay, train_min_index=train_min_index, train_max_index=train_max_index, test_min_index=test_min_index, test_max_index=test_max_index, additional_min_index=additional_min_index, additional_max_index=additional_max_index, step=step)
+                    #, error=function(e) NULL)
                     
                     qual_list[[i]] <-list(Index=paste0("Row_", i), Score =  metricGen(cv=cv, bayes_metric=bayes_metric))
                     print(paste0(bayes_metric, ": ", round(metricGen(cv=cv, bayes_metric=bayes_metric)$Score, 3)))
