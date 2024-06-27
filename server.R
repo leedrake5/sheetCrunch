@@ -2837,7 +2837,7 @@ choiceLines <- reactive({
   
   output$knumui <- renderUI({
       
-      numericInput("knum", label = "K-Means", value=screeCrunch())
+      numericInput("knum", label = "K-Means", value=2)
       
   })
   

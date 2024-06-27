@@ -2763,8 +2763,8 @@ kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, reorder=TR
         y_test <- all_data_list$y_test
     }
     
-    x_additional <- tryCatch(all_data_list$x_additional, function(e) NULL)
-    y_additional <- tryCatch(all_data_list$y_additional, function(e) NULL)
+    x_additional <- tryCatch(all_data_list$x_additional, error = function(e) NULL, warning = function(w) NULL, message = function(m) NULL, finally = {})
+    y_additional <- tryCatch(all_data_list$y_additional, error = function(e) NULL, warning = function(w) NULL, message = function(m) NULL, finally = {})
 
     #channels <- 400
     
@@ -8648,8 +8648,8 @@ bayesMLTable <- function(data
                 qual_list <- list()
                 for(i in 1:nrow(qual_grid)){
                     print(paste0("Starting ", i, " of ", nrow(qual_grid), " Loss:", loss=qual_grid[i,"loss"], ", Optimizer:", optimizer=qual_grid[i,"optimizer"], " Activation:", activation=qual_grid[i,"activation"]))
-                    cv <- xgbLinearNeuralNet(data=data, predictors=predictors, reorder=reorder, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=4, filters=32, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model,  xgbalpha="0-0", xgbeta="0.3-0.3", xgblambda="0.9-0.9",  nrounds=test_nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=5, Bayes=FALSE, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, seed=cv_seed, lookback=lookback, delay=delay, train_min_index=train_min_index, train_max_index=train_max_index, test_min_index=test_min_index, test_max_index=test_max_index, additional_min_index=additional_min_index, additional_max_index=additional_max_index, step=step)
-                    #, error=function(e) NULL)
+                    cv <- tryCatch(xgbLinearNeuralNet(data=data, predictors=predictors, reorder=reorder, variable=variable, split=split, split_by_group=split_by_group, the_group=the_group, epochs=epochs_test, activation=qual_grid[i, "activation"], dropout=0.2, optimizer=qual_grid[i, "optimizer"], learning.rate=0.0001, loss=qual_grid[i, "loss"], metric=metric, start_kernel=4, filters=32, pool_size=2, batch_size=batch_size, model.type=model.type, importance=FALSE, weights=NULL, n_gpus=n_gpus, scale=TRUE, save.directory=NULL, save.name=NULL, verbose=0, eager=eager, previous.model=previous.model,  xgbalpha="0-0", xgbeta="0.3-0.3", xgblambda="0.9-0.9",  nrounds=test_nrounds, test_nrounds=test_nrounds, xgb_eval_metric=xgb_eval_metric, xgb_metric=xgb_metric, train=train, cvrepeats=cvrepeats, number=5, Bayes=FALSE, folds=folds, init_points=init_points, n_iter=n_iter, parallelMethod=parallelMethod, seed=cv_seed, lookback=lookback, delay=delay, train_min_index=train_min_index, train_max_index=train_max_index, test_min_index=test_min_index, test_max_index=test_max_index, additional_min_index=additional_min_index, additional_max_index=additional_max_index, step=step)
+                    , error=function(e) NULL)
                     
                     qual_list[[i]] <-list(Index=paste0("Row_", i), Score =  metricGen(cv=cv, bayes_metric=bayes_metric))
                     print(paste0(bayes_metric, ": ", round(metricGen(cv=cv, bayes_metric=bayes_metric)$Score, 3)))
