@@ -38,6 +38,7 @@ library(parallelMap)
 library(magrittr)
 library(ParBayesianOptimization)
 library(data.table)
+library(shapviz)
 
 #################################################################
 # MISC Functions
@@ -10258,5 +10259,61 @@ model_sheet_gen <- function(directory, pattern=".rdata", recursive=FALSE, val_ty
 
     return(bundle)
     
+    
+}
+
+binary_converter <- function(xgboost_object){
+    observed <- xgboost_object$Model$trainingData[,1]
+    binary <- list()
+    for(i in unique(observed)){
+        binary[[i]] <- observed==i
+    }
+    return(binary)
+}
+
+
+
+shapify_spectra <- function(xgboost_object){
+    mean_spectra <- colMeans(xgboost_object$Model$trainingData[,-1])
+    scaled_mean_spectra <- (mean_spectra - min(mean_spectra)) / (max(mean_spectra) - min(mean_spectra))
+    binary_results <- binary_converter(xgboost_object)
+    full_data <- dataPrep(xgboost_object$ModelData$Data$Data, variable=variable, scale=FALSE)
+    full_data$Data <- full_data$Data[order(full_data$Data$Sample),]
+    shap_values_full <- shapviz(xgboost_object$Model$finalModel, X_pred = data.matrix(full_data$Data[order(full_data$Data$Sample),c(-1, -2)]))
+    names(shap_values_full) <- as.character(xgboost_object$Model$finalModel$obsLevels)
+    shap_values_useable <- list()
+    for(i in names(shap_values_full)){
+        shap_values_useable[[i]] <- as.data.frame(get_shap_values(shap_values_full[[i]]))
+    }
+    shap_binary_list <- list()
+    for(i in names(binary_results)){
+        shap_binary_list[[i]] <- list()
+        shap_binary_list[[i]][["Full"]] <- list()
+        shap_binary_list[[i]][["Full"]][["True"]] <- shap_values_useable[[i]][binary_results[[i]],]
+        shap_binary_list[[i]][["Full"]][["False"]] <- shap_values_useable[[i]][!binary_results[[i]],]
+        shap_binary_list[[i]][["SpectraFrame"]] <- list()
+        shap_binary_list[[i]][["SpectraFrame"]] <- data.frame(Energy=as.numeric(gsub("X", "", names(shap_binary_list[[i]][["Full"]][["True"]]))), CPS=scaled_mean_spectra, CPSMax=colMeans(shap_binary_list[[i]][["Full"]][["True"]]), CPSMin=colMeans(shap_binary_list[[i]][["Full"]][["False"]]), Class=i)
+    }
+    spectra_frame_list <- list()
+    for(i in names(shap_binary_list)){
+        spectra_frame_list[[i]] <- shap_binary_list[[i]][["SpectraFrame"]]
+    }
+    full_shap_spectra_frame <- as.data.frame(data.table::rbindlist(spectra_frame_list))
+    return(list(meanSpectra=mean_spectra, scaledMeanSpectra=scaled_mean_spectra, shapStuff=shap_binary_list, shapSpectraFrame=full_shap_spectra_frame))
+}
+
+
+
+plot_shapified_spectra <- function(xgboost_object){
+        
+    shapified_spectra <- shapify_spectra(xgboost_object)
+        
+    result <- ggplot(shapified_spectra$shapSpectraFrame, aes(Energy, CPS)) +
+    geom_ribbon(aes(x=shapified_spectra$shapSpectraFrame$Energy, ymin=CPS + CPSMin, ymax=CPS + CPSMax, colour=Class, fill=Class), alpha=0.8) +
+    geom_line() +
+    ggtitle("SHAP impact by class") +
+    scale_x_continuous("Energy (keV)") +
+    scale_y_continuous("Normalized Counts per Second") +
+    theme_light()
     
 }
