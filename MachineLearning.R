@@ -1654,20 +1654,24 @@ classifyXGBoostTree <- function(data
         data <- data[, !colnames(data) %in% class]
         data$Class <- as.vector(as.character(classhold))
     
-    #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
+    # This handles data splitting if you choose to cross-validate (best way to evaluate a model)
     if(!is.null(split)){
-        #Generaate random numbers based on the user-selected split
-        a <- data$Sample %in% as.vector(sample(data$Sample, size=(1-split)*length(data$Sample)))
-        #Generate traaining and test sets
-        data.train <- data[a,]
-        data.test <- data[!a,]
-        #Set y_train and x_train for later
+        # Use createDataPartition to ensure stratified sampling based on the 'Class' variable
+        set.seed(seed)  # Set a seed for reproducibility
+        train_indices <- createDataPartition(data$Class, p=split, list=FALSE)
+
+        # Generate training and test sets using the indices from createDataPartition
+        data.train <- data[train_indices, ]
+        data.test <- data[-train_indices, ]
+
+        # Set y_train and x_train for later
         y_train <- data.train$Class
         y_test <- data.test$Class
         x_train <- data.train[, !colnames(data) %in% c("Sample", "Class")]
         x_test <- data.test[, !colnames(data) %in% c("Sample", "Class")]
+
     } else if(is.null(split)){
-        #This just puts placeholders for the whole data set
+        # This just puts placeholders for the whole data set
         data.train <- data
         y_train <- data$Class
         x_train <- data[, !colnames(data) %in% c("Sample", "Class")]
@@ -3036,26 +3040,30 @@ classifyXGBoostDart <- function(data
     #Set maximum delta step - allowed tree estimation
     scaleposweight.vec <- as.numeric(unlist(strsplit(as.character(scaleposweight), "-")))
 
-    #Boring data frame stuff
+        #Boring data frame stuff
         data <- data[complete.cases(data),]
         classhold <- as.vector(make.names(data[,class]))
         data <- data[, !colnames(data) %in% class]
         data$Class <- as.vector(as.character(classhold))
     
-    #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
+    # This handles data splitting if you choose to cross-validate (best way to evaluate a model)
     if(!is.null(split)){
-        #Generaate random numbers based on the user-selected split
-        a <- data$Sample %in% as.vector(sample(data$Sample, size=(1-split)*length(data$Sample)))
-        #Generate traaining and test sets
-        data.train <- data[a,]
-        data.test <- data[!a,]
-        #Set y_train and x_train for later
+        # Use createDataPartition to ensure stratified sampling based on the 'Class' variable
+        set.seed(seed)  # Set a seed for reproducibility
+        train_indices <- createDataPartition(data$Class, p=split, list=FALSE)
+
+        # Generate training and test sets using the indices from createDataPartition
+        data.train <- data[train_indices, ]
+        data.test <- data[-train_indices, ]
+
+        # Set y_train and x_train for later
         y_train <- data.train$Class
         y_test <- data.test$Class
         x_train <- data.train[, !colnames(data) %in% c("Sample", "Class")]
         x_test <- data.test[, !colnames(data) %in% c("Sample", "Class")]
+
     } else if(is.null(split)){
-        #This just puts placeholders for the whole data set
+        # This just puts placeholders for the whole data set
         data.train <- data
         y_train <- data$Class
         x_train <- data[, !colnames(data) %in% c("Sample", "Class")]
@@ -4435,20 +4443,24 @@ classifyXGBoostLinear <- function(data
      
         
     
-    #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
+    # This handles data splitting if you choose to cross-validate (best way to evaluate a model)
     if(!is.null(split)){
-        #Generaate random numbers based on the user-selected split
-        a <- data$Sample %in% as.vector(sample(data$Sample, size=(1-split)*length(data$Sample)))
-        #Generate traaining and test sets
-        data.train <- data[a,]
-        data.test <- data[!a,]
-        #Set y_train and x_train for later
+        # Use createDataPartition to ensure stratified sampling based on the 'Class' variable
+        set.seed(seed)  # Set a seed for reproducibility
+        train_indices <- createDataPartition(data$Class, p=split, list=FALSE)
+
+        # Generate training and test sets using the indices from createDataPartition
+        data.train <- data[train_indices, ]
+        data.test <- data[-train_indices, ]
+
+        # Set y_train and x_train for later
         y_train <- data.train$Class
         y_test <- data.test$Class
         x_train <- data.train[, !colnames(data) %in% c("Sample", "Class")]
         x_test <- data.test[, !colnames(data) %in% c("Sample", "Class")]
+
     } else if(is.null(split)){
-        #This just puts placeholders for the whole data set
+        # This just puts placeholders for the whole data set
         data.train <- data
         y_train <- data$Class
         x_train <- data[, !colnames(data) %in% c("Sample", "Class")]
@@ -5574,26 +5586,30 @@ classifyForest <- function(data
         get_os()
     }
     
-    #Boring data frame stuff
+        #Boring data frame stuff
         data <- data[complete.cases(data),]
         classhold <- as.vector(make.names(data[,class]))
         data <- data[, !colnames(data) %in% class]
         data$Class <- as.vector(as.character(classhold))
     
-    #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
+    # This handles data splitting if you choose to cross-validate (best way to evaluate a model)
     if(!is.null(split)){
-        #Generaate random numbers based on the user-selected split
-        a <- data$Sample %in% as.vector(sample(data$Sample, size=(1-split)*length(data$Sample)))
-        #Generate traaining and test sets
-        data.train <- data[a,]
-        data.test <- data[!a,]
-        #Set y_train and x_train for later
+        # Use createDataPartition to ensure stratified sampling based on the 'Class' variable
+        set.seed(seed)  # Set a seed for reproducibility
+        train_indices <- createDataPartition(data$Class, p=split, list=FALSE)
+
+        # Generate training and test sets using the indices from createDataPartition
+        data.train <- data[train_indices, ]
+        data.test <- data[-train_indices, ]
+
+        # Set y_train and x_train for later
         y_train <- data.train$Class
         y_test <- data.test$Class
         x_train <- data.train[, !colnames(data) %in% c("Sample", "Class")]
         x_test <- data.test[, !colnames(data) %in% c("Sample", "Class")]
+
     } else if(is.null(split)){
-        #This just puts placeholders for the whole data set
+        # This just puts placeholders for the whole data set
         data.train <- data
         y_train <- data$Class
         x_train <- data[, !colnames(data) %in% c("Sample", "Class")]
@@ -6303,26 +6319,30 @@ classifySVM <- function(data
     svmsigma.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmsigma), "-"))), error=function(x) "1-2")
     svmlength.vec <- tryCatch(as.numeric(unlist(strsplit(as.character(svmlength), "-"))), error=function(x) "1-2")
     
-    #Boring data frame stuff
+        #Boring data frame stuff
         data <- data[complete.cases(data),]
         classhold <- as.vector(make.names(data[,class]))
         data <- data[, !colnames(data) %in% class]
         data$Class <- as.vector(as.character(classhold))
     
-    #This handles data splitting if you choose to cross-validate (best waay to evaluate a model)
+    # This handles data splitting if you choose to cross-validate (best way to evaluate a model)
     if(!is.null(split)){
-        #Generaate random numbers based on the user-selected split
-        a <- data$Sample %in% as.vector(sample(data$Sample, size=(1-split)*length(data$Sample)))
-        #Generate traaining and test sets
-        data.train <- data[a,]
-        data.test <- data[!a,]
-        #Set y_train and x_train for later
+        # Use createDataPartition to ensure stratified sampling based on the 'Class' variable
+        set.seed(seed)  # Set a seed for reproducibility
+        train_indices <- createDataPartition(data$Class, p=split, list=FALSE)
+
+        # Generate training and test sets using the indices from createDataPartition
+        data.train <- data[train_indices, ]
+        data.test <- data[-train_indices, ]
+
+        # Set y_train and x_train for later
         y_train <- data.train$Class
         y_test <- data.test$Class
         x_train <- data.train[, !colnames(data) %in% c("Sample", "Class")]
         x_test <- data.test[, !colnames(data) %in% c("Sample", "Class")]
+
     } else if(is.null(split)){
-        #This just puts placeholders for the whole data set
+        # This just puts placeholders for the whole data set
         data.train <- data
         y_train <- data$Class
         x_train <- data[, !colnames(data) %in% c("Sample", "Class")]
@@ -10273,7 +10293,7 @@ binary_converter <- function(xgboost_object){
 
 
 
-shapify_spectra <- function(xgboost_object){
+shapify_spectra <- function(xgboost_object, variable){
     mean_spectra <- colMeans(xgboost_object$Model$trainingData[,-1])
     scaled_mean_spectra <- (mean_spectra - min(mean_spectra)) / (max(mean_spectra) - min(mean_spectra))
     binary_results <- binary_converter(xgboost_object)
@@ -10304,16 +10324,13 @@ shapify_spectra <- function(xgboost_object){
 
 
 
-plot_shapified_spectra <- function(xgboost_object){
+plot_shapified_spectra <- function(xgboost_object, variable){
         
-    shapified_spectra <- shapify_spectra(xgboost_object)
+    shapified_spectra <- shapify_spectra(xgboost_object, variable)
         
     result <- ggplot(shapified_spectra$shapSpectraFrame, aes(Energy, CPS)) +
     geom_ribbon(aes(x=shapified_spectra$shapSpectraFrame$Energy, ymin=CPS + CPSMin, ymax=CPS + CPSMax, colour=Class, fill=Class), alpha=0.8) +
     geom_line() +
-    ggtitle("SHAP impact by class") +
-    scale_x_continuous("Energy (keV)") +
-    scale_y_continuous("Normalized Counts per Second") +
     theme_light()
     
 }
