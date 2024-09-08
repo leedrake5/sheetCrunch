@@ -10334,3 +10334,27 @@ plot_shapified_spectra <- function(xgboost_object, variable){
     theme_light()
     
 }
+
+
+plot_confusion_matrix <- function(xgboost_object, test="testAccuracy"){
+    plt <- as.data.frame(xgboost_object[[test]]$table)
+    plt$Prediction <- factor(plt$Prediction, levels=levels(plt$Prediction))
+    plt$Reference <- factor(plt$Reference, levels=levels(plt$Prediction))  # Ensure Reference is a factor and has correct levels
+    
+    # Calculate the sum of frequencies for each reference class
+    total_per_reference <- aggregate(Freq ~ Reference, data = plt, FUN = sum)
+    
+    # Merge totals back to the main data frame and calculate percentages
+    plt <- merge(plt, total_per_reference, by="Reference")
+    plt$Percentage <- with(plt, Freq.x / Freq.y * 100)
+    
+    # Plot using ggplot2
+    ggplot(plt, aes(x = Reference, y = Prediction, fill = Percentage)) +
+        geom_tile() +
+        geom_text(aes(label = sprintf("%.1f%%", Percentage)), size = 3) +  # Show percentage on tiles
+        scale_fill_gradient(low = "white", high = "#00A86B", name = "Percentage") +
+        labs(x = "Reference", y = "Prediction") +
+        scale_x_discrete(labels = levels(plt$Prediction)) +
+        scale_y_discrete(labels = levels(plt$Prediction)) +
+        theme_light()
+}
