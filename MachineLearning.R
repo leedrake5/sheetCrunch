@@ -11,7 +11,7 @@
 ## MISC CODE FOR MODELING
 #########################################################################################################################################
 #Check to see if needed packages exist, and automatically install them if needed
-list.of.packages <- c("devtools", "xgboost", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm", "ParBayesianOptimization", "data.table")
+list.of.packages <- c("devtools", "xgboost", "ggplot2", "nnet", "randomForest",  "doParallel", "parallel", "rfUtilities", "rBayesianOptimization", "mlr", "parallelMap", "tidyverse", "MLmetrics", "kernlab", "brnn", "bartMachine", "arm", "ParBayesianOptimization", "data.table", "shapviz")
 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) lapply(new.packages, function(x) install.packages(x, repos="http://cran.rstudio.com/", dep = TRUE))
