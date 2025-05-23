@@ -770,10 +770,10 @@ xgb_cv_opt_tree <- function (data
                              , bytree_range = c(0.4, 1L)
                              , min_child_range=c(1L, 3L)
                              , gamma_range=c(0L, 10L)
-                             , max_delta_step_range=c(0L, 10L)
-                             , alpha_range=c(0, 10)
-                             , lambda_range=c(0, 100)
-                             , scale_pos_weight_range=c(0, 10)
+                             #, max_delta_step_range=c(0L, 10L)
+                             #, alpha_range=c(0, 10)
+                             #, lambda_range=c(0, 100)
+                             #, scale_pos_weight_range=c(0, 10)
                              , init_points = 4
                              , n_iter = 10
                              , acq = "ei"
@@ -828,10 +828,10 @@ xgb_cv_opt_tree <- function (data
                            , nrounds_opt
                            , subsample_opt
                            , bytree_opt
-                           , max_delta_step_opt
-                           , alpha_opt
-                           , lambda_opt
-                           , scale_pos_weight_opt
+                           #, max_delta_step_opt
+                           #, alpha_opt
+                           #, lambda_opt
+                           #, scale_pos_weight_opt
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
@@ -842,10 +842,10 @@ xgb_cv_opt_tree <- function (data
                                        , max_depth = max_depth_opt
                                        , subsample = subsample_opt
                                        , colsample_bytree = bytree_opt
-                                       , lambda = lambda_opt
-                                       , alpha = alpha_opt
-                                       , max_delta_step = max_delta_step_opt
-                                       , scale_pos_weight = scale_pos_weight_opt)
+                                       #, lambda = lambda_opt
+                                       #, alpha = alpha_opt
+                                       #, max_delta_step = max_delta_step_opt
+                                       #, scale_pos_weight = scale_pos_weight_opt)
                          , booster = "gbtree"
                          , objective = object_fun
                          , eval_metric = eval_met
@@ -882,10 +882,10 @@ xgb_cv_opt_tree <- function (data
                            , nrounds_opt
                            , subsample_opt
                            , bytree_opt
-                           , max_delta_step
-                           , alpha
-                           , lambda
-                           , scale_pos_weight
+                           #, max_delta_step_opt
+                           #, alpha_opt
+                           #, lambda_opt
+                           #, scale_pos_weight_opt
                            ) {
             object_fun <- objectfun
             eval_met <- evalmetric
@@ -937,10 +937,10 @@ xgb_cv_opt_tree <- function (data
                                                     , nrounds_opt = nrounds_range
                                                     , subsample_opt = subsample_range
                                                     , bytree_opt = bytree_range
-                                                    , lambda_opt = lambda_range
-                                                    , alpha_opt = alpha_range
-                                                    , max_delta_step_opt = max_delta_step_range
-                                                    , scale_pos_weight_opt = scale_pos_weight_range
+                                                    #, lambda_opt = lambda_range
+                                                    #, alpha_opt = alpha_range
+                                                    #, max_delta_step_opt = max_delta_step_range
+                                                    #, scale_pos_weight_opt = scale_pos_weight_range
                                                     )
                                     , init_points
                                     , init_grid_dt = NULL
@@ -950,8 +950,6 @@ xgb_cv_opt_tree <- function (data
                                     , eps
                                     , optkernel
                                     , verbose = verbose
-                                    , tree_method = tree_method
-                                    , single_precision_histogram = single_precision_histogram
                                     )
     return(opt_res)
 }
@@ -972,10 +970,10 @@ xgb_cv_opt_dart <- function (data
                              , bytree_range = c(0.4, 1L)
                              , min_child_range=c(1L, 3L)
                              , gamma_range=c(0L, 1L)
-                             , max_delta_step_range=c(0L, 10L)
-                             , alpha_range=c(0, 10)
-                             , lambda_range=c(0, 100)
-                             , scale_pos_weight_range=c(0, 10)
+                             #, max_delta_step_range=c(0L, 10L)
+                             #, alpha_range=c(0, 10)
+                             #, lambda_range=c(0, 100)
+                             #, scale_pos_weight_range=c(0, 10)
                              , init_points = 4
                              , n_iter = 10
                              , acq = "ei"
@@ -1029,10 +1027,10 @@ xgb_cv_opt_dart <- function (data
                            , nrounds_opt
                            , subsample_opt
                            , bytree_opt
-                           , max_delta_step_opt
-                           , alpha_opt
-                           , lambda_opt
-                           , scale_pos_weight_opt
+                           #, max_delta_step_opt
+                           #, alpha_opt
+                           #, lambda_opt
+                           #, scale_pos_weight_opt
                            , nthread
                            ) {
             object_fun <- objectfun
@@ -1046,10 +1044,10 @@ xgb_cv_opt_dart <- function (data
                                        , skip_drop = skip_range_opt
                                        , subsample = subsample_opt
                                        , colsample_bytree = bytree_opt
-                                       , lambda = lambda_opt
-                                       , alpha = alpha_opt
-                                       , max_delta_step = max_delta_step_opt
-                                       , scale_pos_weight = scale_pos_weight_opt
+                                       #, lambda = lambda_opt
+                                       #, alpha = alpha_opt
+                                       #, max_delta_step = max_delta_step_opt
+                                       #, scale_pos_weight = scale_pos_weight_opt
                                        )
                          , booster = "dart"
                          , objective = object_fun
@@ -1089,10 +1087,10 @@ xgb_cv_opt_dart <- function (data
                            , nrounds_opt
                            , subsample_opt
                            , bytree_opt
-                           , max_delta_step_opt
-                           , alpha_opt
-                           , lambda_opt
-                           , scale_pos_weight_opt
+                           #, max_delta_step_opt
+                           #, alpha_opt
+                           #, lambda_opt
+                           #, scale_pos_weight_opt
                            , nthread
                            ) {
             object_fun <- objectfun
@@ -1107,10 +1105,10 @@ xgb_cv_opt_dart <- function (data
                                        , skip_drop = skip_range_opt
                                        , subsample = subsample_opt
                                        , colsample_bytree = bytree_opt
-                                       , lambda = lambda_opt
-                                       , alpha = alpha_opt
-                                       , max_delta_step = max_delta_step_opt
-                                       , scale_pos_weight = scale_pos_weight_opt
+                                       #, lambda = lambda_opt
+                                       #, alpha = alpha_opt
+                                       #, max_delta_step = max_delta_step_opt
+                                       #, scale_pos_weight = scale_pos_weight_opt
                                        )
                          , booster = "dart"
                          , objective = object_fun
@@ -1149,10 +1147,10 @@ xgb_cv_opt_dart <- function (data
                                                     , nrounds_opt = nrounds_range
                                                     , subsample_opt = subsample_range
                                                     , bytree_opt = bytree_range
-                                                    , lambda_opt = lambda_range
-                                                    , alpha_opt = alpha_range
-                                                    , max_delta_step_opt = max_delta_step_range
-                                                    , scale_pos_weight_opt = scale_pos_weight_range
+                                                    #, lambda_opt = lambda_range
+                                                    #, alpha_opt = alpha_range
+                                                    #, max_delta_step_opt = max_delta_step_range
+                                                    #, scale_pos_weight_opt = scale_pos_weight_range
                                                     )
                                     , init_points
                                     , init_grid_dt = NULL
@@ -1694,28 +1692,28 @@ classifyXGBoostTree <- function(data
             nrounds = test_nrounds
             , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
             , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
-            , alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
+            #, alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
-            , lambda=c(xgblambda.vec[1], xgblambda.vec[2])
+            #, lambda=c(xgblambda.vec[1], xgblambda.vec[2])
             , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
             , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
             , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
-            , max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
-            , scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
+            #, max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
+            #, scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
         ), init_points=init_points)
     } else if(Bayes==TRUE){
         expand.grid(
             nrounds = test_nrounds
             , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
             , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
-            , alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
+            #, alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
-            , lambda=c(xgblambda.vec[1], xgblambda.vec[2])
+            #, lambda=c(xgblambda.vec[1], xgblambda.vec[2])
             , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
             , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
             , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
-            , max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
-            , scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
+            #, max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
+            #, scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
         )
     }
     
@@ -1892,14 +1890,14 @@ if(is.null(eval_metric)){
             nrounds = nrounds
             , max_depth = xgb_model_pre$bestTune$max_depth
             , colsample_bytree = xgb_model_pre$bestTune$colsample_bytree
-            , alpha = xgb_model_pre$bestTune$alpha
+            #, alpha = xgb_model_pre$bestTune$alpha
             , eta = xgb_model_pre$bestTune$eta
-            , lambda = xgb_model_pre$bestTune$lambda
+            #, lambda = xgb_model_pre$bestTune$lambda
             , gamma = xgb_model_pre$bestTune$gamma
             , min_child_weight = xgb_model_pre$bestTune$min_child_weight
             , subsample = xgb_model_pre$bestTune$subsample
-            , max_delta_step = xgb_model_pre$bestTune$smax_delta_step
-            , scale_pos_weight = xgb_model_pre$bestTune$scale_pos_weight
+            #, max_delta_step = xgb_model_pre$bestTune$smax_delta_step
+            #, scale_pos_weight = xgb_model_pre$bestTune$scale_pos_weight
         )
     } else if(nrow(xgbGridPre)>1 && Bayes==TRUE){
         #data.training.temp <- data.training
@@ -1908,16 +1906,16 @@ if(is.null(eval_metric)){
                    label = Class
                    , classes=num_classes
                    , nrounds_range=as.integer(c(100, nrounds))
-                   , alpha_range=xgbalpha.vec
+                   #, alpha_range=xgbalpha.vec
                    , eta_range=xgbeta.vec
-                   , lambda_range=xgblambda.vec
+                   #, lambda_range=xgblambda.vec
                    , gamma_range=xgbgamma.vec
                    , max_depth_range=as.integer(tree.depth.vec)
                    , min_child_range=as.integer(xgbminchild.vec)
                    , subsample_range=xgbsubsample.vec
                    , bytree_range=xgbcolsample.vec
-                   , max_delta_step_range = maxdeltastep.vec
-                   , scale_pos_weight_range = scaleposweight.vec
+                   #, max_delta_step_range = maxdeltastep.vec
+                   #, scale_pos_weight_range = scaleposweight.vec
                    , objectfun = objective.mod
                    , evalmetric = eval_metric
                    , tree_method = tree_method
@@ -1938,15 +1936,15 @@ if(is.null(eval_metric)){
             , eval.metric = metric.mod
             , objective = objective.mod
             , max_depth = OPT_Res$Best_Par["max_depth_opt"]
-            , alpha = OPT_Res$Best_Par["alpha_opt"]
+            #, alpha = OPT_Res$Best_Par["alpha_opt"]
             , eta = OPT_Res$Best_Par["eta_opt"]
-            , lambda = OPT_Res$Best_Par["lambda_opt"]
+            #, lambda = OPT_Res$Best_Par["lambda_opt"]
             , gamma = OPT_Res$Best_Par["gamma_opt"]
             , subsample = OPT_Res$Best_Par["subsample_opt"]
             , colsample_bytree = OPT_Res$Best_Par["bytree_opt"]
             , min_child_weight = OPT_Res$Best_Par["minchild_opt"]
-            , scale_pos_weight = OPT_Res$Best_Par["scale_pos_weight"]
-            , max_delta_step = OPT_Res$Best_Par["max_delta_step"]
+            #, scale_pos_weight = OPT_Res$Best_Par["scale_pos_weight"]
+            #, max_delta_step = OPT_Res$Best_Par["max_delta_step"]
             )
         
         xgb_model_pre <- OPT_Res
@@ -1955,14 +1953,14 @@ if(is.null(eval_metric)){
             nrounds = best_param$nrounds
             , max_depth = best_param$max_depth
             , colsample_bytree = best_param$colsample_bytree
-            , alpha = best_param$alpha
+            #, alpha = best_param$alpha
             , eta = best_param$eta
-            , lambda = best_param$lambda
+            #, lambda = best_param$lambda
             , gamma = best_param$gamma
             , min_child_weight = best_param$min_child_weight
             , subsample = best_param$subsample
-            , scale_pos_weight = best_param$scale_pos_weight
-            , max_delta_step = best_param$max_delta_step
+            #, scale_pos_weight = best_param$scale_pos_weight
+            #, max_delta_step = best_param$max_delta_step
         )
         xgbGridPre <- NULL
     }
@@ -2328,28 +2326,28 @@ regressXGBoostTree <- function(data
             nrounds = test_nrounds
             , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
             , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
-            , alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
+            #, alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
-            , lambda=c(xgblambda.vec[1], xgblambda.vec[2])
+            #, lambda=c(xgblambda.vec[1], xgblambda.vec[2])
             , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
             , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
             , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
-            , max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
-            , scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
+            #, max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
+            #, scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
         ), init_points=init_points)
     } else if(Bayes==TRUE){
         expand.grid(
             nrounds = test_nrounds
             , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
             , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
-            , alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
+            #, alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
-            , lambda=c(xgblambda.vec[1], xgblambda.vec[2])
+            #, lambda=c(xgblambda.vec[1], xgblambda.vec[2])
             , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
             , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
             , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
-            , max_delta_step = seq(maxdeltastep.vec[1], maxdeltastep.vec[2])
-            , scale_pos_weight = seq(scaleposweight.vec[1], scaleposweight.vec[2])
+            #, max_delta_step = seq(maxdeltastep.vec[1], maxdeltastep.vec[2])
+            #, scale_pos_weight = seq(scaleposweight.vec[1], scaleposweight.vec[2])
         )
     }
     
@@ -2432,14 +2430,14 @@ regressXGBoostTree <- function(data
             nrounds = nrounds
             , max_depth = xgb_model_pre$bestTune$max_depth
             , colsample_bytree = xgb_model_pre$bestTune$colsample_bytree
-            , alpha = xgb_model_pre$bestTune$alpha
+            #, alpha = xgb_model_pre$bestTune$alpha
             , eta = xgb_model_pre$bestTune$eta
-            , lambda = xgb_model_pre$bestTune$lambda
+            #, lambda = xgb_model_pre$bestTune$lambda
             , gamma = xgb_model_pre$bestTune$gamma
             , min_child_weight = xgb_model_pre$bestTune$min_child_weight
             , subsample = xgb_model_pre$bestTune$subsample
-            , max_delta_step = xgb_model_pre$bestTune$smax_delta_step
-            , scale_pos_weight = xgb_model_pre$bestTune$scale_pos_weight
+            #, max_delta_step = xgb_model_pre$bestTune$smax_delta_step
+            #, scale_pos_weight = xgb_model_pre$bestTune$scale_pos_weight
         )
         xgbGridPre <- NULL
         } else if(nrow(xgbGridPre)>1 && Bayes==TRUE){
@@ -2461,26 +2459,26 @@ regressXGBoostTree <- function(data
                       xgb_cv_bayes <- function(max_depth
                                                , min_child_weight
                                                , subsample
-                                               , alpha
+                                               #, alpha
                                                , eta
-                                               , lambda
+                                               #, lambda
                                                , nrounds
                                                , gamma
                                                , colsample_bytree
-                                               , max_delta_step
-                                               , scale_pos_weight
+                                               #, max_delta_step
+                                               #, scale_pos_weight
                                                ) {
                           param <- list(booster = "gbtree"
                                         , max_depth = max_depth
                                         , min_child_weight = min_child_weight
-                                        , alpha=alpha
+                                        #, alpha=alpha
                                         , eta=eta
-                                        , lambda=lambda
+                                        #, lambda=lambda
                                         , gamma=gamma
                                         , subsample = subsample
                                         , colsample_bytree = colsample_bytree
-                                        , max_delta_step=max_delta_step
-                                        , scale_pos_weight=scale_pos_weight
+                                        #, max_delta_step=max_delta_step
+                                        #, scale_pos_weight=scale_pos_weight
                                         , objective = "reg:squarederror"
                                         , eval_metric = metric.mod
                                         )
@@ -2516,14 +2514,14 @@ regressXGBoostTree <- function(data
                                             bounds = list(max_depth = as.integer(tree.depth.vec)
                                                           , min_child_weight = as.integer(xgbminchild.vec)
                                                           , subsample = xgbsubsample.vec
-                                                          , alpha = xgbalpha.vec
+                                                          #, alpha = xgbalpha.vec
                                                           , eta = xgbeta.vec
-                                                          , lambda = xgblambda.vec
+                                                          #, lambda = xgblambda.vec
                                                           , nrounds = as.integer(c(100, nrounds))
                                                           , gamma = c(0L, xgbgamma.vec[2])
                                                           , colsample_bytree=xgbcolsample.vec
-                                                          , max_delta_step = maxdeltastep.vec
-                                                          , scale_pos_weight = scaleposweight.vec
+                                                          #, max_delta_step = maxdeltastep.vec
+                                                          #, scale_pos_weight = scaleposweight.vec
                                                           )
                                             , init_grid_dt = NULL
                                             , init_points = init_points
@@ -2539,16 +2537,16 @@ regressXGBoostTree <- function(data
                 , eval.metric = metric.mod
                 , objective = "reg:squarederror"
                 , max_depth = OPT_Res$Best_Par["max_depth"]
-                , alpha = OPT_Res$Best_Par["alpha"]
+                #, alpha = OPT_Res$Best_Par["alpha"]
                 , eta = OPT_Res$Best_Par["eta"]
-                , lambda = OPT_Res$Best_Par["lambda"]
+                #, lambda = OPT_Res$Best_Par["lambda"]
                 , nrounds=OPT_Res$Best_Par["nrounds"]
                 , gamma = OPT_Res$Best_Par["gamma"]
                 , subsample = OPT_Res$Best_Par["subsample"]
                 , colsample_bytree = OPT_Res$Best_Par["colsample_bytree"]
                 , min_child_weight = OPT_Res$Best_Par["min_child_weight"]
-                , scale_pos_weight = OPT_Res$Best_Par["scale_pos_weight"]
-                , max_delta_step = OPT_Res$Best_Par["max_delta_step"]
+                #, scale_pos_weight = OPT_Res$Best_Par["scale_pos_weight"]
+                #, max_delta_step = OPT_Res$Best_Par["max_delta_step"]
                 )
                 
             
@@ -2558,14 +2556,14 @@ regressXGBoostTree <- function(data
                 nrounds = best_param$nrounds
                 , max_depth = best_param$max_depth
                 , colsample_bytree = best_param$colsample_bytree
-                , alpha = best_param$alpha
+                #, alpha = best_param$alpha
                 , eta = best_param$eta
-                , lambda = best_param$lambda
+                #, lambda = best_param$lambda
                 , gamma = best_param$gamma
                 , min_child_weight = best_param$min_child_weight
                 , subsample = best_param$subsample
-                , scale_pos_weight = best_param$scale_pos_weight
-                , max_delta_step = best_param$max_delta_step
+                #, scale_pos_weight = best_param$scale_pos_weight
+                #, max_delta_step = best_param$max_delta_step
             )
             xgbGridPre <- NULL
         }
@@ -3088,14 +3086,14 @@ classifyXGBoostDart <- function(data
             , rate_drop = seq(drop.tree.vec[1], drop.tree.vec[2])
             , skip_drop = seq(skip.drop.vec[1], skip.drop.vec[2],)
             , colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2])
-            , alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
+            #, alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
-            , lambda=c(xgblambda.vec[1], xgblambda.vec[2])
+            #, lambda=c(xgblambda.vec[1], xgblambda.vec[2])
             , gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2])
             , min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2])
             , subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2])
-            , max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
-            , scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
+            #, max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
+            #, scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
             ), init_points=init_points)
     } else if(Bayes==TRUE){
         expand.grid(
@@ -3104,14 +3102,14 @@ classifyXGBoostDart <- function(data
             , rate_drop = c(drop.tree.vec[1], drop.tree.vec[2])
             , skip_drop = c(skip.drop.vec[1], skip.drop.vec[2])
             , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
-            , alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
+            #, alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
-            , lambda=c(xgblambda.vec[1], xgblambda.vec[2])
+            #, lambda=c(xgblambda.vec[1], xgblambda.vec[2])
             , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
             , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
             , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
-            , max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
-            , scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
+            #, max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
+            #, scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
         )
     }
     
@@ -3291,14 +3289,14 @@ if(is.null(eval_metric)){
             , rate_drop = xgb_model_pre$bestTune$rate_drop
             , skip_drop = xgb_model_pre$bestTune$skip_drop
             , colsample_bytree = xgb_model_pre$bestTune$colsample_bytree
-            , alpha = xgb_model_pre$bestTune$alpha
+            #, alpha = xgb_model_pre$bestTune$alpha
             , eta = xgb_model_pre$bestTune$eta
-            , lambda = xgb_model_pre$bestTune$lambda
+            #, lambda = xgb_model_pre$bestTune$lambda
             , gamma = xgb_model_pre$bestTune$gamma
             , min_child_weight = xgb_model_pre$bestTune$min_child_weight
             , subsample = xgb_model_pre$bestTune$subsample
-            , max_delta_step = xgb_model_pre$bestTune$smax_delta_step
-            , scale_pos_weight = xgb_model_pre$bestTune$scale_pos_weight
+            #, max_delta_step = xgb_model_pre$bestTune$smax_delta_step
+            #, scale_pos_weight = xgb_model_pre$bestTune$scale_pos_weight
         )
     } else if(nrow(xgbGridPre)>1 && Bayes==TRUE){
         #data.training.temp <- data.training
@@ -3307,9 +3305,9 @@ if(is.null(eval_metric)){
                    label = Class
                    , classes=num_classes
                    , nrounds_range=as.integer(c(100, nrounds))
-                   , alpha_range=xgbalpha.vec
+                   #, alpha_range=xgbalpha.vec
                    , eta_range=xgbeta.vec
-                   , lambda_range=xgblambda.vec
+                   #, lambda_range=xgblambda.vec
                    , gamma_range=xgbgamma.vec
                    , max_depth_range=as.integer(tree.depth.vec)
                    , drop_range=drop.tree.vec
@@ -3317,8 +3315,8 @@ if(is.null(eval_metric)){
                    , min_child_range=as.integer(xgbminchild.vec)
                    , subsample_range=xgbsubsample.vec
                    , bytree_range=xgbcolsample.vec
-                   , max_delta_step_range = maxdeltastep.vec
-                   , scale_pos_weight_range = scaleposweight.vec
+                   #, max_delta_step_range = maxdeltastep.vec
+                   #, scale_pos_weight_range = scaleposweight.vec
                    , objectfun = objective.mod
                    , evalmetric = eval_metric
                    , tree_method = tree_method
@@ -3341,15 +3339,15 @@ if(is.null(eval_metric)){
             , max_depth = OPT_Res$Best_Par["max_depth_opt"]
             , rate_drop = OPT_Res$Best_Par["drop_range_opt"]
             , skip_drop = OPT_Res$Best_Par["skip_range_opt"]
-            , alpha = OPT_Res$Best_Par["alpha_opt"]
+            #, alpha = OPT_Res$Best_Par["alpha_opt"]
             , eta = OPT_Res$Best_Par["eta_opt"]
-            , lambda = OPT_Res$Best_Par["lambda_opt"]
+            #, lambda = OPT_Res$Best_Par["lambda_opt"]
             , gamma = OPT_Res$Best_Par["gamma_opt"]
             , subsample = OPT_Res$Best_Par["subsample_opt"]
             , colsample_bytree = OPT_Res$Best_Par["bytree_opt"]
             , min_child_weight = OPT_Res$Best_Par["minchild_opt"]
-            , scale_pos_weight = OPT_Res$Best_Par["scale_pos_weight"]
-            , max_delta_step = OPT_Res$Best_Par["max_delta_step"]
+            #, scale_pos_weight = OPT_Res$Best_Par["scale_pos_weight"]
+            #, max_delta_step = OPT_Res$Best_Par["max_delta_step"]
             )
         
         xgb_model_pre <- OPT_Res
@@ -3360,14 +3358,14 @@ if(is.null(eval_metric)){
             , rate_drop = best_param$rate_drop
             , skip_drop = best_param$skip_drop
             , colsample_bytree = best_param$colsample_bytree
-            , alpha = best_param$alpha
+            #, alpha = best_param$alpha
             , eta = best_param$eta
-            , lambda = best_param$lambda
+            #, lambda = best_param$lambda
             , gamma = best_param$gamma
             , min_child_weight = best_param$min_child_weight
             , subsample = best_param$subsample
-            , scale_pos_weight = best_param$scale_pos_weight
-            , max_delta_step = best_param$max_delta_step
+            #, scale_pos_weight = best_param$scale_pos_weight
+            #, max_delta_step = best_param$max_delta_step
         )
         xgbGridPre <- NULL
     }
@@ -3740,14 +3738,14 @@ regressXGBoostDart <- function(data
             , rate_drop = seq(drop.tree.vec[1], drop.tree.vec[2])
             , skip_drop = seq(skip.drop.vec[1], skip.drop.vec[2],)
             , colsample_bytree = seq(xgbcolsample.vec[1], xgbcolsample.vec[2])
-            , alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
+            #, alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
-            , lambda=c(xgblambda.vec[1], xgblambda.vec[2])
+            #, lambda=c(xgblambda.vec[1], xgblambda.vec[2])
             , gamma=seq(xgbgamma.vec[1], xgbgamma.vec[2])
             , min_child_weight = seq(xgbminchild.vec[1], xgbminchild.vec[2])
             , subsample = seq(xgbsubsample.vec[1], xgbsubsample.vec[2])
-            , max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
-            , scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
+            #, max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
+            #, scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
             ), init_points=init_points)
     } else if(Bayes==TRUE){
         expand.grid(
@@ -3756,14 +3754,14 @@ regressXGBoostDart <- function(data
             , rate_drop = c(drop.tree.vec[1], drop.tree.vec[2])
             , skip_drop = c(skip.drop.vec[1], skip.drop.vec[2])
             , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
-            , alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
+            #, alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
-            , lambda=c(xgblambda.vec[1], xgblambda.vec[2])
+            #, lambda=c(xgblambda.vec[1], xgblambda.vec[2])
             , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
             , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
             , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
-            , max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
-            , scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
+            #, max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
+            #, scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
         )
     }
     #Boring x_train stuff for later
@@ -3847,14 +3845,14 @@ regressXGBoostDart <- function(data
             , rate_drop = xgb_model_pre$bestTune$rate_drop
             , skip_drop = xgb_model_pre$bestTune$skip_drop
             , colsample_bytree = xgb_model_pre$bestTune$colsample_bytree
-            , alpha = xgb_model_pre$bestTune$alpha
+            #, alpha = xgb_model_pre$bestTune$alpha
             , eta = xgb_model_pre$bestTune$eta
-            , lambda = xgb_model_pre$bestTune$lambda
+            #, lambda = xgb_model_pre$bestTune$lambda
             , gamma = xgb_model_pre$bestTune$gamma
             , min_child_weight = xgb_model_pre$bestTune$min_child_weight
             , subsample = xgb_model_pre$bestTune$subsample
-            , max_delta_step = xgb_model_pre$bestTune$smax_delta_step
-            , scale_pos_weight = xgb_model_pre$bestTune$scale_pos_weight
+            #, max_delta_step = xgb_model_pre$bestTune$smax_delta_step
+            #, scale_pos_weight = xgb_model_pre$bestTune$scale_pos_weight
         )
         xgbGridPre <- NULL
         } else if(nrow(xgbGridPre)>1 && Bayes==TRUE){
@@ -3878,28 +3876,28 @@ regressXGBoostDart <- function(data
                                                , skip_drop
                                                , min_child_weight
                                                , subsample
-                                               , alpha=alpha
+                                               #, alpha=alpha
                                                , eta=eta
-                                               , lambda=lambda
+                                               #, lambda=lambda
                                                , nrounds
                                                , gamma
                                                , colsample_bytree
-                                               , max_delta_step
-                                               , scale_pos_weight
+                                               #, max_delta_step
+                                               #, scale_pos_weight
                                                ) {
                           param <- list(booster = "dart"
                                         , max_depth = max_depth
                                         , rate_drop = rate_drop
                                         , skip_drop = skip_drop
                                         , min_child_weight = min_child_weight
-                                        , alpha=alpha
+                                        #, alpha=alpha
                                         , eta=eta
-                                        , lambda=lambda
+                                        #, lambda=lambda
                                         , gamma = gamma
                                         , subsample = subsample
                                         , colsample_bytree = colsample_bytree
-                                        , max_delta_step=max_delta_step
-                                        , scale_pos_weight=scale_pos_weight
+                                        #, max_delta_step=max_delta_step
+                                        #, scale_pos_weight=scale_pos_weight
                                         , objective = "reg:squarederror"
                                         , eval_metric = metric.mod
                                         )
@@ -3934,14 +3932,14 @@ regressXGBoostDart <- function(data
                       , skip_drop=skip.drop.vec
                       , min_child_weight = as.integer(xgbminchild.vec)
                       , subsample = xgbsubsample.vec
-                      , alpha = xgbalpha.vec
+                      #, alpha = xgbalpha.vec
                       , eta = xgbeta.vec
-                      , lambda = xgblambda.vec
+                      #, lambda = xgblambda.vec
                       , nrounds = as.integer(c(100, nrounds))
                       , gamma = c(0L, xgbgamma.vec[2])
                       , colsample_bytree=xgbcolsample.vec
-                      , max_delta_step = maxdeltastep.vec
-                      , scale_pos_weight = scaleposweight.vec
+                      #, max_delta_step = maxdeltastep.vec
+                      #, scale_pos_weight = scaleposweight.vec
                       )
                                             , init_grid_dt = NULL
                                             , init_points = init_points
@@ -3959,16 +3957,16 @@ regressXGBoostDart <- function(data
                 , max_depth = OPT_Res$Best_Par["max_depth"]
                 , rate_drop = OPT_Res$Best_Par["rate_drop"]
                 , skip_drop = OPT_Res$Best_Par["skip_drop"]  
-                , alpha = OPT_Res$Best_Par["alpha"]
+                #, alpha = OPT_Res$Best_Par["alpha"]
                 , eta = OPT_Res$Best_Par["eta"]
-                , lambda = OPT_Res$Best_Par["lambda"]
+                #, lambda = OPT_Res$Best_Par["lambda"]
                 , nrounds=OPT_Res$Best_Par["nrounds"]
                 , gamma = OPT_Res$Best_Par["gamma"]
                 , subsample = OPT_Res$Best_Par["subsample"]
                 , colsample_bytree = OPT_Res$Best_Par["colsample_bytree"]
                 , min_child_weight = OPT_Res$Best_Par["min_child_weight"]
-                , scale_pos_weight = OPT_Res$Best_Par["scale_pos_weight"]
-                , max_delta_step = OPT_Res$Best_Par["max_delta_step"]
+                #, scale_pos_weight = OPT_Res$Best_Par["scale_pos_weight"]
+                #, max_delta_step = OPT_Res$Best_Par["max_delta_step"]
                 )
                 
             
@@ -3980,10 +3978,15 @@ regressXGBoostDart <- function(data
                 , rate_drop = best_param$rate_drop
                 , skip_drop = best_param$skip_drop
                 , colsample_bytree = best_param$colsample_bytree
+                #, alpha = best_param$alpha
                 , eta = best_param$eta
                 , gamma = best_param$gamma
+                #, lambda = best_param$lambda
                 , min_child_weight = best_param$min_child_weight
                 , subsample = best_param$subsample
+                #, scale_pos_weight = best_param$scale_pos_weight
+                #, max_delta_step = best_param$max_delta_step
+
             )
             xgbGridPre <- NULL
         }
@@ -10154,7 +10157,7 @@ sequential_predict <- function(qualpart, model_data, new_data, variable, scale=F
 
 model_stats_class <- function(qualpart, name="model"){
     
-    train_frame <- data.frame(Model=name, Accuracy=qualpart$trainAccuracy$overall["Accuracy"], BalancedAccuracy=qualpart$trainAccuracy$byClass["Balanced Accuracy"], Kappa=qualpart$trainAccuracy$overall["Kappa"], Sensitivity=qualpart$trainAccuracy$byClass["Sensitivity"], Specificity=qualpart$trainAccuracy$byClass["Specificity"])
+     train_frame <- data.frame(Model=name, n=nrow(qualpart$Model$trainingData), Accuracy=qualpart$trainAccuracy$overall["Accuracy"], BalancedAccuracy=qualpart$trainAccuracy$byClass["Balanced Accuracy"], Kappa=qualpart$trainAccuracy$overall["Kappa"], Sensitivity=qualpart$trainAccuracy$byClass["Sensitivity"], Specificity=qualpart$trainAccuracy$byClass["Specificity"])
     rownames(train_frame) <- NULL
     results <- list(Train=train_frame)
     if("testAccuracy" %in% names(qualpart)){
@@ -10336,25 +10339,40 @@ plot_shapified_spectra <- function(xgboost_object, variable){
 }
 
 
-plot_confusion_matrix <- function(xgboost_object, test="testAccuracy"){
-    plt <- as.data.frame(xgboost_object[[test]]$table)
-    plt$Prediction <- factor(plt$Prediction, levels=levels(plt$Prediction))
-    plt$Reference <- factor(plt$Reference, levels=levels(plt$Prediction))  # Ensure Reference is a factor and has correct levels
-    
-    # Calculate the sum of frequencies for each reference class
-    total_per_reference <- aggregate(Freq ~ Reference, data = plt, FUN = sum)
-    
-    # Merge totals back to the main data frame and calculate percentages
-    plt <- merge(plt, total_per_reference, by="Reference")
-    plt$Percentage <- with(plt, Freq.x / Freq.y * 100)
-    
-    # Plot using ggplot2
-    ggplot(plt, aes(x = Reference, y = Prediction, fill = Percentage)) +
-        geom_tile() +
-        geom_text(aes(label = sprintf("%.1f%%", Percentage)), size = 3) +  # Show percentage on tiles
-        scale_fill_gradient(low = "white", high = "#00A86B", name = "Percentage") +
-        labs(x = "Reference", y = "Prediction") +
-        scale_x_discrete(labels = levels(plt$Prediction)) +
-        scale_y_discrete(labels = levels(plt$Prediction)) +
-        theme_light()
+plot_confusion_matrix <- function(xgboost_object,
+                                  test    = "testAccuracy",
+                                  min_n   = 5) {
+  # turn xgboost_object[[test]]$table into a data frame
+  plt <- as.data.frame(xgboost_object[[test]]$table)
+  plt$Prediction <- factor(plt$Prediction, levels = levels(plt$Prediction))
+  plt$Reference  <- factor(plt$Reference,  levels = levels(plt$Prediction))
+  
+  # 1) compute total counts per reference class
+  total_per_reference <- aggregate(Freq ~ Reference, data = plt, FUN = sum)
+  
+  # 2) decide which classes to keep
+  keep_refs <- total_per_reference$Reference[total_per_reference$Freq >= min_n]
+  
+  # 3) filter out rows for low-n classes
+  plt <- subset(plt, Reference %in% keep_refs & Prediction %in% keep_refs)
+  
+  # 4) re-set factor levels so the axes only show kept classes
+  plt$Reference  <- factor(plt$Reference,  levels = keep_refs)
+  plt$Prediction <- factor(plt$Prediction, levels = keep_refs)
+  
+  # 5) re-compute totals & percentages on the filtered set
+  total_per_reference <- aggregate(Freq ~ Reference, data = plt, FUN = sum)
+  plt <- merge(plt, total_per_reference, by = "Reference", suffixes = c("", ".total"))
+  plt$Percentage <- with(plt, Freq / Freq.total * 100)
+  
+  # 6) plot
+  ggplot(plt, aes(x = Reference, y = Prediction, fill = Percentage)) +
+    geom_tile() +
+    geom_text(aes(label = sprintf("%.1f%%", Percentage)), size = 3) +
+    scale_fill_gradient(low = "white", high = "#00A86B", name = "Percentage") +
+    labs(x = "Reference", y = "Prediction") +
+    # replace dots with spaces in the axis tick labels
+    scale_x_discrete(labels = function(lbls) gsub("\\.", " ", lbls)) +
+    scale_y_discrete(labels = function(lbls) gsub("\\.", " ", lbls)) +
+    theme_light()
 }

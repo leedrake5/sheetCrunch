@@ -3151,7 +3151,7 @@ choiceLines <- reactive({
   
   
   pcaTableInputFull <- reactive({
-      xrf.pca.results <- xrfPCAReactive()
+      xrf.pca.results <- clusterFrame()
 
       xrf.pca.results
  
@@ -5073,4 +5073,5 @@ content = function(file) {
 })
 
 })
+
 
