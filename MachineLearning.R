@@ -497,6 +497,13 @@ BayesianOptimizationDebug <- function(FUN, bounds, init_grid_dt = NULL, init_poi
         This_Log <- utils::capture.output({
             This_Time <- system.time({
                 This_Score_Pred <- do.call(what = FUN, args = as.list(This_Par))
+                # 🚨 crash on bad scores
+                if (!is.numeric(This_Score_Pred$Score) ||
+                    length(This_Score_Pred$Score) != 1 ||
+                    is.nan(This_Score_Pred$Score)) {
+                  stop(sprintf("Iteration %d: %s returned an invalid score (%s)",
+                               i, deparse(substitute(FUN)), This_Score_Pred$Score))
+                }
             })
         })
         data.table::set(DT_history, i = as.integer(i), j = "Value",
@@ -532,23 +539,30 @@ BayesianOptimizationDebug <- function(FUN, bounds, init_grid_dt = NULL, init_poi
             inset(., DT_bounds[Type == "integer", Parameter],
                 round(extract(., DT_bounds[Type == "integer",
                   Parameter]))), error=function(e) unlist(iter_points_dt_backup[j,]))
-        Next_Log <- tryCatch(utils::capture.output({
-            Next_Time <- system.time({
-                Next_Score_Pred <- do.call(what = FUN, args = as.list(Next_Par))
-            })
-        }), error=function(e) NULL)
-        tryCatch(data.table::set(DT_history, i = as.integer(j), j = c(DT_bounds[,
+              Next_Log <- utils::capture.output({
+                  Next_Time <- system.time({
+                      Next_Score_Pred <- do.call(what = FUN, args = as.list(Next_Par))
+                  })
+              })
+              # 🚨 crash on bad scores
+              if (!is.numeric(Next_Score_Pred$Score) ||
+                  length(Next_Score_Pred$Score) != 1 ||
+                  is.nan(Next_Score_Pred$Score)) {
+                stop(sprintf("Iteration %d: %s returned invalid score = %s",
+                             j, deparse(substitute(FUN)), Next_Score_Pred$Score))
+              }
+        data.table::set(DT_history, i = as.integer(j), j = c(DT_bounds[,
             Parameter], "Value"), value = as.list(c(Next_Par,
-            Value = Next_Score_Pred$Score))), error=function(e) NULL)
-        tryCatch(Pred_list[[j]] <- Next_Score_Pred$Pred, error=function(e) NULL)
+            Value = Next_Score_Pred$Score)))
+        Pred_list[[j]] <- Next_Score_Pred$Pred
         if (verbose == TRUE) {
-            tryCatch(paste(c("elapsed", names(DT_history)), c(format(Next_Time["elapsed"],
+           paste(c("elapsed", names(DT_history)), c(format(Next_Time["elapsed"],
                 trim = FALSE, digits = NULL, nsmall = 2), format(DT_history[j,
                 "Round", with = FALSE], trim = FALSE, digits = NULL,
                 nsmall = 0), format(DT_history[j, -"Round", with = FALSE],
                 trim = FALSE, digits = NULL, nsmall = 4)), sep = " = ",
-                collapse = "\t") %>% cat(., "\n"), error=function(e) NULL)
-        }#, error=function(e) NULL})
+                collapse = "\t") %>% cat(., "\n")
+        }
     }
     Best_Par <- as.numeric(DT_history[which.max(Value), DT_bounds[,
         Parameter], with = FALSE]) %>% magrittr::set_names(.,
@@ -840,6 +854,7 @@ xgb_cv_opt_tree <- function (data
                                        , min_child_weight = minchild_opt
                                        , eta = eta_opt
                                        , max_depth = max_depth_opt
+                                       , nrounds = nrounds_opt
                                        , subsample = subsample_opt
                                        , colsample_bytree = bytree_opt
                                        #, lambda = lambda_opt
@@ -891,8 +906,8 @@ xgb_cv_opt_tree <- function (data
             object_fun <- objectfun
             eval_met <- evalmetric
             num_classes <- classes
-            cv <- xgb.cv(params = list(
-                                       gamma = gamma_opt
+            cv <- xgb.cv(params = list(nrounds = nrounds_opt
+                                       , gamma = gamma_opt
                                        , min_child_weight = minchild_opt
                                        , eta = eta_opt
                                        , max_depth = max_depth_opt
@@ -1183,7 +1198,7 @@ xgb_cv_opt_linear <- function (data
                                , classes = NULL
                                , seed = 0
                                , nthread=nthread
-                               , verose = 1
+                               , verbose = 1
                                )
 {
     to_maximize = if(evalmetric=="auc"){
@@ -1266,7 +1281,7 @@ xgb_cv_opt_linear <- function (data
             eval_met <- evalmetric
             num_classes <- classes
             cv <- xgb.cv(params = list(
-                                       , alpha = alpha_opt
+                                       alpha = alpha_opt
                                        , eta = eta_opt
                                        , lambda = lambda_opt
                                        )
@@ -4590,6 +4605,7 @@ if(is.null(eval_metric)){
             , verboseIter = FALSE
             )
         }
+    
         
         #Prepare the computer's CPU for what's comming
          if(parallel_method!="linux"){
