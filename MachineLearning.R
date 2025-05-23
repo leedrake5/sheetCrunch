@@ -898,10 +898,10 @@ xgb_cv_opt_tree <- function (data
                                        , max_depth = max_depth_opt
                                        , subsample = subsample_opt
                                        , colsample_bytree = bytree_opt
-                                       , alpha = alpha_opt
-                                       , lambda = lambda_opt
-                                       , max_delta_step = max_delta_step_opt
-                                       , scale_pos_weight = scale_pos_weight_opt
+                                       #, alpha = alpha_opt
+                                       #, lambda = lambda_opt
+                                       #, max_delta_step = max_delta_step_opt
+                                       #, scale_pos_weight = scale_pos_weight_opt
                                        )
                          , booster = "gbtree"
                          , objective = object_fun
