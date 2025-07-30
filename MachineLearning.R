@@ -2112,6 +2112,9 @@ if(is.null(eval_metric)){
     y_predict_train <- predict(object=xgb_model, newdata=x_train, na.action = na.pass)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
     #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    all_lvls <- levels( as.factor(xgb_model$trainingData$.outcome ))
+    results.frame_train$Predicted <- factor(results.frame_train$Predicted, levels = all_lvls)
+    results.frame_train$Known <- factor(results.frame_train$Known,      levels = all_lvls)
     accuracy.rate_train <- confusionMatrix(as.factor(results.frame_train$Predicted), as.factor(results.frame_train$Known), positive = PositiveClass)
     
     
@@ -2125,6 +2128,9 @@ if(is.null(eval_metric)){
                                     , Predicted=y_predict
                                     )
         #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        all_lvls <- levels( as.factor(xgb_model$trainingData$.outcome ))
+        results.frame$Predicted <- factor(results.frame$Predicted, levels = all_lvls)
+        results.frame$Known <- factor(results.frame$Known,      levels = all_lvls)
         accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
         
         #results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
@@ -3517,6 +3523,9 @@ if(is.null(eval_metric)){
     y_predict_train <- predict(object=xgb_model, newdata=x_train, na.action = na.pass)
     results.frame_train <- data.frame(Sample=data.train$Sample, Known=data.train$Class, Predicted=y_predict_train)
     #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    all_lvls <- levels( as.factor(xgb_model$trainingData$.outcome ))
+    results.frame_train$Predicted <- factor(results.frame_train$Predicted, levels = all_lvls)
+    results.frame_train$Known <- factor(results.frame_train$Known,      levels = all_lvls)
     accuracy.rate_train <- confusionMatrix(as.factor(results.frame_train$Predicted), as.factor(results.frame_train$Known), positive = PositiveClass)
     
     
@@ -3530,6 +3539,9 @@ if(is.null(eval_metric)){
                                     , Predicted=y_predict
                                     )
         #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        all_lvls <- levels( as.factor(xgb_model$trainingData$.outcome ))
+        results.frame$Predicted <- factor(results.frame$Predicted, levels = all_lvls)
+        results.frame$Known <- factor(results.frame$Known,      levels = all_lvls)
         accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
         
         #results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$PCC, accuracy.rate$PCC), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
@@ -4848,6 +4860,9 @@ if(is.null(eval_metric)){
                                       , Predicted=y_predict_train
                                       )
     #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    all_lvls <- levels( as.factor(xgb_model$trainingData$.outcome ))
+    results.frame_train$Predicted <- factor(results.frame_train$Predicted, levels = all_lvls)
+    results.frame_train$Known <- factor(results.frame_train$Known,      levels = all_lvls)
     accuracy.rate_train <- caret::confusionMatrix(as.factor(results.frame_train$Predicted), as.factor(results.frame_train$Known), positive = PositiveClass)
     
     #If you chose a random split, we will generate the same accuracy metrics
@@ -4861,6 +4876,9 @@ if(is.null(eval_metric)){
                                     , Predicted=y_predict
                                     )
         #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        all_lvls <- levels( as.factor(xgb_model$trainingData$.outcome ))
+        results.frame$Predicted <- factor(results.frame$Predicted, levels = all_lvls)
+        results.frame$Known <- factor(results.frame$Known,      levels = all_lvls)
         accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
         
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1], accuracy.rate$overall[1]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
@@ -5559,12 +5577,15 @@ classifyForest <- function(data
                            , split=NULL
                            , split_by_group=NULL
                            , the_group=NULL
-                           , try, trees
+                           , try
+                           , trees
                            , metric=metric
                            #, summary_function="f1"
                            , train="repeatedcv"
                            , cvrepeats=5
                            , number=100
+                           , init_points=100
+                           , n_iter=5
                            , save.directory=NULL
                            , save.name=NULL
                            , parallelMethod=NULL
@@ -5573,7 +5594,7 @@ classifyForest <- function(data
                            , save_plots=FALSE
                            , scale=FALSE
                            , seed=NULL
-                           , search=FALSE
+                           , search=TRUE
                            ){
     
     ###Prepare the data
@@ -5807,6 +5828,9 @@ classifyForest <- function(data
                                       , Predicted=y_predict_train
                                       )
     #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    all_lvls <- levels( as.factor(forest_model$trainingData$.outcome ))
+    results.frame_train$Predicted <- factor(results.frame_train$Predicted, levels = all_lvls)
+    results.frame_train$Known <- factor(results.frame_train$Known,      levels = all_lvls)
     accuracy.rate_train <- confusionMatrix(as.factor(results.frame_train$Predicted), as.factor(results.frame_train$Known), positive = PositiveClass)
     
     #If you chose a random split, we will generate the same accuracy metrics
@@ -5817,6 +5841,9 @@ classifyForest <- function(data
                                     , Predicted=y_predict
                                     )
         #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        all_lvls <- levels( as.factor(forest_model$trainingData$.outcome ))
+        results.frame$Predicted <- factor(results.frame$Predicted, levels = all_lvls)
+        results.frame$Known <- factor(results.frame$Known,      levels = all_lvls)
         accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
         
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1], accuracy.rate$overall[1]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
@@ -5905,7 +5932,7 @@ regressForest <- function(data
                           , save_plots=FALSE
                           , scale=FALSE
                           , seed=NULL
-                          , search=FALSE
+                          , search=TRUE
                           ){
     
     ###Prepare the data
@@ -6180,6 +6207,8 @@ autoForest<- function(data
                       , train="repeatedcv"
                       , cvrepeats=5
                       , number=30
+                      , init_points=10
+                      , n_iter=5
                       , save.directory=NULL
                       , save.name=NULL
                       , parallelMethod=NULL
@@ -6188,7 +6217,7 @@ autoForest<- function(data
                       , save_plots=FALSE
                       , scale=FALSE
                       , seed=NULL
-                      , search=FALSE
+                      , search=TRUE
                       ){
     
     if(is.null(save.name)){
@@ -6227,6 +6256,8 @@ autoForest<- function(data
                        , train=train
                        , cvrepeats=cvrepeats
                        , number=number
+                       , init_points=init_points
+                       , n_iter=n_iter
                        , save.directory=save.directory
                        , save.name=save.name
                        , parallelMethod=parallelMethod
@@ -6252,6 +6283,8 @@ autoForest<- function(data
                       , train=train
                       , cvrepeats=cvrepeats
                       , number=number
+                      , init_points=init_points
+                      , n_iter=n_iter
                       , save.directory=save.directory
                       , save.name=save.name
                       , parallelMethod=parallelMethod
@@ -6638,6 +6671,9 @@ classifySVM <- function(data
                                       , Predicted=y_predict_train
                                       )
     #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    all_lvls <- levels( as.factor(svm_model$trainingData$.outcome ))
+    results.frame_train$Predicted <- factor(results.frame_train$Predicted, levels = all_lvls)
+    results.frame_train$Known <- factor(results.frame_train$Known,      levels = all_lvls)
     accuracy.rate_train <- confusionMatrix(as.factor(results.frame_train$Predicted), as.factor(results.frame_train$Known), positive = PositiveClass)
     
     #If you chose a random split, we will generate the same accuracy metrics
@@ -6648,6 +6684,9 @@ classifySVM <- function(data
                                     , Predicted=y_predict
                                     )
         #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        all_lvls <- levels( as.factor(svm_model$trainingData$.outcome ))
+        results.frame$Predicted <- factor(results.frame$Predicted, levels = all_lvls)
+        results.frame$Known <- factor(results.frame$Known,      levels = all_lvls)
         accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
         
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1], accuracy.rate$overall[1]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
@@ -7554,6 +7593,9 @@ classifyBayes <- function(data
                                       , Predicted=y_predict_train
                                       )
     #accuracy.rate_train <- rfUtilities::accuracy(x=results.frame_train$Known, y=results.frame_train$Predicted)
+    all_lvls <- levels( as.factor(bayes_model$trainingData$.outcome ))
+    results.frame_train$Predicted <- factor(results.frame_train$Predicted, levels = all_lvls)
+    results.frame_train$Known <- factor(results.frame_train$Known,      levels = all_lvls)
     accuracy.rate_train <- confusionMatrix(as.factor(results.frame_train$Predicted), as.factor(results.frame_train$Known), positive = PositiveClass)
     
     #If you chose a random split, we will generate the same accuracy metrics
@@ -7564,6 +7606,9 @@ classifyBayes <- function(data
                                     , Predicted=y_predict
                                     )
         #accuracy.rate <- rfUtilities::accuracy(x=results.frame$Known, y=results.frame$Predicted)
+        all_lvls <- levels( as.factor(bayes_model$trainingData$.outcome ))
+        results.frame$Predicted <- factor(results.frame$Predicted, levels = all_lvls)
+        results.frame$Known <- factor(results.frame$Known,      levels = all_lvls)
         accuracy.rate <- confusionMatrix((results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
         
         results.bar.frame <- data.frame(Accuracy=c(accuracy.rate_train$overall[1], accuracy.rate$overall[1]), Type=c("1. Train", "2. Test"), stringsAsFactors=FALSE)
