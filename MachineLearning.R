@@ -5697,10 +5697,11 @@ classifyForest <- function(data
      # }
 
      forestGrid <- if(search==TRUE){
-         as.data.frame(generate_grid(bounds=list(mtry=c(1, try)), init_points=init_points))
+         as.data.frame(generate_grid(bounds=list(mtry=as.integer(c(1, try))), init_points=init_points))
      } else if(search==FALSE){
          data.frame(mtry=try)
      }
+     forestGrid <- forestGrid[ , "mtry", drop = FALSE]
 
     
     #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
@@ -5991,10 +5992,11 @@ regressForest <- function(data
     data.testing <- data.test[, !colnames(data.test) %in% "Sample"]
 
     forestGrid <- if(search==TRUE){
-        as.data.frame(generate_grid(bounds=list(mtry=c(1, try)), init_points=init_points))
+        as.data.frame(generate_grid(bounds=list(mtry=as.integer(c(1, try))), init_points=init_points))
     } else if(search==FALSE){
         data.frame(mtry=try)
     }
+    forestGrid <- forestGrid[ , "mtry", drop = FALSE]
     dependent <- "Dependent"
 
     
@@ -6330,7 +6332,7 @@ classifySVM <- function(data
                         , scale=FALSE
                         , seed=NULL
                         , init_points=100
-                        , search=FALSE
+                        , search=TRUE
                         ){
     
     ###Prepare the data
@@ -6566,7 +6568,7 @@ classifySVM <- function(data
                 )
            }
        }
-       
+       svmGrid <- svmGrid[,!colnames(svmGrid) %in% "Value"]
        
        
        
@@ -6937,7 +6939,7 @@ regressSVM <- function(data
              )
         }
     }
-    
+    svmGrid <- svmGrid[,!colnames(svmGrid) %in% "Value"]
     dependent <- "Dependent"
 
     
@@ -7432,6 +7434,8 @@ classifyBayes <- function(data
                 )
             }
        }
+       bayesGrid <- bayesGrid[,!colnames(bayesGrid) %in% "Value"]
+
        bayes_type <- if(type=="bayesLinear"){
            "bayesglm"
        } else if(type=="bayesTree"){
@@ -7800,7 +7804,7 @@ regressBayes <- function(data
              )
          }
     }
-    
+    bayesGrid <- bayesGrid[,!colnames(bayesGrid) %in% "Value"]
     bayes_type <- if(type=="bayesLinear"){
         "bayesglm"
     } else if(type=="bayesTree"){
