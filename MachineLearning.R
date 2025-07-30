@@ -5697,7 +5697,12 @@ classifyForest <- function(data
      # }
 
      forestGrid <- if(search==TRUE){
-         as.data.frame(generate_grid(bounds=list(mtry=as.integer(c(1, try))), init_points=init_points))
+         if(init_points < try){
+             as.data.frame(generate_grid(bounds=list(mtry=as.integer(c(1, try))), init_points=init_points))
+         } else {
+             data.frame(mtry=seq(1, try, 1))
+         }
+         
      } else if(search==FALSE){
          data.frame(mtry=try)
      }
@@ -6476,11 +6481,10 @@ classifySVM <- function(data
      #         prSummary
      #     }
      # }
-
        svmGrid <- if(search==TRUE){
            if(type=="svmLinear"){
                as.data.frame(generate_grid(bounds=list(
-                    C = c(svmc.vec[1], svmc.vec[2]),
+                    C = c(svmc.vec[1], svmc.vec[2])
                 ), init_points=init_points))
            } else if(type=="svmPoly"){
                as.data.frame(generate_grid(bounds=list(
@@ -6851,7 +6855,7 @@ regressSVM <- function(data
     svmGrid <- if(search==TRUE){
         if(type=="svmLinear"){
             as.data.frame(generate_grid(bounds=list(
-                 C = c(svmc.vec[1], svmc.vec[2]),
+                 C = c(svmc.vec[1], svmc.vec[2])
              ), init_points=init_points))
         } else if(type=="svmPoly"){
             as.data.frame(generate_grid(bounds=list(
