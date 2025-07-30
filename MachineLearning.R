@@ -1215,7 +1215,7 @@ xgb_cv_opt_linear <- function (data
     }
     else {
         quolabel <- enquo(label)
-        datalabel <- (data %>% select(!!quolabel))[[1]]
+        datalabel <- data %>% dplyr::pull(!!quolabel)
         mx <- Matrix::sparse.model.matrix(datalabel ~ ., data)
         if (class(datalabel) == "factor") {
             dtrain <- xgb.DMatrix(mx, label = as.integer(datalabel) -
@@ -8486,6 +8486,9 @@ autoMLTable <- function(data
           if(is.null(PositiveClass)){
             PositiveClass <- tryCatch(unique(sort(additional_data$Data[,variable]))[1], error=function(e) unique(sort(additional_data$Data[,variable]))[1])
           }
+          all_lvls <- levels( as.factor(qualpart$Model$trainingData$.outcome ))
+          results.frame$Predicted <- factor(results.frame$Predicted, levels = all_lvls)
+          results.frame$Known <- factor(results.frame$Known,      levels = all_lvls)
           accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
           merged.accuracy.rate <- confusionMatrix(as.factor(qualpart$mergedValidationSet$Predicted), as.factor(qualpart$mergedValidationSet$Known), positive = PositiveClass)
         } else if(is.numeric(additional_data$Data[,variable])){
@@ -10084,6 +10087,9 @@ bayesMLTable <- function(data
           if(is.null(PositiveClass)){
             PositiveClass <- tryCatch(unique(sort(additional_data$Data[,variable]))[1], error=function(e) unique(sort(additional_data$Data[,variable]))[1])
           }
+          all_lvls <- levels( as.factor(qualpart$Model$trainingData$.outcome ))
+          results.frame$Predicted <- factor(results.frame$Predicted, levels = all_lvls)
+          results.frame$Known <- factor(results.frame$Known,      levels = all_lvls)
           accuracy.rate <- confusionMatrix(as.factor(results.frame$Predicted), as.factor(results.frame$Known), positive = PositiveClass)
           merged.accuracy.rate <- confusionMatrix(as.factor(qualpart$mergedValidationSet$Predicted), as.factor(qualpart$mergedValidationSet$Known), positive = PositiveClass)
         } else if(is.numeric(additional_data$Data[,variable])){
