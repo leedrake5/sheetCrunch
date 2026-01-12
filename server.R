@@ -370,23 +370,41 @@ dataType <- reactive({
         proto.fish <- loadWorkbook(file=inFile$datapath)
         just.fish <- readWorkbook(proto.fish, sheet=1)
         just.fish[,1] <- as.character(just.fish[,1])
-        quant.fish <- as.data.frame(just.fish[, sapply(just.fish, is.numeric)])
-        qual.fish <- as.data.frame(just.fish[, !sapply(just.fish, is.numeric)])
-        
+        quant.fish <- as.data.frame(just.fish[, sapply(just.fish, is.numeric), drop=FALSE])
+        qual.fish <- as.data.frame(just.fish[, !sapply(just.fish, is.numeric), drop=FALSE])
+
         data.frame(Spectrum=qual.fish[,1], quant.fish)
 
     })
-    
+
     sheetCSVData <- reactive({
         inFile <- input$file1
         if (is.null(inFile)) return(NULL)
 
         just.fish <- read.csv(inFile$datapath)
         just.fish[,1] <- as.character(just.fish[,1])
-        quant.fish <- as.data.frame(just.fish[, sapply(just.fish, is.numeric)])
-        qual.fish <- as.data.frame(just.fish[, !sapply(just.fish, is.numeric)])
-        
+        quant.fish <- as.data.frame(just.fish[, sapply(just.fish, is.numeric), drop=FALSE])
+        qual.fish <- as.data.frame(just.fish[, !sapply(just.fish, is.numeric), drop=FALSE])
+
         data.frame(Spectrum=qual.fish[,1], quant.fish)
+
+    })
+
+    # CSV equivalent of qualExcelDataPre - preserves qualitative column names
+    qualCSVDataPre <- reactive({
+        inFile <- input$file1
+        if (is.null(inFile)) return(NULL)
+
+        just.fish <- read.csv(inFile$datapath)
+        just.fish[,1] <- as.character(just.fish[,1])
+        quant.fish <- as.data.frame(just.fish[, sapply(just.fish, is.numeric), drop=FALSE])
+        qual.fish <- as.data.frame(just.fish[, !sapply(just.fish, is.numeric), drop=FALSE])
+        if(ncol(qual.fish) > 1){
+            # Use drop=FALSE to preserve column names when subsetting
+            data.frame(Spectrum=qual.fish[,1], qual.fish[, 2:ncol(qual.fish), drop=FALSE])
+        } else if(ncol(qual.fish) == 1){
+            data.frame(Spectrum=qual.fish[,1], Qualitative1=qual.fish[,1])
+        }
 
     })
     
@@ -398,23 +416,24 @@ dataType <- reactive({
         just.fish <- readWorkbook(proto.fish, sheet=1)
         just.fish[,1] <- as.character(just.fish[,1])
         quant.fish <- as.data.frame(just.fish[, sapply(just.fish, is.numeric)])
-        qual.fish <- as.data.frame(just.fish[, !sapply(just.fish, is.numeric)])
-        if(length(qual.fish)>1){
-            data.frame(Spectrum=qual.fish[,1], qual.fish[,2:length(qual.fish)])
-        } else if(length(qual.fish)==1){
+        qual.fish <- as.data.frame(just.fish[, !sapply(just.fish, is.numeric), drop=FALSE])
+        if(ncol(qual.fish) > 1){
+            # Use drop=FALSE to preserve column names when subsetting
+            data.frame(Spectrum=qual.fish[,1], qual.fish[, 2:ncol(qual.fish), drop=FALSE])
+        } else if(ncol(qual.fish) == 1){
             data.frame(Spectrum=qual.fish[,1], Qualitative1=qual.fish[,1])
         }
-        
+
     })
     
     qualExcelData <- reactive({
-        
+
         if(input$filetype=="Excel Spreadsheet"){
             qualExcelDataPre()
         } else if(input$filetype=="CSV Spreadsheet"){
-            sheetCSVData()
+            qualCSVDataPre()
         }
-        
+
     })
     
     
