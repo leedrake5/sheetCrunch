@@ -8,7 +8,6 @@ library(ggplot2)
 library(ggtern)
 library(random)
 library(rhandsontable)
-library(random)
 library(gghighlight)
 library(scales)
 library(openxlsx)
@@ -98,7 +97,7 @@ shinyServer(function(input, output, session) {
     
     output$file2gen <- renderUI({
         
-        if(input$otherdata==TRUE){
+        if(input$otherdata){
             fileInput('file2', 'Choose Spectra', multiple=TRUE,
             accept=c('text/csv',
             'text/comma-separated-values,text/plain',
@@ -112,7 +111,7 @@ shinyServer(function(input, output, session) {
     
     output$calfile2gen <- renderUI({
         
-        if(input$otherdata==TRUE){
+        if(input$otherdata){
             fileInput('calfileinput2', 'Load Cal File', accept='.quant', multiple=FALSE)
         } else {
             p()
@@ -123,7 +122,7 @@ shinyServer(function(input, output, session) {
     
     output$space23gen <- renderUI({
         
-        if(input$otherdata==TRUE){
+        if(input$otherdata){
             tags$hr()
         } else {
             p()
@@ -134,7 +133,7 @@ shinyServer(function(input, output, session) {
     
     output$file3gen <- renderUI({
         
-        if(input$otherdata==TRUE){
+        if(input$otherdata){
             fileInput('file3', 'Choose Spectra', multiple=TRUE,
             accept=c('text/csv',
             'text/comma-separated-values,text/plain',
@@ -148,7 +147,7 @@ shinyServer(function(input, output, session) {
     
     output$calfile3gen <- renderUI({
         
-        if(input$otherdata==TRUE){
+        if(input$otherdata){
             fileInput('calfileinput3', 'Load Cal File', accept='.quant', multiple=FALSE)
         } else {
             p()
@@ -159,46 +158,46 @@ shinyServer(function(input, output, session) {
     
     
     output$gainshiftui <- renderUI({
-        
-        if(input$advanced==TRUE){
+
+        if(isTRUE(input$advanced)){
             numericInput('gainshift', "Gain Shift (keV)", min=-1, max=1, value=0)
         } else {
             p()
         }
-        
+
     })
-    
-    
+
+
     output$binaryui <- renderUI({
-        
-        if(input$advanced==TRUE && input$filetype=="PDZ"){
+
+        if(isTRUE(input$advanced) && input$filetype=="PDZ"){
             numericInput('binaryshift', "Binary Shift (bits)", min=0, max=1000, value=0)
         } else {
             p()
         }
-        
+
     })
-    
-    
+
+
     binaryHold <- reactive({
-        
-        if(input$advanced==TRUE){
+
+        if(isTRUE(input$advanced)){
             input$binaryshift
-        } else if(input$advanced==FALSE){
+        } else {
             500
         }
-        
+
     })
-    
-    
+
+
     gainshiftHold <- reactive({
-        
-        if(input$advanced==TRUE){
+
+        if(isTRUE(input$advanced)){
             input$gainshift
-        } else if(input$advanced==FALSE){
+        } else {
             0
         }
-        
+
     })
 
     
@@ -264,11 +263,10 @@ dataType <- reactive({
             n <- length(inFile$datapath)
             names <- inFile$name
             
-            if(input$advanced==FALSE){
+            if(!isTRUE(input$advanced)){
                 myfiles.frame <- as.data.frame(do.call(rbind, lapply(seq(1, n, 1), function(x) readPDZData(filepath=inFile$datapath[x], filename=inFile$name[x]))))
-            } else if(input$advanced==TRUE){
+            } else {
                 myfiles.frame <- as.data.frame(do.call(rbind, lapply(seq(1, n, 1), function(x) readPDZ25DataManual(filepath=inFile$datapath[x], filename=inFile$name[x], binaryshift=binaryHold()))))
-                
             }
             
             incProgress(1/n)
@@ -719,9 +717,9 @@ dataType <- reactive({
         dataCount1 <- reactive({
             inFile <- input$file1
             
-            if(input$usecalfile==FALSE){
+            if(!input$usecalfile){
                 length(inFile$datapath)
-            }else if(input$usecalfile==TRUE){
+            } else {
                 length(calFileContents()$Intensities)
             }
         })
@@ -1062,9 +1060,9 @@ dataType <- reactive({
         dataCount2 <- reactive({
             inFile <- input$file2
             
-            if(input$usecalfile==FALSE){
+            if(!input$usecalfile){
                 length(inFile$datapath)
-            }else if(input$usecalfile==TRUE){
+            } else {
                 length(calFileContents2()$Intensities)
             }
         })
@@ -1397,9 +1395,9 @@ dataType <- reactive({
         dataCount3 <- reactive({
             inFile <- input$file3
             
-            if(input$usecalfile==FALSE){
+            if(!input$usecalfile){
                 length(inFile$datapath)
-            }else if(input$usecalfile==TRUE){
+            } else {
                 length(calFileContents3()$Intensities)
             }
         })
@@ -1760,9 +1758,9 @@ dataType <- reactive({
         dataCount <- reactive({
             inFile <- input$file1
             
-            if(input$usecalfile==FALSE){
+            if(!input$usecalfile){
                 length(inFile$datapath)
-            }else if(input$usefile==TRUE){
+            } else {
                 length(calFileContents()$Intensities)
             }
         })
@@ -2000,51 +1998,51 @@ spectral.plot
              
              if(dataType()!="Spreadsheet"){
                  
-                 first.instrument <- if(dataType()=="Spectra" && input$usecalfile==FALSE){
+                 first.instrument <- if(dataType()=="Spectra" && !input$usecalfile){
                      spectra.line.fn(myData1())
-                 } else if(input$filetype=="Net" && input$usecalfile==FALSE){
+                 } else if(input$filetype=="Net" && !input$usecalfile){
                      myData1()
-                 }  else if(dataType()=="Spectra" && input$usecalfile==TRUE) {
+                 }  else if(dataType()=="Spectra" && input$usecalfile) {
                      tableInputValQuant1()
-                 } else if(input$filetype=="Net" && input$usecalfile==TRUE){
+                 } else if(input$filetype=="Net" && input$usecalfile){
                      tableInputValQuant1()
                  }
                  
-                 if(is.null(input$file2)==FALSE){
-                     second.instrument <- if(dataType()=="Spectra" && input$usecalfile==FALSE){
+                 if(!is.null(input$file2)){
+                     second.instrument <- if(dataType()=="Spectra" && !input$usecalfile){
                          spectra.line.fn(myData2())
-                     } else if(input$filetype=="Net" && input$usecalfile==FALSE){
+                     } else if(input$filetype=="Net" && !input$usecalfile){
                          myData2()
-                     } else if(dataType()=="Spectra" && input$usecalfile==TRUE) {
+                     } else if(dataType()=="Spectra" && input$usecalfile) {
                          tableInputValQuant2()
-                     } else if(input$filetype=="Net" && input$usecalfile==TRUE){
+                     } else if(input$filetype=="Net" && input$usecalfile){
                          tableInputValQuant2()
                      }
                  }
                  
-                 if(is.null(input$file3)==FALSE){
-                     third.instrument <- if(dataType()=="Spectra" && input$usecalfile==FALSE){
+                 if(!is.null(input$file3)){
+                     third.instrument <- if(dataType()=="Spectra" && !input$usecalfile){
                          spectra.line.fn(myData3())
-                     } else if(input$filetype=="Net" && input$usecalfile==FALSE){
+                     } else if(input$filetype=="Net" && !input$usecalfile){
                          myData3()
-                     } else if(dataType()=="Spectra" && input$usecalfile==TRUE) {
+                     } else if(dataType()=="Spectra" && input$usecalfile) {
                          tableInputValQuant3()
-                     } else if(input$filetype=="Net" && input$usecalfile==TRUE){
+                     } else if(input$filetype=="Net" && input$usecalfile){
                          tableInputValQuant3()
                      }
                  }
                  
                  
-                 if(is.null(input$file2)==TRUE && is.null(input$file3)==TRUE){
+                 if(is.null(input$file2) && is.null(input$file3)){
                      first.instrument
-                 }else if(is.null(input$file2)==FALSE && is.null(input$file3)==TRUE){
+                 }else if(!is.null(input$file2) && is.null(input$file3)){
                      merge(first.instrument, second.instrument, all=TRUE)
-                 }else if(is.null(input$file2)==FALSE && is.null(input$file3)==FALSE){
+                 }else if(!is.null(input$file2) && !is.null(input$file3)){
                      merge(merge(first.instrument, second.instrument, all=TRUE), third.instrument, all=TRUE)
                  }
-             }  else if(dataType()=="Spreadsheet" && input$usecalfile==FALSE){
+             }  else if(dataType()=="Spreadsheet" && !input$usecalfile){
                  myData1()
-             } else if(input$filetype=="Artax Excel" && input$usecalfile==FALSE){
+             } else if(input$filetype=="Artax Excel" && !input$usecalfile){
                  myData1()
              }
              
@@ -2057,18 +2055,18 @@ spectral.plot
          lineOptions <- reactive({
              
              spectra.line.table <- dataMerge()[ ,!(colnames(dataMerge()) == "Spectrum")]
-             if(input$usecalfile==TRUE){
+             if(input$usecalfile){
                  quant.frame <- dataMerge()[ ,!(colnames(dataMerge()) =="Spectrum")]
                  quantified <- colnames(quant.frame)
              }
              
-             standard <- if(input$usecalfile==FALSE && dataType()=="Spectra"){
+             standard <- if(!input$usecalfile && dataType()=="Spectra"){
                  spectralLines
-             } else if(input$usecalfile==FALSE && input$filetype=="Net"){
+             } else if(!input$usecalfile && input$filetype=="Net"){
                  colnames(spectra.line.table)
-             } else if(input$usecalfile==TRUE && dataType()=="Spectra"){
+             } else if(input$usecalfile && dataType()=="Spectra"){
                  quantified
-             }else if(input$usecalfile==TRUE && input$filetype=="Net"){
+             }else if(input$usecalfile && input$filetype=="Net"){
                  quantified
              } else if(dataType()=="Spreadsheet"){
                  colnames(spectra.line.table)
@@ -2081,16 +2079,16 @@ spectral.plot
          defaultLines <- reactive({
              
              spectra.line.table <- dataMerge()
-             if(input$usecalfile==TRUE){quantified <- colnames(dataMerge()[ ,!(colnames(dataMerge()) =="Spectrum")])
+             if(input$usecalfile){quantified <- colnames(dataMerge()[ ,!(colnames(dataMerge()) =="Spectrum")])
              }
              
-             standard <- if(input$usecalfile==FALSE && dataType()=="Spectra"){
+             standard <- if(!input$usecalfile && dataType()=="Spectra"){
                  defaultVariables()
-             } else if(input$usecalfile==FALSE && input$filetype=="Net"){
+             } else if(!input$usecalfile && input$filetype=="Net"){
                  defaultVariables()
-             } else if(input$usecalfile==TRUE && dataType()=="Spectra"){
+             } else if(input$usecalfile && dataType()=="Spectra"){
                  quantified
-             }else if(input$usecalfile==TRUE && input$filetype=="Net"){
+             }else if(input$usecalfile && input$filetype=="Net"){
                  quantified
              } else if(dataType()=="Spreadsheet"){
                  colnames(spectra.line.table[ ,!(colnames(spectra.line.table) == "Spectrum")])
@@ -2101,9 +2099,9 @@ spectral.plot
          
          optionLines <- reactive({
              
-             if(input$clusterlearn==FALSE){
+             if(!input$clusterlearn){
                  defaultLines()
-             } else if(input$clusterlearn==TRUE){
+             } else if(input$clusterlearn){
                  theFish()
              }
              
@@ -2140,9 +2138,9 @@ spectral.plot
       spectra.line.table <- dataMerge()
       spectra.line.vector <- spectra.line.table$Spectrum
       
-      spectra.line.vector <- if(is.null(spectra.line.vector)==FALSE){
+      spectra.line.vector <- if(!is.null(spectra.line.vector)){
           spectra.line.table$Spectrum
-      } else if(is.null(spectra.line.vector)==TRUE){
+      } else if(is.null(spectra.line.vector)){
           seq(1, 5, 1)
       }
       
@@ -2186,10 +2184,11 @@ spectral.plot
       if (!is.null(input$hot)) {
           DF = hot_to_r(input$hot)
       } else {
-          if (is.null(values[["DF"]]))
-          DF <- hotableInput()
-          else
-          DF <- values[["DF"]]
+          if (is.null(values[["DF"]])) {
+              DF <- hotableInput()
+          } else {
+              DF <- values[["DF"]]
+          }
       }
       values[["DF"]] <- DF
   })
@@ -2390,9 +2389,9 @@ mergedHold <- reactive({
     
     #merged.table <- merge(dataMerge1a(), dataMerge1b(), all=TRUE)
         
-    if(input$usefull==FALSE){
+    if(!input$usefull){
         c(as.vector(dataMerge1a()$Spectrum),  as.vector(dataMerge1b()$Spectrum))
-    } else if(input$usefull==TRUE){
+    } else if(input$usefull){
         dataMerge()$Spectrum
     }
     
@@ -2494,9 +2493,9 @@ content = function(file
 
 dataMerge3 <- reactive({
     
-    spectra.line.table <- if(input$usefull==FALSE){
+    spectra.line.table <- if(!input$usefull){
         dataMerge2()
-    } else if(input$usefull==TRUE){
+    } else if(input$usefull){
         dataMerge()
     }
     
@@ -2510,7 +2509,7 @@ dataMerge3 <- reactive({
     
     #spectra.line.table <- spectra.line.table[complete.cases(spectra.line.table),]
     
-    if(input$logtrans==TRUE){spectra.line.table[,input$show_vars] <- log(spectra.line.table[,input$show_vars]+10)}
+    if(input$logtrans){spectra.line.table[,input$show_vars] <- log(spectra.line.table[,input$show_vars]+10)}
 
     spectra.line.table
     
@@ -2643,9 +2642,9 @@ choiceLines <- reactive({
   
   output$nvariablesui <- renderUI({
       
-      if(input$clusterlearn==TRUE){
+      if(input$clusterlearn){
           numericInput("nvariables", label = "# Elements", min=2, max=length(defaultVariables()), value=2)
-      } else if(input$clusterlearn==FALSE){
+      } else if(!input$clusterlearn){
           p()
       }
       
@@ -2654,9 +2653,9 @@ choiceLines <- reactive({
   
   output$usesubsetui <- renderUI({
       
-      if(input$clusterlearn==TRUE){
+      if(input$clusterlearn){
           checkboxInput("usesubset", label="Use Subset", value=FALSE)
-      } else if(input$clusterlearn==FALSE){
+      } else if(!input$clusterlearn){
           p()
       }
       
@@ -2698,9 +2697,9 @@ choiceLines <- reactive({
   
   fishVector <- reactive({
       
-      spectra.line.table <- if(input$usesubset==FALSE){
+      spectra.line.table <- if(!input$usesubset){
           dataMerge()
-      } else if(input$usesubset==TRUE){
+      } else if(input$usesubset){
           as.data.frame(dataMerge2()[, sapply(dataMerge2(), is.numeric)])
       }
       
@@ -2729,9 +2728,9 @@ choiceLines <- reactive({
   
   thanksForAllTheFish <- reactive({
       
-      spectra.line.table <- if(input$usesubset==FALSE){
+      spectra.line.table <- if(!input$usesubset){
           dataMerge()
-      } else if(input$usesubset==TRUE){
+      } else if(input$usesubset){
           as.data.frame(dataMerge2()[, sapply(dataMerge2(), is.numeric)])
       }
       
@@ -2999,7 +2998,7 @@ choiceLines <- reactive({
       
       spectra.line.table <- clusterFrame()
       
-      color.plot <- if(input$elipseplot1==FALSE){
+      color.plot <- if(!input$elipseplot1){
           ggplot(data= spectra.line.table) +
           geom_point(aes(PC1, PC2, colour=as.factor(spectra.line.table[,input$pcacolour]), shape=as.factor(spectra.line.table[,input$pcacolour])), size = input$spotsize+1) +
           geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2) +
@@ -3017,7 +3016,7 @@ choiceLines <- reactive({
           scale_shape_manual(input$pcacolour, values=1:nlevels(as.factor(spectra.line.table[,input$pcacolour]))) +
           scale_colour_discrete(input$pcacolour) +
           geom_point(aes(PC1, PC2), colour="grey30", size=input$spotsize-2)
-      } else if(input$elipseplot1==TRUE){
+      } else if(input$elipseplot1){
           ggplot(data= spectra.line.table) +
           stat_ellipse(aes(PC1, PC2, colour=as.factor(spectra.line.table[,input$pcacolour]), linetype=as.factor(spectra.line.table[,input$pcacolour]))) +
           geom_point(aes(PC1, PC2, colour=as.factor(spectra.line.table[,input$pcacolour]), shape=as.factor(spectra.line.table[,input$pcacolour])), size = input$spotsize+1) +
@@ -3051,17 +3050,17 @@ choiceLines <- reactive({
       
       if (input$pcacolour == "Focus" && input$pcafocuslabel=="None") {colnames(new.spectra.line.table) <- c("Spectrum", "PC1", "PC2", "Selected")}
       
-      if (input$elipseplot1 == FALSE && input$pcacolour == "Focus" && input$pcafocuslabel=="None") {select.plot <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize,  use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme(legend.text=element_text(size=15)) + theme_light()}
+      if (!input$elipseplot1 && input$pcacolour == "Focus" && input$pcafocuslabel=="None") {select.plot <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize,  use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme(legend.text=element_text(size=15)) + theme_light()}
       
-      if (input$elipseplot1 == TRUE && input$pcacolour == "Focus"  && input$pcafocuslabel=="None") {select.plot <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, use_group_by=FALSE, use_direct_label=FALSE) +  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      if (input$elipseplot1 && input$pcacolour == "Focus"  && input$pcafocuslabel=="None") {select.plot <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, use_group_by=FALSE, use_direct_label=FALSE) +  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
       
       if (input$pcacolour == "Focus" && input$pcafocuslabel!="None") {newer.spectra.line.table <- spectra.line.table[,c("Spectrum", "PC1", "PC2", input$pcafocusvariable, input$pcafocuslabel)]}
       
       if (input$pcacolour == "Focus" && input$pcafocuslabel!="None") {colnames(newer.spectra.line.table) <- c("Spectrum", "PC1", "PC2", "Selected", "Label")}
       
-      if (input$elipseplot1 == FALSE && input$pcacolour == "Focus" && input$pcafocuslabel!="None") {select.plot <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
+      if (!input$elipseplot1 && input$pcacolour == "Focus" && input$pcafocuslabel!="None") {select.plot <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
       
-      if (input$elipseplot1 == TRUE && input$pcacolour == "Focus"  && input$pcafocuslabel!="None") {select.plot <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      if (input$elipseplot1 && input$pcacolour == "Focus"  && input$pcafocuslabel!="None") {select.plot <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
       
       select.plot
       
@@ -3324,7 +3323,7 @@ spectraMatchData <- reactive({
     data$Energy <- as.numeric(data$Energy)
     data$Spectrum <- as.vector(data$Spectrum)
     
-    if(input$usesubsetmatch==TRUE){
+    if(input$usesubsetmatch){
         data <- filter(data,
         Spectrum %in% input$show_rows
         )
@@ -3934,7 +3933,7 @@ secondDefaultSelect <- reactive({
       ratio.names.x <- paste(ratio.names.x, sep=",", collapse="")
       ratio.names.y <- paste(ratio.names.y, sep=",", collapse="")
       
-      color.plot <- if(input$elipseplot2==FALSE){
+      color.plot <- if(!input$elipseplot2){
           qplot(X, Y, data=ratio.frame, xlab = ratio.names.x, ylab = ratio.names.y ) +
           geom_point(aes(colour=as.factor(ratio.frame[,input$ratiocolour]), shape=as.factor(ratio.frame[,input$ratiocolour])), size=input$spotsize2+1) +
           geom_point(colour="grey30", size=input$spotsize2-2) +
@@ -3950,7 +3949,7 @@ secondDefaultSelect <- reactive({
           theme(legend.title=element_text(size=15)) +
           theme(legend.text=element_text(size=15)) +
           geom_point(colour="grey30", size=input$spotsize2-2, alpha=0.01)
-      } else if(input$elipseplot2==TRUE){
+      } else if(input$elipseplot2){
           ggplot(data=ratio.frame) +
           stat_ellipse(aes(X, Y, colour=as.factor(ratio.frame[,input$ratiocolour]), linetype=as.factor(ratio.frame[,input$ratiocolour]))) +
           geom_point(aes(X, Y, colour=as.factor(ratio.frame[,input$ratiocolour]), shape=as.factor(ratio.frame[,input$ratiocolour])), size = input$spotsize2+1) +
@@ -3998,17 +3997,17 @@ secondDefaultSelect <- reactive({
           colnames(new.ratio.table) <- c("Spectrum", "X", "Y", "Selected", input$ratiofocusshape)
       }
       
-      if (input$elipseplot2 == FALSE && input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {select.plot <- gghighlight_point(new.ratio.table, aes_string("X", "Y", colour="Selected", shape=input$ratiofocusshape), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
+      if (!input$elipseplot2 && input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {select.plot <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected, shape=.data[[input$ratiofocusshape]]), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
       
-      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel=="None") {select.plot <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected, shape=input$ratiofocusshape), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + scale_x_continuous(ratio.names.x) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      if (input$elipseplot2 && input$ratiocolour == "Focus"  && input$ratiofocuslabel=="None") {select.plot <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected, shape=input$ratiofocusshape), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + scale_x_continuous(ratio.names.x) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
       
       if (input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {newer.ratio.table <- ratio.frame[,c("Spectrum", "X", "Y", input$ratiofocusvariable, input$ratiofocuslabel)]}
       
       if (input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {colnames(newer.ratio.table) <- c("Spectrum", "X", "Y", "Selected", "Label")}
       
-      if (input$elipseplot2 == FALSE && input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {select.plot <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected, shape=input$ratiofocusshape), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
+      if (!input$elipseplot2 && input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {select.plot <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected, shape=input$ratiofocusshape), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
       
-      if (input$elipseplot2 == TRUE && input$ratiocolour == "Focus"  && input$ratiofocuslabel!="None") {select.plot <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected, shape=input$ratiofocusshape), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      if (input$elipseplot2 && input$ratiocolour == "Focus"  && input$ratiofocuslabel!="None") {select.plot <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected, shape=input$ratiofocusshape), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
       
       select.plot
       
@@ -4186,9 +4185,9 @@ firstAxis <- reactive({
     
     first.axis.nonorm <- as.vector(spectra.line.table[,input$axisa])
     first.axis.norm <- first.axis.nonorm/sum(first.axis.nonorm)
-    first.axis <- if(input$ternnormplot==FALSE){
+    first.axis <- if(!input$ternnormplot){
         first.axis.nonorm
-    } else if(input$ternnormplot==TRUE){
+    } else if(input$ternnormplot){
         first.axis.norm
     }
     first.axis
@@ -4200,9 +4199,9 @@ secondAxis <- reactive({
     
     second.axis.nonorm <- as.vector(spectra.line.table[,input$axisb])
     second.axis.norm <- second.axis.nonorm/sum(second.axis.nonorm)
-    second.axis <- if(input$ternnormplot==FALSE){
+    second.axis <- if(!input$ternnormplot){
         second.axis.nonorm
-    } else if(input$ternnormplot==TRUE){
+    } else if(input$ternnormplot){
         second.axis.norm
     }
     second.axis
@@ -4214,9 +4213,9 @@ thirdAxis <- reactive({
     
     third.axis.nonorm <- as.vector(spectra.line.table[,input$axisc])
     third.axis.norm <- third.axis.nonorm/sum(third.axis.nonorm)
-    third.axis <- if(input$ternnormplot==FALSE){
+    third.axis <- if(!input$ternnormplot){
         third.axis.nonorm
-    } else if(input$ternnormplot==TRUE){
+    } else if(input$ternnormplot){
         third.axis.norm
     }
     third.axis
@@ -4260,8 +4259,8 @@ plotInput5black <- reactive({
     
     axis.frame <- tenaryFrame()
     
-    ternaryplot <- if(input$terndensityplot==FALSE){
-            ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
+    ternaryplot <- if(!input$terndensityplot){
+            ggtern(data=axis.frame, aes(x = .data[[colnames(axis.frame)[1]]], y = .data[[colnames(axis.frame)[2]]], z = .data[[colnames(axis.frame)[3]]])) +
             geom_point(size=input$ternpointsize) +
             theme_light() +
             theme(axis.text.x = element_text(size=15)) +
@@ -4271,8 +4270,8 @@ plotInput5black <- reactive({
             theme(plot.title=element_text(size=20)) +
             theme(legend.title=element_text(size=15)) +
             theme(legend.text=element_text(size=15))
-        } else if(input$terndensityplot==TRUE){
-            ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
+        } else if(input$terndensityplot){
+            ggtern(data=axis.frame, aes(x = .data[[colnames(axis.frame)[1]]], y = .data[[colnames(axis.frame)[2]]], z = .data[[colnames(axis.frame)[3]]])) +
             geom_density_tern() +
             geom_point(size=input$ternpointsize) +
             theme_light() +
@@ -4293,12 +4292,12 @@ plotInput5color <- reactive({
     
     axis.frame <- tenaryFrame()
     
-    ternaryplot <- if(input$terndensityplot==FALSE){
-            ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
+    ternaryplot <- if(!input$terndensityplot){
+            ggtern(data=axis.frame, aes(x = .data[[colnames(axis.frame)[1]]], y = .data[[colnames(axis.frame)[2]]], z = .data[[colnames(axis.frame)[3]]])) +
             geom_point(aes(colour = as.factor(axis.frame[,input$ternarycolour]), shape=as.factor(axis.frame[,input$ternarycolour])), size=input$ternpointsize+1) +
             geom_point(colour="grey30", size=input$ternpointsize-2) +
-            scale_shape_manual(input$ternarycolour, values=1:nlevels(as.factor(axis.frame[,input$ternarycolour]))) +
-            scale_colour_discrete(input$ternarycolour) +
+            scale_shape_manual(name = input$ternarycolour, input$ternarycolour, values=1:nlevels(as.factor(axis.frame[,input$ternarycolour]))) +
+            scale_colour_discrete(name = input$ternarycolour) +
             theme_light() +
             theme(axis.text.x = element_text(size=15)) +
             theme(axis.text.y = element_text(size=15)) +
@@ -4307,8 +4306,8 @@ plotInput5color <- reactive({
             theme(plot.title=element_text(size=20)) +
             theme(legend.title=element_text(size=15)) +
             theme(legend.text=element_text(size=15))
-        } else if(input$terndensityplot==TRUE){
-            ggtern(data=axis.frame, aes_string(x = colnames(axis.frame)[1], y = colnames(axis.frame)[2], z = colnames(axis.frame)[3])) +
+        } else if(input$terndensityplot){
+            ggtern(data=axis.frame, aes(x = .data[[colnames(axis.frame)[1]]], y = .data[[colnames(axis.frame)[2]]], z = .data[[colnames(axis.frame)[3]]])) +
             geom_density_tern() +
             geom_point(aes(colour = as.factor(axis.frame[,input$ternarycolour]), shape=as.factor(axis.frame[,input$ternarycolour])), size=input$ternpointsize) +
             geom_point(colour="grey30", size=input$ternpointsize-2) +
@@ -4381,9 +4380,9 @@ output$predictorsui <- renderUI({
 
 
 modelKind <- reactive({
-    if(is.numeric(dataMerge3()[,input$variable])==TRUE){
+    if(is.numeric(dataMerge3()[,input$variable])){
         "Regression"
-    } else if(is.numeric(dataMerge3()[,input$variable])==FALSE){
+    } else if(!is.numeric(dataMerge3()[,input$variable])){
         "Classification"
     }
 })
@@ -4535,39 +4534,39 @@ minN <- reactive({
 
 output$foresttryui <- renderUI({
     req(input$modeltype)
-    if(needTry()==TRUE){
+    if(needTry()){
         forestTryUI(radiocal=input$modeltype, neuralhiddenlayers=2, selection=10, maxsample=100)
-    } else if(needTry()==FALSE){
+    } else if(!needTry()){
         NULL
     }
 })
 
 forestTry <- reactive({
-    if(needTry()==TRUE){
+    if(needTry()){
         input$foresttry
-    } else if(needTry()==FALSE){
+    } else if(!needTry()){
         NULL
     }
 })
 
 
 output$forestmetricui <- renderUI({
-    if(needCaret()==TRUE){
+    if(needCaret()){
         if(modelKind()=="Regression"){
             forestMetricQuantUI(radiocal=input$modeltype, selection="RMSE")
         } else if(modelKind()=="Classification"){
             forestMetricQualUI(radiocal=input$modeltype, selection="Accuracy")
         }
         
-    } else if(needCaret()==FALSE){
+    } else if(!needCaret()){
         NULL
     }
 })
 
 forestMetric <- reactive({
-    if(needCaret()==TRUE){
+    if(needCaret()){
         input$forestmetric
-    } else if(needCaret()==FALSE){
+    } else if(!needCaret()){
         NULL
     }
 })
@@ -4575,34 +4574,34 @@ forestMetric <- reactive({
 
 output$foresttrainui <- renderUI({
     req(input$modeltype)
-    if(needCaret()==TRUE){
+    if(needCaret()){
         forestTrainUI(radiocal=input$modeltype, selection="repeatedcv")
-    } else if(needCaret()==FALSE){
+    } else if(!needCaret()){
         NULL
     }
 })
 
 forestTrain <- reactive({
-    if(needCaret()==TRUE){
+    if(needCaret()){
         input$foresttrain
-    } else if(needCaret()==FALSE){
+    } else if(!needCaret()){
         NULL
     }
 })
 
 output$forestnumberui <- renderUI({
     req(input$modeltype)
-    if(needCaret()==TRUE){
+    if(needCaret()){
         forestNumberUI(radiocal=input$modeltype, selection=30)
-    } else if(needCaret()==FALSE){
+    } else if(!needCaret()){
         NULL
     }
 })
 
 forestNumber <- reactive({
-    if(needCaret()==TRUE){
+    if(needCaret()){
         input$forestnumber
-    } else if(needCaret()==FALSE){
+    } else if(!needCaret()){
         NULL
     }
 })
@@ -4627,9 +4626,9 @@ cvRepeats <- reactive({
 
 output$foresttreesui <- renderUI({
     req(input$modeltype)
-    if(needForest()==TRUE){
+    if(needForest()){
         forestTreesUI(radiocal=input$modeltype, selection=1000)
-    } else if(needXGBoost()==TRUE){
+    } else if(needXGBoost()){
         forestTreesUI(radiocal=input$modeltype, selection=1000)
     } else {
         NULL
@@ -4638,9 +4637,9 @@ output$foresttreesui <- renderUI({
 
 forestTrees <- reactive({
     req(input$modeltype)
-    if(needForest()==TRUE){
+    if(needForest()){
         input$foresttrees
-    } else if(needXGBoost()==TRUE){
+    } else if(needXGBoost()){
         input$foresttrees
     } else {
         NULL
@@ -4650,9 +4649,9 @@ forestTrees <- reactive({
 
 output$neuralhiddenlayersui <- renderUI({
     req(input$modeltype)
-    if(needNeuralNet()==TRUE){
+    if(needNeuralNet()){
         neuralHiddenLayersUI(radiocal=input$modeltype, selection=1)
-    } else if(needNeuralNet()==FALSE){
+    } else if(!needNeuralNet()){
         NULL
     }
 })
@@ -4666,9 +4665,9 @@ neuralHiddenLayer <- reactive({
 
 output$neuralhiddenunitsui <- renderUI({
     req(input$modeltype)
-    if(needNeuralNet()==TRUE){
+    if(needNeuralNet()){
         neuralHiddenUnitsUi(radiocal=input$modeltype, selection=c(2, 4))
-    } else if(needNeuralNet()==FALSE){
+    } else if(!needNeuralNet()){
         NULL
     }
 })
@@ -4686,9 +4685,9 @@ neuralHiddenUnits <- reactive({
 
 output$neuralweightdecayui <- renderUI({
     req(input$modeltype)
-    if(needNeuralNet()==TRUE){
+    if(needNeuralNet()){
         neuralWeightDecayUI(radiocal=input$modeltype, selection=c(0.3, 0.5), neuralhiddenlayers=input$neuralhiddenlayers)
-    } else if(needNeuralNet()==FALSE){
+    } else if(!needNeuralNet()){
         NULL
     }
 })
@@ -4703,9 +4702,9 @@ neuralWeightDecay <- reactive({
 
 output$neuralmaxiterationsui <- renderUI({
     req(input$modeltype)
-    if(needNeuralNet()==TRUE){
+    if(needNeuralNet()){
         neuralMaxIterationsUI(radiocal=input$modeltype, selection=2000, neuralhiddenlayers=input$neuralhiddenlayers)
-    } else if(needNeuralNet()==FALSE){
+    } else if(!needNeuralNet()){
         NULL
     }
     
@@ -4720,17 +4719,17 @@ neuralMaxIterations <- reactive({
 
 output$xgbtypeui <- renderUI({
     req(input$modeltype)
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         xgbTypeUI(radiocal=input$modeltype, selection="Linear")
-    } else if(needXGBoost()==FALSE){
+    } else if(!needXGBoost()){
         NULL
     }
 })
 
 xgbType <- reactive({
-        if(needXGBoost()==TRUE){
+        if(needXGBoost()){
         input$xgbtype
-    } else if(needXGBoost()==FALSE){
+    } else if(!needXGBoost()){
         NULL
     }
 })
@@ -4738,7 +4737,7 @@ xgbType <- reactive({
 
 output$usebayesui <- renderUI({
     req(input$modeltype)
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         checkboxInput("usebayes", "Use Bayesian Parameter Estimation", value=FALSE)
     } else {
         NULL
@@ -4746,7 +4745,7 @@ output$usebayesui <- renderUI({
 })
 
 useBayes <- reactive({
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         input$usebayes
     } else {
         FALSE
@@ -4755,83 +4754,83 @@ useBayes <- reactive({
 
 output$foldsui <- renderUI({
     req(input$modeltype, input$usebayes)
-    if(useBayes()==TRUE){
+    if(useBayes()){
         sliderInput("folds", "K-folds", min=2, max=50, value=5)
-    } else if(useBayes()==FALSE){
+    } else if(!useBayes()){
         NULL
     }
 })
 
 output$testingroundsui <- renderUI({
     req(input$modeltype)
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         sliderInput("testrounds", "Testing Rounds", min=2, max=1000, value=200)
-    } else if(needXGBoost()==FALSE){
+    } else if(!needXGBoost()){
         NULL
     }
 })
 
 testRounds <- reactive({
     req(input$modeltype)
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         input$testrounds
-    } else if(needXGBoost()==FALSE){
+    } else if(!needXGBoost()){
         NULL
     }
 })
 
 bayesFolds <- reactive({
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         input$folds
-    } else if(needXGBoost()==FALSE){
+    } else if(!needXGBoost()){
         NULL
     }
 })
 
 output$init_pointsui <- renderUI({
     req(input$modeltype, input$usebayes)
-    if(useBayes()==TRUE){
+    if(useBayes()){
         sliderInput("init_points", "Initial Runs", min=2, max=150, value=50)
-    } else if(useBayes()==FALSE){
+    } else if(!useBayes()){
         50
     }
 })
 
 bayesInitPoints <- reactive({
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         input$init_points
-    } else if(needXGBoost()==FALSE){
+    } else if(!needXGBoost()){
         NULL
     }
 })
 
 output$n_iterui <- renderUI({
     req(input$modeltype, input$usebayes)
-    if(useBayes()==TRUE){
+    if(useBayes()){
         sliderInput("n_iter", "Bayesian Iterations", min=2, max=50, value=10)
-    } else if(useBayes()==FALSE){
+    } else if(!useBayes()){
         NULL
     }
 })
 
 bayesNIter <- reactive({
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         input$n_iter
-    } else if(needXGBoost()==FALSE){
+    } else if(!needXGBoost()){
         NULL
     }
 })
 
 output$treedepthui <- renderUI({
     req(input$modeltype)
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         req(input$xgbtype)
-        if(input$usebayes==TRUE){
+        if(input$usebayes){
             treeDepthUI(radiocal=input$modeltype, selection=c(2, 40), xgbtype=input$xgbtype)
-        } else if(input$usebayes==FALSE){
+        } else if(!input$usebayes){
             treeDepthUI(radiocal=input$modeltype, selection=c(2, 7), xgbtype=input$xgbtype)
         }
-    } else if(needXGBoost()==FALSE){
+    } else if(!needXGBoost()){
         NULL
     }
 })
@@ -4847,14 +4846,14 @@ treeDepth <- reactive({
 
 output$xgbalphaui <- renderUI({
     req(input$modeltype)
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         req(input$xgbtype)
-        if(input$usebayes==TRUE){
+        if(input$usebayes){
             xgbAlphaUI(radiocal=input$modeltype, selection=c(0, 10), xgbtype=input$xgbtype)
-        } else if(input$usebayes==FALSE){
+        } else if(!input$usebayes){
             xgbAlphaUI(radiocal=input$modeltype, selection=c(0.05, 0.95), xgbtype=input$xgbtype)
         }
-    } else if(needXGBoost()==FALSE){
+    } else if(!needXGBoost()){
         NULL
     }
 })
@@ -4870,14 +4869,14 @@ xgbAlpha <- reactive({
 
 output$xgbgammaui <- renderUI({
     req(input$modeltype)
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         req(input$xgbtype)
-        if(input$usebayes==TRUE){
+        if(input$usebayes){
             xgbGammaUI(radiocal=input$modeltype, selection=c(0.0, 1), xgbtype=input$xgbtype)
-        } else if(input$usebayes==FALSE){
+        } else if(!input$usebayes){
             xgbGammaUI(radiocal=input$modeltype, selection=c(0.0, 1), xgbtype=input$xgbtype)
         }
-    } else if(needXGBoost()==FALSE){
+    } else if(!needXGBoost()){
         NULL
     }
 })
@@ -4892,14 +4891,14 @@ xgbGamma <- reactive({
 
 output$xgbetaui <- renderUI({
     req(input$modeltype)
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         req(input$xgbtype)
-        if(input$usebayes==TRUE){
+        if(input$usebayes){
             xgbEtaUI(radiocal=input$modeltype, selection=c(0.01, 0.999))
-        } else if(input$usebayes==FALSE){
+        } else if(!input$usebayes){
             xgbEtaUI(radiocal=input$modeltype, selection=c(0.01, 0.99))
         }
-    } else if(needXGBoost()==FALSE){
+    } else if(!needXGBoost()){
         NULL
     }
 })
@@ -4916,14 +4915,14 @@ xgbEta <- reactive({
 
 output$xgblambdaui <- renderUI({
     req(input$modeltype)
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         req(input$xgbtype)
-        if(input$usebayes==TRUE){
+        if(input$usebayes){
             xgbLambdaUI(radiocal=input$modeltype, selection=c(0, 10), xgbtype=input$xgbtype)
-        } else if(input$usebayes==FALSE){
+        } else if(!input$usebayes){
             xgbLambdaUI(radiocal=input$modeltype, selection=c(0.05, 0.95), xgbtype=input$xgbtype)
         }
-    } else if(needXGBoost()==FALSE){
+    } else if(!needXGBoost()){
         NULL
     }
 })
@@ -4939,14 +4938,14 @@ xgbLambda <- reactive({
 
 output$xgbsubsampleui <- renderUI({
     req(input$modeltype)
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         req(input$xgbtype)
-        if(input$usebayes==TRUE){
+        if(input$usebayes){
             xgbSubSampleUI(radiocal=input$modeltype, selection=c(0.05, 0.95), xgbtype=input$xgbtype)
-        } else if(input$usebayes==FALSE){
+        } else if(!input$usebayes){
             xgbSubSampleUI(radiocal=input$modeltype, selection=c(0.05, 0.95), xgbtype=input$xgbtype)
         }
-    } else if(needXGBoost()==FALSE){
+    } else if(!needXGBoost()){
         NULL
     }
 })
@@ -4962,14 +4961,14 @@ xgbSubSample <- reactive({
 
 output$xgbcolsampleui <- renderUI({
     req(input$modeltype)
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         req(input$xgbtype)
-        if(input$usebayes==TRUE){
+        if(input$usebayes){
             xgbColSampleUI(radiocal=input$modeltype, selection=c(0.05, 0.95), xgbtype=input$xgbtype)
-        } else if(input$usebayes==FALSE){
+        } else if(!input$usebayes){
             xgbColSampleUI(radiocal=input$modeltype, selection=c(0.05, 0.95), xgbtype=input$xgbtype)
         }
-    } else if(needXGBoost()==FALSE){
+    } else if(!needXGBoost()){
         NULL
     }
 })
@@ -4984,10 +4983,10 @@ xgbColSample <- reactive({
 
 output$xgbminchildui <- renderUI({
     req(input$modeltype)
-    if(needXGBoost()==TRUE){
+    if(needXGBoost()){
         req(input$xgbtype)
         xgbMinChildUI(radiocal=input$modeltype, selection=c(1, 3), xgbtype=input$xgbtype)
-    } else if(needXGBoost()==FALSE){
+    } else if(!needXGBoost()){
         NULL
     }
 })

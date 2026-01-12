@@ -72,8 +72,8 @@ my.cores <- if(parallel::detectCores()>=3){
 }
 
 
-my.max <- function(x) ifelse( !all(is.na(x)), max(x, na.rm=T), NA)
-my.min <- function(x) ifelse( !all(is.na(x)), min(x, na.rm=T), NA)
+my.max <- function(x) ifelse( !all(is.na(x)), max(x, na.rm=TRUE), NA)
+my.min <- function(x) ifelse( !all(is.na(x)), min(x, na.rm=TRUE), NA)
 
 strip_glm <- function(cm) {
     cm$y = c()
@@ -606,7 +606,7 @@ BayesianOptimizationDebug <- function(FUN, bounds, init_grid_dt = NULL, init_poi
                               )
  {
      
-     if (class(data)[1] == "dgCMatrix") {
+     if (inherits(data, "dgCMatrix")) {
          dtrain <- xgb.DMatrix(data, label = label)
          xg_watchlist <- list(msr = dtrain)
          cv_folds <- KFold(label, nfolds = n_folds, stratified = TRUE,
@@ -617,7 +617,7 @@ BayesianOptimizationDebug <- function(FUN, bounds, init_grid_dt = NULL, init_poi
          #datalabel <- (data %>% select(!!quolabel))[[1]]
          datalabel <- data$Class
          mx <- Matrix::sparse.model.matrix(datalabel ~ ., data[,!colnames(data) %in% "Class"])
-         if (class(datalabel) == "factor") {
+         if (is.factor(datalabel)) {
              dtrain <- xgb.DMatrix(mx, label = as.integer(datalabel) -
                  1)
          }
@@ -809,7 +809,7 @@ xgb_cv_opt_tree <- function (data
         FALSE
     }
     
-    if (class(data)[1] == "dgCMatrix") {
+    if (inherits(data, "dgCMatrix")) {
         dtrain <- xgb.DMatrix(data, label = label)
         xg_watchlist <- list(msr = dtrain)
         cv_folds <- KFold(label, nfolds = n_folds, stratified = TRUE,
@@ -820,7 +820,7 @@ xgb_cv_opt_tree <- function (data
         #datalabel <- (data %>% select(!!quolabel))[[1]]
         datalabel <- data$Class
         mx <- Matrix::sparse.model.matrix(datalabel ~ ., data[,!colnames(data) %in% "Class"])
-        if (class(datalabel) == "factor") {
+        if (is.factor(datalabel)) {
             dtrain <- xgb.DMatrix(mx, label = as.integer(datalabel) -
                 1)
         }
@@ -1011,7 +1011,7 @@ xgb_cv_opt_dart <- function (data
         FALSE
     }
     
-    if (class(data)[1] == "dgCMatrix") {
+    if (inherits(data, "dgCMatrix")) {
         dtrain <- xgb.DMatrix(data, label = label)
         xg_watchlist <- list(msr = dtrain)
         cv_folds <- KFold(label, nfolds = n_folds, stratified = TRUE,
@@ -1021,7 +1021,7 @@ xgb_cv_opt_dart <- function (data
         #datalabel <- (data %>% select(!!quolabel))[[1]]
         datalabel <- data$Class
         mx <- Matrix::sparse.model.matrix(datalabel ~ ., data[,!colnames(data) %in% "Class"])
-        if (class(datalabel) == "factor") {
+        if (is.factor(datalabel)) {
             dtrain <- xgb.DMatrix(mx, label = as.integer(datalabel) -
                 1)} else {
             dtrain <- xgb.DMatrix(mx, label = datalabel)
@@ -1207,7 +1207,7 @@ xgb_cv_opt_linear <- function (data
         FALSE
     }
     
-    if (class(data)[1] == "dgCMatrix") {
+    if (inherits(data, "dgCMatrix")) {
         dtrain <- xgb.DMatrix(data, label = label)
         xg_watchlist <- list(msr = dtrain)
         cv_folds <- KFold(label, nfolds = n_folds, stratified = TRUE,
@@ -1217,7 +1217,7 @@ xgb_cv_opt_linear <- function (data
         quolabel <- enquo(label)
         datalabel <- data %>% dplyr::pull(!!quolabel)
         mx <- Matrix::sparse.model.matrix(datalabel ~ ., data)
-        if (class(datalabel) == "factor") {
+        if (is.factor(datalabel)) {
             dtrain <- xgb.DMatrix(mx, label = as.integer(datalabel) -
                 1)
         }
@@ -1240,7 +1240,7 @@ xgb_cv_opt_linear <- function (data
             object_fun <- objectfun
             eval_met <- evalmetric
             cv <- xgb.cv(params = list(
-                                       , alpha = alpha_opt
+                                       alpha = alpha_opt
                                        , eta = eta_opt
                                        , lambda = lambda_opt
                                        
@@ -6575,7 +6575,6 @@ classifySVM <- function(data
        svmGrid <- svmGrid[,!colnames(svmGrid) %in% "Value"]
        
        
-       
 
        #Create tune control for the final model. This will be based on the training method, iterations, and cross-validation repeats choosen by the user
        tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
@@ -8606,13 +8605,13 @@ qualPartLoad <- function(qualpart_directory=NULL, qualpart=NULL){
         qualpart$PlotData <- qualpart$AllData
     }
     
-    qualpart$ResultPlot <- if(class(qualpart$trainAccuracy)=="confusionMatrix"){
+    qualpart$ResultPlot <- if(inherits(qualpart$trainAccuracy, "confusionMatrix")){
         ggplot(qualpart$PlotData, aes(x=Type, y=Accuracy, fill=Type)) +
         geom_bar(stat="identity") +
         geom_text(aes(label=paste0(round(Accuracy, 2), "%")), vjust=1.6, color="white",
                   position = position_dodge(0.9), size=3.5) +
         theme_light()
-    } else if(class(qualpart$trainAccuracy)!="confusionMatrix"){
+    } else {
         ggplot(qualpart$PlotData, aes(Known, Predicted, colour=Type, shape=Type)) +
         geom_point(alpha=0.5) +
         stat_smooth(method="lm") +
