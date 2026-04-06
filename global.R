@@ -18,6 +18,11 @@ get_os <- function(){
 #getOption("repos")
 #options(download.file.method="libcurl", url.method="libcurl")
 if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+
+# Define a placeholder function
+some_function <- function(x) {
+  return(x * 2)
+}
 list.of.bioconductor <- c("graph", "RBGL", "Rgraphviz")
 new.bioconductor <- list.of.bioconductor[!(list.of.bioconductor %in% installed.packages()[,"Package"])]
 #if(length(new.bioconductor)) source("https://www.bioconductor.org/biocLite.R")
