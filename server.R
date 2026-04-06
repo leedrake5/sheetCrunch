@@ -159,8 +159,8 @@ shinyServer(function(input, output, session) {
     
     output$gainshiftui <- renderUI({
 
-        if(isTRUE(input$advanced)){
-            numericInput('gainshift', "Gain Shift (keV)", min=-1, max=1, value=0)
+        if(isTRUE(input$advanced) && !is.null(input$gainshift)){
+            numericInput('gainshift', "Gain Shift (keV)", min=-1, max=1, value=input$gainshift)
         } else {
             p()
         }
@@ -181,7 +181,7 @@ shinyServer(function(input, output, session) {
 
     binaryHold <- reactive({
 
-        if(isTRUE(input$advanced)){
+        if(isTRUE(input$advanced) && !is.null(input$binaryshift)){
             input$binaryshift
         } else {
             500
@@ -192,7 +192,7 @@ shinyServer(function(input, output, session) {
 
     gainshiftHold <- reactive({
 
-        if(isTRUE(input$advanced)){
+        if(isTRUE(input$advanced) && !is.null(input$gainshift)){
             input$gainshift
         } else {
             0
@@ -4163,7 +4163,11 @@ firstAxis <- reactive({
     spectra.line.table <- dataMerge3()
     
     first.axis.nonorm <- as.vector(spectra.line.table[,input$axisa])
-    first.axis.norm <- first.axis.nonorm/sum(first.axis.nonorm)
+    if (!is.null(first.axis.nonorm) && sum(first.axis.nonorm) != 0) {
+        first.axis.norm <- first.axis.nonorm/sum(first.axis.nonorm)
+    } else {
+        first.axis.norm <- rep(0, length(first.axis.nonorm))
+    }
     first.axis <- if(!input$ternnormplot){
         first.axis.nonorm
     } else if(input$ternnormplot){
