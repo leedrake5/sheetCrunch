@@ -2890,22 +2890,13 @@ choiceLines <- reactive({
       point.table <- optimalK()
       
       hover <- input$plot_hoveroptimalk
-      point <- nearPoints(point.table,  coordinfo=hover,   threshold = 5, maxpoints = 1, addDist = TRUE)
+      point <- nearPoints(point.table,  coordinfo=hover, xvar="clustercount", yvar="wss",  threshold = 5, maxpoints = 1, addDist = TRUE)
       if (nrow(point) == 0) return(NULL)
-      
-      
-      
-      
-      # calculate point position INSIDE the image as percent of total dimensions
-      # from left (horizontal) and from top (vertical)
-      left_pct <- (hover$x - hover$domain$left) / (hover$domain$right - hover$domain$left)
-      top_pct <- (hover$domain$top - hover$y) / (hover$domain$top - hover$domain$bottom)
-      
-      # calculate distance from left and bottom side of the picture in pixels
-      left_px <- hover$range$left + left_pct * (hover$range$right - hover$range$left)
-      top_px <- hover$range$top + top_pct * (hover$range$bottom - hover$range$top)
-      
-      
+
+      # calculate point position using coords_css for correct positioning
+      left_px <- hover$coords_css$x
+      top_px <- hover$coords_css$y
+
       # create style property fot tooltip
       # background color is set so tooltip is a bit transparent
       # z-index is set so we are sure are tooltip will be on top
@@ -3069,17 +3060,17 @@ choiceLines <- reactive({
       
       if (input$pcacolour == "Focus" && input$pcafocuslabel=="None") {colnames(new.spectra.line.table) <- c("Spectrum", "PC1", "PC2", "Selected")}
       
-      if (!input$elipseplot1 && input$pcacolour == "Focus" && input$pcafocuslabel=="None") {select.plot <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize,  use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme(legend.text=element_text(size=15)) + theme_light()}
+      if (!input$elipseplot1 && input$pcacolour == "Focus" && input$pcafocuslabel=="None") {select.plot <- ggplot(new.spectra.line.table, aes(PC1, PC2, colour=Selected)) + geom_point(size=input$spotsize) + gghighlight(Selected %in% c(input$pcafocuschoice), use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme(legend.text=element_text(size=15)) + theme_light()}
       
-      if (input$elipseplot1 && input$pcacolour == "Focus"  && input$pcafocuslabel=="None") {select.plot <- gghighlight_point(new.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, use_group_by=FALSE, use_direct_label=FALSE) +  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      if (input$elipseplot1 && input$pcacolour == "Focus"  && input$pcafocuslabel=="None") {select.plot <- ggplot(new.spectra.line.table, aes(PC1, PC2, colour=Selected)) + geom_point(size=input$spotsize) + gghighlight(Selected %in% c(input$pcafocuschoice), use_group_by=FALSE, use_direct_label=FALSE) +  coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
       
       if (input$pcacolour == "Focus" && input$pcafocuslabel!="None") {newer.spectra.line.table <- spectra.line.table[,c("Spectrum", "PC1", "PC2", input$pcafocusvariable, input$pcafocuslabel)]}
       
       if (input$pcacolour == "Focus" && input$pcafocuslabel!="None") {colnames(newer.spectra.line.table) <- c("Spectrum", "PC1", "PC2", "Selected", "Label")}
       
-      if (!input$elipseplot1 && input$pcacolour == "Focus" && input$pcafocuslabel!="None") {select.plot <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
+      if (!input$elipseplot1 && input$pcacolour == "Focus" && input$pcafocuslabel!="None") {select.plot <- ggplot(newer.spectra.line.table, aes(PC1, PC2, colour=Selected)) + geom_point(size=input$spotsize) + gghighlight(Selected %in% c(input$pcafocuschoice), use_group_by=FALSE, use_direct_label=TRUE, label_key=Label) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
       
-      if (input$elipseplot1 && input$pcacolour == "Focus"  && input$pcafocuslabel!="None") {select.plot <- gghighlight_point(newer.spectra.line.table, aes(PC1, PC2, colour=Selected), Selected %in% c(input$pcafocuschoice), size=input$spotsize, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      if (input$elipseplot1 && input$pcacolour == "Focus"  && input$pcafocuslabel!="None") {select.plot <- ggplot(newer.spectra.line.table, aes(PC1, PC2, colour=Selected)) + geom_point(size=input$spotsize) + gghighlight(Selected %in% c(input$pcafocuschoice), use_group_by=FALSE, use_direct_label=TRUE, label_key=Label) + coord_cartesian(xlim = rangespca$x, ylim = rangespca$y, expand = TRUE) + scale_x_continuous("Principle Component 1") + scale_y_continuous("Principle Component 2") + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
       
       select.plot
       
@@ -3110,22 +3101,13 @@ choiceLines <- reactive({
       point.table <- clusterFrame()
       
       hover <- input$plot_hoverpca
-      point <- nearPoints(point.table,  coordinfo=hover,   threshold = 5, maxpoints = 1, addDist = TRUE)
+      point <- nearPoints(point.table,  coordinfo=hover, xvar="PC1", yvar="PC2",  threshold = 5, maxpoints = 1, addDist = TRUE)
       if (nrow(point) == 0) return(NULL)
-      
 
+      # calculate point position using coords_css for correct positioning
+      left_px <- hover$coords_css$x
+      top_px <- hover$coords_css$y
 
-      
-      # calculate point position INSIDE the image as percent of total dimensions
-      # from left (horizontal) and from top (vertical)
-      left_pct <- (hover$x - hover$domain$left) / (hover$domain$right - hover$domain$left)
-      top_pct <- (hover$domain$top - hover$y) / (hover$domain$top - hover$domain$bottom)
-      
-      # calculate distance from left and bottom side of the picture in pixels
-      left_px <- hover$range$left + left_pct * (hover$range$right - hover$range$left)
-      top_px <- hover$range$top + top_pct * (hover$range$bottom - hover$range$top)
-      
-      
       # create style property fot tooltip
       # background color is set so tooltip is a bit transparent
       # z-index is set so we are sure are tooltip will be on top
@@ -3549,22 +3531,13 @@ observeEvent(input$plot_dblclickmatch, {
         
         
         hover <- input$plot_hovermatch
-        point <- nearPoints(point.table,  coordinfo=hover,   threshold = 5, maxpoints = 1, addDist = TRUE)
+        point <- nearPoints(point.table,  coordinfo=hover, xvar="Energy", yvar="CPS",  threshold = 5, maxpoints = 1, addDist = TRUE)
         if (nrow(point) == 0) return(NULL)
-        
-        
-        
-        
-        # calculate point position INSIDE the image as percent of total dimensions
-        # from left (horizontal) and from top (vertical)
-        left_pct <- (hover$x - hover$domain$left) / (hover$domain$right - hover$domain$left)
-        top_pct <- (hover$domain$top - hover$y) / (hover$domain$top - hover$domain$bottom)
-        
-        # calculate distance from left and bottom side of the picture in pixels
-        left_px <- hover$range$left + left_pct * (hover$range$right - hover$range$left)
-        top_px <- hover$range$top + top_pct * (hover$range$bottom - hover$range$top)
-        
-        
+
+        # calculate point position using coords_css for correct positioning
+        left_px <- hover$coords_css$x
+        top_px <- hover$coords_css$y
+
         # create style property fot tooltip
         # background color is set so tooltip is a bit transparent
         # z-index is set so we are sure are tooltip will be on top
@@ -3678,22 +3651,13 @@ observeEvent(input$plot_dblclickmatch, {
             
             
             hover <- input$plot_hovermatchmetric
-            point <- nearPoints(point.table,  coordinfo=hover,   threshold = 5, maxpoints = 1, addDist = TRUE)
+            point <- nearPoints(point.table,  coordinfo=hover, xvar="Energy", yvar="CPS",  threshold = 5, maxpoints = 1, addDist = TRUE)
             if (nrow(point) == 0) return(NULL)
-            
-            
-            
-            
-            # calculate point position INSIDE the image as percent of total dimensions
-            # from left (horizontal) and from top (vertical)
-            left_pct <- (hover$x - hover$domain$left) / (hover$domain$right - hover$domain$left)
-            top_pct <- (hover$domain$top - hover$y) / (hover$domain$top - hover$domain$bottom)
-            
-            # calculate distance from left and bottom side of the picture in pixels
-            left_px <- hover$range$left + left_pct * (hover$range$right - hover$range$left)
-            top_px <- hover$range$top + top_pct * (hover$range$bottom - hover$range$top)
-            
-            
+
+            # calculate point position using coords_css for correct positioning
+            left_px <- hover$coords_css$x
+            top_px <- hover$coords_css$y
+
             # create style property fot tooltip
             # background color is set so tooltip is a bit transparent
             # z-index is set so we are sure are tooltip will be on top
@@ -4011,22 +3975,22 @@ secondDefaultSelect <- reactive({
       
       if (input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {colnames(new.ratio.table) <- c("Spectrum", "X", "Y", "Selected")}
       
-      if(input$ratiofocusshape!="None"){
+      if(input$ratiofocusshape!="None" && input$ratiofocuslabel=="None"){
           new.ratio.table$Shape <- ratio.frame[,input$ratiofocusshape]
           colnames(new.ratio.table) <- c("Spectrum", "X", "Y", "Selected", input$ratiofocusshape)
       }
       
-      if (!input$elipseplot2 && input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {select.plot <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected, shape=.data[[input$ratiofocusshape]]), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
+      if (!input$elipseplot2 && input$ratiocolour == "Focus" && input$ratiofocuslabel=="None") {select.plot <- ggplot(new.ratio.table, aes(X, Y, colour=Selected, shape=.data[[input$ratiofocusshape]])) + geom_point(size=input$spotsize2) + gghighlight(Selected %in% c(input$ratiofocuschoice), use_group_by=FALSE, use_direct_label=FALSE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
       
-      if (input$elipseplot2 && input$ratiocolour == "Focus"  && input$ratiofocuslabel=="None") {select.plot <- gghighlight_point(new.ratio.table, aes(X, Y, colour=Selected, shape=input$ratiofocusshape), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, use_group_by=FALSE, use_direct_label=FALSE) + scale_x_continuous(ratio.names.x) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      if (input$elipseplot2 && input$ratiocolour == "Focus"  && input$ratiofocuslabel=="None") {select.plot <- ggplot(new.ratio.table, aes(X, Y, colour=Selected, shape=input$ratiofocusshape)) + geom_point(size=input$spotsize2) + gghighlight(Selected %in% c(input$ratiofocuschoice), use_group_by=FALSE, use_direct_label=FALSE) + scale_x_continuous(ratio.names.x) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
       
       if (input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {newer.ratio.table <- ratio.frame[,c("Spectrum", "X", "Y", input$ratiofocusvariable, input$ratiofocuslabel)]}
       
       if (input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {colnames(newer.ratio.table) <- c("Spectrum", "X", "Y", "Selected", "Label")}
       
-      if (!input$elipseplot2 && input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {select.plot <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected, shape=input$ratiofocusshape), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
+      if (!input$elipseplot2 && input$ratiocolour == "Focus" && input$ratiofocuslabel!="None") {select.plot <- ggplot(newer.ratio.table, aes(X, Y, colour=Selected, shape=input$ratiofocusshape)) + geom_point(size=input$spotsize2) + gghighlight(Selected %in% c(input$ratiofocuschoice), use_group_by=FALSE, use_direct_label=TRUE, label_key=Label) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) +  scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + theme_light()}
       
-      if (input$elipseplot2 && input$ratiocolour == "Focus"  && input$ratiofocuslabel!="None") {select.plot <- gghighlight_point(newer.ratio.table, aes(X, Y, colour=Selected, shape=input$ratiofocusshape), Selected %in% c(input$ratiofocuschoice), size=input$spotsize2, label_key=Label, use_group_by=FALSE, use_direct_label=TRUE) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
+      if (input$elipseplot2 && input$ratiocolour == "Focus"  && input$ratiofocuslabel!="None") {select.plot <- ggplot(newer.ratio.table, aes(X, Y, colour=Selected, shape=input$ratiofocusshape)) + geom_point(size=input$spotsize2) + gghighlight(Selected %in% c(input$ratiofocuschoice), use_group_by=FALSE, use_direct_label=TRUE, label_key=Label) + coord_cartesian(xlim = rangesratio$x, ylim = rangesratio$y, expand = TRUE) + scale_x_continuous(ratio.names.x) + scale_y_continuous(ratio.names.y) + theme(axis.text.x = element_text(size=15)) + theme(axis.text.y = element_text(size=15)) + theme(axis.title.x = element_text(size=15)) + theme(axis.title.y = element_text(size=15, angle=90)) + theme(plot.title=element_text(size=20)) + theme(legend.title=element_text(size=15)) + stat_ellipse() + theme_light()}
       
       select.plot
       
@@ -4060,29 +4024,25 @@ secondDefaultSelect <- reactive({
        point.table <- ratioFrame()
        
        hover <- input$plot_hoverratio
-       point <- nearPoints(point.table,  coordinfo=hover,   threshold = 5, maxpoints = 1, addDist = TRUE)
+       point <- nearPoints(point.table,  coordinfo=hover, xvar="X", yvar="Y",  threshold = 5, maxpoints = 1, addDist = TRUE)
        if (nrow(point) == 0) return(NULL)
-       
-       
+
+
        # calculate point position INSIDE the image as percent of total dimensions
-       # from left (horizontal) and from top (vertical)
-       left_pct <- (hover$x - hover$domain$left) / (hover$domain$right - hover$domain$left)
-       top_pct <- (hover$domain$top - hover$y) / (hover$domain$top - hover$domain$bottom)
-       
-       # calculate distance from left and bottom side of the picture in pixels
-       left_px <- hover$range$left + left_pct * (hover$range$right - hover$range$left)
-       top_px <- hover$range$top + top_pct * (hover$range$bottom - hover$range$top)
-       
-       
-       
-       
-       
+       # using coords_css for correct positioning relative to the image element
+       left_px <- hover$coords_css$x
+       top_px <- hover$coords_css$y
+
+
+
+
+
        # create style property fot tooltip
        # background color is set so tooltip is a bit transparent
        # z-index is set so we are sure are tooltip will be on top
        style <- paste0("position:absolute; z-index:100; background-color: rgba(245, 245, 245, 0.85); ",
        "left:", left_px + 2, "px; top:", top_px + 2, "px;")
-       
+
        # actual tooltip created as wellPanel
        wellPanel(
        style = style,

@@ -2,3 +2,6 @@
 *.history
 *.txt
 .DS_Store
+/bad
+/bad
+/rsconnect/shinyapps.io

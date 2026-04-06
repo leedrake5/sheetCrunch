@@ -130,7 +130,7 @@ f1 <- function (data
                 , model = NULL
                 ) {
   precision <- posPredValue(data$pred, data$obs, positive = "pass")
-  recall  <- sensitivity(data$pred, data$obs, postive = "pass")
+  recall  <- sensitivity(data$pred, data$obs, positive = "pass")
   f1_val <- (2 * precision * recall) / (precision + recall)
   names(f1_val) <- c("F1")
   f1_val
@@ -150,6 +150,7 @@ customTwoClassSummary <- function(data
   caret:::requireNamespaceQuietStop("ModelMetrics")
   if (!all(levels(data[, "pred"]) == lvls)) 
     stop("levels of observed and predicted data do not match")
+  if (is.null(lev)) stop('Parameter lev cannot be NULL')
   rocAUC <- ModelMetrics::auc(ifelse(data$obs == lev[2], 0, 
                                      1), data[, lvls[1]])
   out <- c(rocAUC, 
