@@ -352,8 +352,13 @@ dataType <- reactive({
         
         
         
-        proto.fish <- loadWorkbook(file=inFile$datapath)
-        just.fish <- readWorkbook(proto.fish, sheet=2)
+        tryCatch({
+            proto.fish <- loadWorkbook(file=inFile$datapath)
+            just.fish <- readWorkbook(proto.fish, sheet=2)
+        }, error = function(e) {
+            showNotification('Error processing Excel file: please ensure the file is not corrupted or mismatched.', type = 'error')
+            return(NULL)
+        })
         colnames(just.fish)[4] <- "Spectrum"
 
         
@@ -367,13 +372,18 @@ dataType <- reactive({
         inFile <- input$file1
         if (is.null(inFile)) return(NULL)
 
-        proto.fish <- loadWorkbook(file=inFile$datapath)
-        just.fish <- readWorkbook(proto.fish, sheet=1)
-        just.fish[,1] <- as.character(just.fish[,1])
-        quant.fish <- as.data.frame(just.fish[, sapply(just.fish, is.numeric), drop=FALSE])
-        qual.fish <- as.data.frame(just.fish[, !sapply(just.fish, is.numeric), drop=FALSE])
+        tryCatch({
+            proto.fish <- loadWorkbook(file=inFile$datapath)
+            just.fish <- readWorkbook(proto.fish, sheet=1)
+            just.fish[,1] <- as.character(just.fish[,1])
+            quant.fish <- as.data.frame(just.fish[, sapply(just.fish, is.numeric), drop=FALSE])
+            qual.fish <- as.data.frame(just.fish[, !sapply(just.fish, is.numeric), drop=FALSE])
 
-        data.frame(Spectrum=qual.fish[,1], quant.fish)
+            data.frame(Spectrum=qual.fish[,1], quant.fish)
+        }, error = function(e) {
+            showNotification(paste('Error loading Excel file:', e$message), type = 'error')
+            return(NULL)
+        })
 
     })
 
@@ -412,11 +422,16 @@ dataType <- reactive({
         inFile <- input$file1
         if (is.null(inFile)) return(NULL)
 
-        proto.fish <- loadWorkbook(file=inFile$datapath)
-        just.fish <- readWorkbook(proto.fish, sheet=1)
-        just.fish[,1] <- as.character(just.fish[,1])
-        quant.fish <- as.data.frame(just.fish[, sapply(just.fish, is.numeric)])
-        qual.fish <- as.data.frame(just.fish[, !sapply(just.fish, is.numeric), drop=FALSE])
+        tryCatch({
+            proto.fish <- loadWorkbook(file=inFile$datapath)
+            just.fish <- readWorkbook(proto.fish, sheet=1)
+            just.fish[,1] <- as.character(just.fish[,1])
+            quant.fish <- as.data.frame(just.fish[, sapply(just.fish, is.numeric)])
+            qual.fish <- as.data.frame(just.fish[, !sapply(just.fish, is.numeric), drop=FALSE])
+        }, error = function(e) {
+            showNotification('Invalid Excel file: please upload a valid .xlsx file', type = 'error')
+            return(NULL)
+        })
         if(ncol(qual.fish) > 1){
             # Use drop=FALSE to preserve column names when subsetting
             data.frame(Spectrum=qual.fish[,1], qual.fish[, 2:ncol(qual.fish), drop=FALSE])
@@ -2641,8 +2656,13 @@ choiceLines <- reactive({
                   accepted.net.trace
               }
           } else if(input$filetype=="Artax Excel"){
-              proto.fish <- loadWorkbook(file=inFile$datapath)
-              just.fish <- readWorkbook(proto.fish, sheet=1)
+              tryCatch({
+                  proto.fish <- loadWorkbook(file=inFile$datapath)
+                  just.fish <- readWorkbook(proto.fish, sheet=1)
+              }, error = function(e) {
+                  showNotification('Error processing Excel file: please ensure it is not corrupted or mismatched.', type = 'error')
+                  return(NULL)
+              })
               voltage <- as.numeric(just.fish[4,2])
               if(voltage<25){
                   accepted.net.light

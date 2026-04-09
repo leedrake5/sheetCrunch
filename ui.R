@@ -18,11 +18,9 @@ actionButton("actionprocess", label = "Process Data"),
 actionButton("actionplot", label = "Plot Covariance"),
 downloadButton('downloadPlot', "Plot"),
 
-
 tags$hr(),
 
 uiOutput('filegrab'),
-
 
 selectInput("filetype", label=NULL, c("PDZ","CSV", "Net", "Excel Spreadsheet", "CSV Spreadsheet", "Artax Excel"), selected="Excel Spreadsheet"),
 
@@ -43,20 +41,19 @@ element <- selectInput("element", "Element:", element_choices, selected="Fe.tabl
 
 #checkboxInput('backgroundsubtract', "Background Subtract"),
 
-
-
 tags$hr(),
 
 fileInput('calfileinput1', 'Load Cal File', accept='.quant', multiple=FALSE),
 
 checkboxInput('usecalfile', "Use Cal File"),
-
+tags$hr(),
 
 
 
 tags$hr(),
 
 checkboxInput('otherdata', "Import Other Data", value=FALSE),
+checkboxInput('exclude_na_neg', "Exclude Rows with NA or Negative Values", value=FALSE),
 
 uiOutput('file2gen'),
 uiOutput('calfile2gen'),
