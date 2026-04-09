@@ -53,7 +53,6 @@ tags$hr(),
 tags$hr(),
 
 checkboxInput('otherdata', "Import Other Data", value=FALSE),
-checkboxInput('exclude_na_neg', "Exclude Rows with NA or Negative Values", value=FALSE),
 
 uiOutput('file2gen'),
 uiOutput('calfile2gen'),
