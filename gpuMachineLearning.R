@@ -2305,10 +2305,13 @@ kerasSingleGPURunRegress <- function(data, dependent, predictors=NULL, reorder=T
     
     simple.split <- if(is.null(split) & is.null(split_by_group)){
         0
-    } else if(!is.null(split) | !is.null(split_by_group)){
-        split
+    } else {
+        ## split_by_group holds out a named group (temporal/blocked holdout) with
+        ## no numeric `split`; use a positive flag so the held-out group is used as
+        ## validation_data (not validation_split). Fixes 'argument is of length zero'.
+        if(!is.null(split)) split else 0.15
     }
-    
+
     second_metric <- NULL
     
     callback_list <- if(!is.null(save.directory)){
@@ -2852,8 +2855,7 @@ kerasMultiGPURunClassify <- function(data, class, n_gpus=2, predictors=NULL, reo
     
 }
 
-kerasMultiGPURunRegress <- function(data, dependent, predictors=NULL, reorder=TRUE, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, scale=FALSE, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss="mae", metric=c("mae", "mse"), start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, seed=NULL, lookback=NULL, delay=2, train_min_index=1, train_max_index=50, test_min_index=51, test_max_index=100, additional_min_index=101, additional_max_index=151, step=1){
-    use_implementation("tensorflow")
+kerasMultiGPURunRegress <- function(data, dependent, n_gpus=2, predictors=NULL, reorder=TRUE, split=NULL, split_by_group=NULL, the_group=NULL, model.split=0.1, scale=FALSE, epochs, activation="relu", dropout=0.65, optimizer="rmsprop", learning.rate=0.0001, loss="mae", metric=c("mae", "mse"), start_kernel=7, filters=32, pool_size=2, batch_size=4, verbose=1, model.type="Dense", save.directory="~/Desktop/", save.name="Model", previous.model=NULL, eager=FALSE, importance=TRUE, seed=NULL, lookback=NULL, delay=2, train_min_index=1, train_max_index=50, test_min_index=51, test_max_index=100, additional_min_index=101, additional_max_index=151, step=1){
     library(tensorflow)
     device <- detect_device()
     configure_device(device)
