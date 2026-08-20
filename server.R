@@ -2599,9 +2599,24 @@ choiceLines <- reactive({
       
       spectra.line.table <- dataMerge3()
      
-      xrf.pca.frame <- spectra.line.table[,input$show_vars]
-      xrf.pca.frame <- xrf.pca.frame[complete.cases(xrf.pca.frame),]
+      # unified NA handling respecting UI checkbox
+      if (isTRUE(input$removeNA)) {
+        validRows <- complete.cases(spectra.line.table[, input$show_vars]) &
+                     complete.cases(spectra.line.table$Spectrum)
+      } else {
+        # keep all rows – no filtering
+        validRows <- rep(TRUE, nrow(spectra.line.table))
+      }
+      # apply mask consistently
+      xrf.pca.frame <- spectra.line.table[validRows, input$show_vars, drop = FALSE]
+      # preserve original Spectrum order for later use
+      spectrum_vec <- spectra.line.table$Spectrum[validRows]
       #xrf.pca.frame <- as.data.frame(sapply( xrf.pca.frame, as.numeric ))
+      if (nrow(xrf.pca.frame) == 0 || any(!is.finite(as.matrix(xrf.pca.frame)))) {
+        showNotification('No valid rows to cluster – check NA handling.', type = 'error')
+        return(NULL)
+      }
+
 
       
       xrf.k <- kmeans(xrf.pca.frame, centers=input$knum, iter.max=1000, nstart=500, algorithm=c("Hartigan-Wong"), trace=TRUE)
@@ -2609,7 +2624,14 @@ choiceLines <- reactive({
       
       xrf.scores <- as.data.frame(xrf.pca$x)
       
-      cluster.frame <- data.frame(spectra.line.table$Spectrum, xrf.k$cluster, xrf.scores)
+      cluster.frame <- data.frame(Spectrum = spectrum_vec,
+                                  Cluster = xrf.k$cluster,
+                                  xrf.scores)
+
+      if (!isTRUE(input$removeNA) && nrow(cluster.frame) != nrow(xrf.pca.frame)) {
+        showNotification('Row count mismatch detected – enable "Remove rows with missing values" to ignore.', type = 'error')
+        stop('Row count mismatch')
+      }
       
       colnames(cluster.frame) <- c("Assay", "Cluster", names(xrf.scores))
       
@@ -3003,11 +3025,24 @@ choiceLines <- reactive({
       xrf.pca.results <- xrfKReactive()
       
       xrf.k <- xrfKReactive()
+      if (is.null(xrf.k)) {
+        # Return an empty data frame with the expected columns so UI code does not break
+        return(data.frame(Assay=character(), Cluster=integer(), PC1=numeric(), PC2=numeric()))
+      }
+
       
       quality.table <-qualityTable()
       
-      colour.table <- data.frame(xrf.k$Cluster, spectra.line.table)
-      colnames(colour.table) <- c("Cluster", names(spectra.line.table))
+      if (isTRUE(input$remove_missing)) {
+        mask <- complete.cases(spectra.line.table) & complete.cases(xrf.k)
+      } else {
+        mask <- rep(TRUE, nrow(spectra.line.table))
+      }
+      # Apply mask to both data sources
+      spectra.line.table <- spectra.line.table[mask, , drop = FALSE]
+      xrf.k <- lapply(xrf.k, function(col) col[mask])
+
+      colour.table <- data.frame(Cluster = xrf.k$Cluster, spectra.line.table, stringsAsFactors = FALSE)
       
       
       
@@ -3098,6 +3133,10 @@ choiceLines <- reactive({
   
   
   plotInput2 <- reactive({
+      cf <- clusterFrame()
+      if (nrow(cf) == 0) {
+        return(ggplot() + theme_void())
+      }
       
       if(input$pcacolour!="Focus"){
           plotInput2color()
@@ -3119,6 +3158,7 @@ choiceLines <- reactive({
   output$hover_infopca <- renderUI({
       
       point.table <- clusterFrame()
+      if (nrow(point.table) == 0) return(NULL)
       
       hover <- input$plot_hoverpca
       point <- nearPoints(point.table,  coordinfo=hover, xvar="PC1", yvar="PC2",  threshold = 5, maxpoints = 1, addDist = TRUE)

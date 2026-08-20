@@ -196,6 +196,8 @@ sidebarLayout(
 
 sidebarPanel(
 uiOutput('knumui'),
+    checkboxInput('removeNA', 'Remove rows with missing values', FALSE),
+
 
 uiOutput('pcacolourui'),
 
@@ -208,6 +210,8 @@ sliderInput("spotsize", label = "Point Size", value=2, min=2, max=15),
 
 checkboxInput('elipseplot1', "Elipse"),
 checkboxInput('logtrans', "Log Transform"),
+
+    checkboxInput('remove_missing', 'Remove rows with missing values', value = FALSE),
 
 checkboxInput('usesubset', "Subset Data", value=FALSE),
 
