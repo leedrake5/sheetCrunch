@@ -31,6 +31,7 @@ library(kernlab)
 tryCatch(library(brnn), error=function(e) NULL)
 tryCatch(library(arm), error=function(e) NULL)
 library(doParallel)
+library(foreach)
 library(rBayesianOptimization)
 tryCatch(library(tidyverse), error=function(e) NULL)
 library(mlr)
@@ -39,6 +40,10 @@ library(magrittr)
 library(ParBayesianOptimization)
 library(data.table)
 library(shapviz)
+library(pls)
+library(Cubist)
+library(glmnet)
+library(earth)
 
 #################################################################
 # MISC Functions
@@ -252,11 +257,15 @@ metric_fun <- function(num_classes
 # What does this fuction optimize?
 
 generate_grid_multi <- function(bounds, init_points, init_grid_dt = NULL){
-    DT_bounds <- data.table(Parameter = names(bounds), Lower = sapply(bounds,
-    magrittr::extract2, 1), Upper = sapply(bounds, magrittr::extract2, 2), Type = sapply(bounds,
-        class))
-    setDT(init_grid_dt)
-    if (nrow(init_grid_dt) != 0) {
+    # A bound may be given as a single fixed value (e.g. nrounds = test_nrounds) rather
+    # than c(lower, upper). extract2(x, 2) throws on those, which used to abort the whole
+    # search and silently fall back to a one-point grid at every parameter's lower bound.
+    DT_bounds <- data.table(Parameter = names(bounds),
+        Lower = sapply(bounds, function(b) b[[1]]),
+        Upper = sapply(bounds, function(b) b[[length(b)]]),
+        Type  = sapply(bounds, class))
+    if (!is.null(init_grid_dt)) setDT(init_grid_dt)
+    if (!is.null(init_grid_dt) && nrow(init_grid_dt) != 0) {
         if (identical(names(init_grid_dt), DT_bounds[, Parameter]) ==
             TRUE) {
             init_grid_dt[, `:=`(Value, -Inf)]
@@ -275,37 +284,54 @@ generate_grid_multi <- function(bounds, init_points, init_grid_dt = NULL){
         setnames(., old = names(.), new = DT_bounds[, Parameter]) %T>%
         {
             if (any(DT_bounds[, Type] == "integer")) {
-                set(., j = DT_bounds[Type == "integer", Parameter],
-                  value = round(extract(., j = DT_bounds[Type ==
+                data.table::set(., j = DT_bounds[Type == "integer", Parameter],
+                  value = round(magrittr::extract(., j = DT_bounds[Type ==
                     "integer", Parameter], with = FALSE)))
             }
             else {
                 .
             }
-        } %T>% extract(., j = `:=`(Value, -Inf))
-        
+        } %T>% magrittr::extract(., j = `:=`(Value, -Inf))
+
+        # Bounds given as a single fixed value are sampled on a degenerate interval and
+        # come back with floating-point noise (50 -> 50.0000000149). Snap them back to
+        # the exact value so integer-valued parameters such as nrounds stay integers.
+        fixed_par <- DT_bounds[Lower == Upper, Parameter]
+        for (pnm in fixed_par) data.table::set(init_points_dt, j = pnm,
+                                               value = DT_bounds[Parameter == pnm, Lower])
+
         return(init_points_dt)
 }
 
 generate_grid_single <- function(bounds){
-    as.data.frame(bounds)[1,]
+    as.data.frame(bounds)[1, , drop=FALSE]
 }
 
 generate_grid <- function(bounds, init_points, init_grid_dt = NULL){
-    
-    tryCatch(generate_grid_multi(bounds=bounds, init_points=init_points, init_grid_dt=init_grid_dt), error=function(e) generate_grid_single(bounds))
-    
+
+    g <- tryCatch(generate_grid_multi(bounds=bounds, init_points=init_points, init_grid_dt=init_grid_dt),
+                  error=function(e) generate_grid_single(bounds))
+    # generate_grid_multi carries a bookkeeping "Value" column from the Bayesian-optimisation
+    # init-grid format. caret rejects any tuneGrid column that is not a tuning parameter, so
+    # drop it here rather than relying on every caller to remember (svm/bayes do, xgboost did
+    # not - it never saw one, because the broken fallback path returned no Value column).
+    g <- as.data.frame(g)
+    g[, !colnames(g) %in% "Value", drop = FALSE]
 }
 
 BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points = 0,
     n_iter, acq = "ei", kappa = 2.576, eps = 0, kernel = list(type = "exponential",
         power = 2), verbose = TRUE)
 {
-    DT_bounds <- data.table(Parameter = names(bounds), Lower = sapply(bounds,
-    magrittr::extract2, 1), Upper = sapply(bounds, magrittr::extract2, 2), Type = sapply(bounds,
-        class))
-    setDT(init_grid_dt)
-    if (nrow(init_grid_dt) != 0) {
+    # A bound may be given as a single fixed value (e.g. nrounds = test_nrounds) rather
+    # than c(lower, upper). extract2(x, 2) throws on those, which used to abort the whole
+    # search and silently fall back to a one-point grid at every parameter's lower bound.
+    DT_bounds <- data.table(Parameter = names(bounds),
+        Lower = sapply(bounds, function(b) b[[1]]),
+        Upper = sapply(bounds, function(b) b[[length(b)]]),
+        Type  = sapply(bounds, class))
+    if (!is.null(init_grid_dt)) setDT(init_grid_dt)
+    if (!is.null(init_grid_dt) && nrow(init_grid_dt) != 0) {
         if (identical(names(init_grid_dt), DT_bounds[, Parameter]) ==
             TRUE) {
             init_grid_dt[, `:=`(Value, -Inf)]
@@ -324,21 +350,21 @@ BayesianOptimization <- function(FUN, bounds, init_grid_dt = NULL, init_points =
         setnames(., old = names(.), new = DT_bounds[, Parameter]) %T>%
         {
             if (any(DT_bounds[, Type] == "integer")) {
-                set(., j = DT_bounds[Type == "integer", Parameter],
-                  value = round(extract(., j = DT_bounds[Type ==
+                data.table::set(., j = DT_bounds[Type == "integer", Parameter],
+                  value = round(magrittr::extract(., j = DT_bounds[Type ==
                     "integer", Parameter], with = FALSE)))
             }
             else {
                 .
             }
-        } %T>% extract(., j = `:=`(Value, -Inf))
+        } %T>% magrittr::extract(., j = `:=`(Value, -Inf))
     iter_points_dt_backup <- Matrix_runif(n = init_points+n_iter, lower = DT_bounds[,
             Lower], upper = DT_bounds[, Upper]) %>% data.table(.) %T>%
             setnames(., old = names(.), new = DT_bounds[, Parameter]) %T>%
             {
                 if (any(DT_bounds[, Type] == "integer")) {
-                    set(., j = DT_bounds[Type == "integer", Parameter],
-                      value = round(extract(., j = DT_bounds[Type ==
+                    data.table::set(., j = DT_bounds[Type == "integer", Parameter],
+                      value = round(magrittr::extract(., j = DT_bounds[Type ==
                         "integer", Parameter], with = FALSE)))
                 }
                 else {
@@ -437,11 +463,15 @@ BayesianOptimizationDebug <- function(FUN, bounds, init_grid_dt = NULL, init_poi
     n_iter, acq = "ei", kappa = 2.576, eps = 0, kernel = list(type = "exponential",
         power = 2), verbose = TRUE)
 {
-    DT_bounds <- data.table(Parameter = names(bounds), Lower = sapply(bounds,
-    magrittr::extract2, 1), Upper = sapply(bounds, magrittr::extract2, 2), Type = sapply(bounds,
-        class))
-    setDT(init_grid_dt)
-    if (nrow(init_grid_dt) != 0) {
+    # A bound may be given as a single fixed value (e.g. nrounds = test_nrounds) rather
+    # than c(lower, upper). extract2(x, 2) throws on those, which used to abort the whole
+    # search and silently fall back to a one-point grid at every parameter's lower bound.
+    DT_bounds <- data.table(Parameter = names(bounds),
+        Lower = sapply(bounds, function(b) b[[1]]),
+        Upper = sapply(bounds, function(b) b[[length(b)]]),
+        Type  = sapply(bounds, class))
+    if (!is.null(init_grid_dt)) setDT(init_grid_dt)
+    if (!is.null(init_grid_dt) && nrow(init_grid_dt) != 0) {
         if (identical(names(init_grid_dt), DT_bounds[, Parameter]) ==
             TRUE) {
             init_grid_dt[, `:=`(Value, -Inf)]
@@ -460,21 +490,21 @@ BayesianOptimizationDebug <- function(FUN, bounds, init_grid_dt = NULL, init_poi
         setnames(., old = names(.), new = DT_bounds[, Parameter]) %T>%
         {
             if (any(DT_bounds[, Type] == "integer")) {
-                set(., j = DT_bounds[Type == "integer", Parameter],
-                  value = round(extract(., j = DT_bounds[Type ==
+                data.table::set(., j = DT_bounds[Type == "integer", Parameter],
+                  value = round(magrittr::extract(., j = DT_bounds[Type ==
                     "integer", Parameter], with = FALSE)))
             }
             else {
                 .
             }
-        } %T>% extract(., j = `:=`(Value, -Inf))
+        } %T>% magrittr::extract(., j = `:=`(Value, -Inf))
     iter_points_dt_backup <- Matrix_runif(n = init_points+n_iter, lower = DT_bounds[,
             Lower], upper = DT_bounds[, Upper]) %>% data.table(.) %T>%
             setnames(., old = names(.), new = DT_bounds[, Parameter]) %T>%
             {
                 if (any(DT_bounds[, Type] == "integer")) {
-                    set(., j = DT_bounds[Type == "integer", Parameter],
-                      value = round(extract(., j = DT_bounds[Type ==
+                    data.table::set(., j = DT_bounds[Type == "integer", Parameter],
+                      value = round(magrittr::extract(., j = DT_bounds[Type ==
                         "integer", Parameter], with = FALSE)))
                 }
                 else {
@@ -1707,13 +1737,13 @@ classifyXGBoostTree <- function(data
     xgbGridPre <- if(Bayes==FALSE){
         generate_grid(bounds=list(
             nrounds = test_nrounds
-            , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
+            , max_depth = as.integer(c(tree.depth.vec[1], tree.depth.vec[2]))
             , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
             #, alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
             #, lambda=c(xgblambda.vec[1], xgblambda.vec[2])
             , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
-            , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
+            , min_child_weight = as.integer(c(xgbminchild.vec[1], xgbminchild.vec[2]))
             , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
             #, max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
             #, scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
@@ -1721,13 +1751,13 @@ classifyXGBoostTree <- function(data
     } else if(Bayes==TRUE){
         expand.grid(
             nrounds = test_nrounds
-            , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
+            , max_depth = as.integer(c(tree.depth.vec[1], tree.depth.vec[2]))
             , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
             #, alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
             #, lambda=c(xgblambda.vec[1], xgblambda.vec[2])
             , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
-            , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
+            , min_child_weight = as.integer(c(xgbminchild.vec[1], xgbminchild.vec[2]))
             , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
             #, max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
             #, scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
@@ -1863,7 +1893,7 @@ if(is.null(eval_metric)){
                              )
             }
             #Close the CPU sockets
-            stopCluster(cl)
+            stopCluster(cl); foreach::registerDoSEQ()
             #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
         } else if(parallel_method=="linux"){
             xgb_model_pre <- if(num_classes>2){
@@ -2058,7 +2088,7 @@ if(is.null(eval_metric)){
                          )
         }
 
-        stopCluster(cl)
+        stopCluster(cl); foreach::registerDoSEQ()
         xgbGridPre <- NULL
     } else if(parallel_method=="linux"){
         data.training <- data.train[, !colnames(data.train) %in% "Sample"]
@@ -2347,13 +2377,13 @@ regressXGBoostTree <- function(data
     xgbGridPre <- if(Bayes==FALSE){
         generate_grid(bounds=list(
             nrounds = test_nrounds
-            , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
+            , max_depth = as.integer(c(tree.depth.vec[1], tree.depth.vec[2]))
             , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
             #, alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
             #, lambda=c(xgblambda.vec[1], xgblambda.vec[2])
             , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
-            , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
+            , min_child_weight = as.integer(c(xgbminchild.vec[1], xgbminchild.vec[2]))
             , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
             #, max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
             #, scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
@@ -2361,13 +2391,13 @@ regressXGBoostTree <- function(data
     } else if(Bayes==TRUE){
         expand.grid(
             nrounds = test_nrounds
-            , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
+            , max_depth = as.integer(c(tree.depth.vec[1], tree.depth.vec[2]))
             , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
             #, alpha = c(xgbalpha.vec[1], xgbalpha.vec[2])
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
             #, lambda=c(xgblambda.vec[1], xgblambda.vec[2])
             , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
-            , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
+            , min_child_weight = as.integer(c(xgbminchild.vec[1], xgbminchild.vec[2]))
             , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
             #, max_delta_step = seq(maxdeltastep.vec[1], maxdeltastep.vec[2])
             #, scale_pos_weight = seq(scaleposweight.vec[1], scaleposweight.vec[2])
@@ -2428,7 +2458,7 @@ regressXGBoostTree <- function(data
                                           , verbose=verbose
                                           )
             #Close the CPU sockets
-            stopCluster(cl)
+            stopCluster(cl); foreach::registerDoSEQ()
             #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
         } else if(parallel_method=="linux"){
             xgb_model_pre <- caret::train(Dependent~.
@@ -2643,7 +2673,7 @@ regressXGBoostTree <- function(data
                                   , verbose=verbose
                                   )
 
-        stopCluster(cl)
+        stopCluster(cl); foreach::registerDoSEQ()
     } else if(parallel_method=="linux"){
         xgb_model <- caret::train(Dependent~.
                                   , data=data.training
@@ -3121,7 +3151,7 @@ classifyXGBoostDart <- function(data
     } else if(Bayes==TRUE){
         expand.grid(
             nrounds = test_nrounds
-            , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
+            , max_depth = as.integer(c(tree.depth.vec[1], tree.depth.vec[2]))
             , rate_drop = c(drop.tree.vec[1], drop.tree.vec[2])
             , skip_drop = c(skip.drop.vec[1], skip.drop.vec[2])
             , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
@@ -3129,7 +3159,7 @@ classifyXGBoostDart <- function(data
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
             #, lambda=c(xgblambda.vec[1], xgblambda.vec[2])
             , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
-            , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
+            , min_child_weight = as.integer(c(xgbminchild.vec[1], xgbminchild.vec[2]))
             , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
             #, max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
             #, scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
@@ -3266,7 +3296,7 @@ if(is.null(eval_metric)){
                              )
             }
             #Close the CPU sockets
-            stopCluster(cl)
+            stopCluster(cl); foreach::registerDoSEQ()
             #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
         } else if(parallel_method=="linux"){
             xgb_model_pre <- if(num_classes>2){
@@ -3469,7 +3499,7 @@ if(is.null(eval_metric)){
                          )
         }
 
-        stopCluster(cl)
+        stopCluster(cl); foreach::registerDoSEQ()
         xgbGridPre <- NULL
     } else if(parallel_method=="linux"){
         data.training <- data.train[, !colnames(data.train) %in% "Sample"]
@@ -3779,7 +3809,7 @@ regressXGBoostDart <- function(data
     } else if(Bayes==TRUE){
         expand.grid(
             nrounds = test_nrounds
-            , max_depth = c(tree.depth.vec[1], tree.depth.vec[2])
+            , max_depth = as.integer(c(tree.depth.vec[1], tree.depth.vec[2]))
             , rate_drop = c(drop.tree.vec[1], drop.tree.vec[2])
             , skip_drop = c(skip.drop.vec[1], skip.drop.vec[2])
             , colsample_bytree = c(xgbcolsample.vec[1], xgbcolsample.vec[2])
@@ -3787,7 +3817,7 @@ regressXGBoostDart <- function(data
             , eta = c(xgbeta.vec[1], xgbeta.vec[2])
             #, lambda=c(xgblambda.vec[1], xgblambda.vec[2])
             , gamma=c(xgbgamma.vec[1], xgbgamma.vec[2])
-            , min_child_weight = c(xgbminchild.vec[1], xgbminchild.vec[2])
+            , min_child_weight = as.integer(c(xgbminchild.vec[1], xgbminchild.vec[2]))
             , subsample = c(xgbsubsample.vec[1], xgbsubsample.vec[2])
             #, max_delta_step = c(maxdeltastep.vec[1], maxdeltastep.vec[2])
             #, scale_pos_weight = c(scaleposweight.vec[1], scaleposweight.vec[2])
@@ -3847,7 +3877,7 @@ regressXGBoostDart <- function(data
                                           , verbose=verbose
                                           )
             #Close the CPU sockets
-            stopCluster(cl)
+            stopCluster(cl); foreach::registerDoSEQ()
             #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
         } else if(parallel_method=="linux"){
             xgb_model_pre <- caret::train(Dependent~.
@@ -4072,7 +4102,7 @@ regressXGBoostDart <- function(data
                                   , verbose=verbose
                                   )
 
-        stopCluster(cl)
+        stopCluster(cl); foreach::registerDoSEQ()
     } else if(parallel_method=="linux"){
         xgb_model <- caret::train(Dependent~.
                                   , data=data.training
@@ -4655,7 +4685,7 @@ if(is.null(eval_metric)){
                              )
             }
             #Close the CPU sockets
-            stopCluster(cl)
+            stopCluster(cl); foreach::registerDoSEQ()
             #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
         } else if(parallel_method=="linux"){
             xgb_model_pre <- if(num_classes>2){
@@ -4808,7 +4838,7 @@ if(is.null(eval_metric)){
                              , verbose=verbose
                              )
             }
-        stopCluster(cl)
+        stopCluster(cl); foreach::registerDoSEQ()
     } else if(parallel_method=="linux"){
         data.training <- data.train[, !colnames(data.train) %in% "Sample"]
        # data.training<-Pos_class_fun(data.training,PositiveClass)
@@ -5131,7 +5161,7 @@ regressXGBoostLinear <- function(data
                                           , verbose=verbose
                                           )
             #Close the CPU sockets
-            stopCluster(cl)
+            stopCluster(cl); foreach::registerDoSEQ()
             #But if you use linux (or have configured a Mac well), you can make this all run much faster by using OpenMP, instead of maually opening sockets
         } else if(parallel_method=="linux"){
             xgb_model_pre <- caret::train(Dependent~.
@@ -5288,7 +5318,7 @@ regressXGBoostLinear <- function(data
                                   , verbose=verbose
                                   )
 
-        stopCluster(cl)
+        stopCluster(cl); foreach::registerDoSEQ()
     } else if(parallel_method=="linux"){
         xgb_model <- caret::train(Dependent~.
                                   , data=data.training
@@ -5785,7 +5815,7 @@ classifyForest <- function(data
                              ,  na.action=na.omit
                              )
             }
-        stopCluster(cl)
+        stopCluster(cl); foreach::registerDoSEQ()
     } else if(parallel_method=="linux"){
         parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
         data.training <- data.train[, !colnames(data.train) %in% "Sample"]
@@ -5986,8 +6016,8 @@ regressForest <- function(data
         data.train <- data[a,]
         data.test <- data[!a,]
         #Set y_train and x_train for later
-        y_train <- data.train$Class
-        y_test <- data.test$Class
+        y_train <- data.train$Dependent
+        y_test <- data.test$Dependent
         x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
         x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
     }
@@ -5995,7 +6025,10 @@ regressForest <- function(data
     
     #Take out the Sample #, this could really cause problems with the machine learning process
     data.training <- data.train[, !colnames(data.train) %in% "Sample"]
-    data.testing <- data.test[, !colnames(data.test) %in% "Sample"]
+    # data.test only exists when a split or split_by_group was requested; without one
+    # this line aborted the full-data fit. (data.testing is not read anywhere below.)
+    data.testing <- if (exists("data.test", inherits = FALSE))
+        data.test[, !colnames(data.test) %in% "Sample"] else NULL
 
     forestGrid <- if(search==TRUE){
         as.data.frame(generate_grid(bounds=list(mtry=as.integer(c(1, try))), init_points=init_points))
@@ -6061,7 +6094,7 @@ regressForest <- function(data
                                      , na.action=na.omit
                                      )
 
-        stopCluster(cl)
+        stopCluster(cl); foreach::registerDoSEQ()
     } else if(parallel_method=="linux"){
         parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
         forest_model <- caret::train(x_train
@@ -6115,9 +6148,9 @@ regressForest <- function(data
         if(scale==TRUE){
             all.data[,dependent] <- (all.data[,dependent]*(data_list$YMax-data_list$YMin)) + data_list$YMin
         }
-        train.frame <- all.data[!all.data$Sample %in% results.frame,]
+        train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
         KnownSet <- data.frame(Sample=train.frame$Sample
-                               , Known=data[,dependent]
+                               , Known=train.frame[,dependent]
                                , Predicted=y_predict_train
                                , stringsAsFactors=FALSE
                                )
@@ -6640,7 +6673,7 @@ classifySVM <- function(data
                                                  , method=type
                                                  , na.action=na.omit
                                                  )
-                       stopCluster(cl)
+                       stopCluster(cl); foreach::registerDoSEQ()
                    } else if(parallel_method=="linux"){
                        parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
                        svm_model <- caret::train(x_train
@@ -6830,8 +6863,8 @@ regressSVM <- function(data
         data.train <- data[a,]
         data.test <- data[!a,]
         #Set y_train and x_train for later
-        y_train <- data.train$Class
-        y_test <- data.test$Class
+        y_train <- data.train$Dependent
+        y_test <- data.test$Dependent
         x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
         x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
     }
@@ -6996,7 +7029,7 @@ regressSVM <- function(data
                                    , method=type
                                    , na.action=na.omit
                                    )
-         stopCluster(cl)
+         stopCluster(cl); foreach::registerDoSEQ()
      } else if(parallel_method=="linux"){
          parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
          svm_model <- caret::train(Dependent~.
@@ -7503,7 +7536,7 @@ classifyBayes <- function(data
                                            , method=bayes_type
                                            , na.action=na.omit
                                            )
-               stopCluster(cl)
+               stopCluster(cl); foreach::registerDoSEQ()
            } else if(parallel_method=="linux"){
                parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
                bayes_model <- caret::train(x_train
@@ -7562,7 +7595,7 @@ classifyBayes <- function(data
                                            , method=bayes_type
                                            , na.action=na.omit
                                            )
-               stopCluster(cl)
+               stopCluster(cl); foreach::registerDoSEQ()
            } else if(parallel_method=="linux"){
                parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
                bayes_model <- caret::train(x_train
@@ -7868,7 +7901,7 @@ regressBayes <- function(data
                                             , method=bayes_type
                                             , na.action=na.omit
                                             )
-                stopCluster(cl)
+                stopCluster(cl); foreach::registerDoSEQ()
             } else if(parallel_method=="linux"){
                 parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
                 bayes_model <- caret::train(x_train
@@ -7927,7 +7960,7 @@ regressBayes <- function(data
                                             , method=bayes_type
                                             , na.action=na.omit
                                             )
-                stopCluster(cl)
+                stopCluster(cl); foreach::registerDoSEQ()
             } else if(parallel_method=="linux"){
                 parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
                 bayes_model <- caret::train(x_train
@@ -8198,6 +8231,683 @@ autoBayes <- function(data
 ## Master function 
 ##############################################################################################################
 # Uses previously defined functions to take any data set and preform slected machine learning structure.
+######################################################################################################################################
+## Chemometric models - ported from CloudCal calibration types 14-21
+######################################################################################################################################
+## PLS (14/15), Cubist (16/17), Elastic Net (18/19), MARS (20/21).
+##
+## These four were selected in CloudCal by tests/redundancy_benchmark.R, which correlates
+## OUT-OF-FOLD RESIDUALS between candidate and incumbent models: what two models get wrong
+## together is what makes one of them redundant. The forest / SVM / BART cluster correlates
+## at 0.91-0.95; these four decorrelate from it because they are linear-latent or
+## locally-linear rather than partition-averaging, and they extrapolate beyond the
+## calibrated range where tree ensembles plateau.
+##
+## All four are plain caret models with no bespoke serialization needs (unlike XGBoost,
+## which stores a raw booster), so they share one engine here rather than repeating the
+## ~500 lines of identical data-prep/split/return boilerplate four times. The public
+## regress*/classify*/auto* functions below match the naming and argument conventions of
+## the existing families, so autoMLTable and bayesMLTable call them the same way.
+##
+## Tuning ranges use sheetCrunch's "lo-hi" string convention (as with svmc="1-5").
+######################################################################################################################################
+
+chemometricMethods <- c(pls="pls", cubist="cubist", glmnet="glmnet", mars="earth")
+
+#' Build a caret tuneGrid for a chemometric model family.
+#'
+#' n.rank caps PLS components at the rank of the data; without this cap PLS will happily
+#' search more components than the data can support and select an overfit model.
+chemometricGrid <- function(type
+                            , plsncomp="1-10"
+                            , cubistcommittees="1-20"
+                            , cubistneighbors="0-5"
+                            , glmnetalpha="0-1"
+                            , glmnetlambda="0.001-1"
+                            , marsprune="2-15"
+                            , marsdegree="1-2"
+                            , search=FALSE
+                            , init_points=100
+                            , n.rank=NULL
+                            ){
+
+    rng <- function(x, default){
+        v <- tryCatch(as.numeric(unlist(strsplit(as.character(x), "-"))), error=function(e) default)
+        if(length(v) < 2 || any(is.na(v))) v <- default
+        sort(v[1:2])
+    }
+
+    plsncomp.vec         <- rng(plsncomp,         c(1, 10))
+    cubistcommittees.vec <- rng(cubistcommittees, c(1, 20))
+    cubistneighbors.vec  <- rng(cubistneighbors,  c(0, 5))
+    glmnetalpha.vec      <- rng(glmnetalpha,      c(0, 1))
+    glmnetlambda.vec     <- rng(glmnetlambda,     c(0.001, 1))
+    marsprune.vec        <- rng(marsprune,        c(2, 15))
+    marsdegree.vec       <- rng(marsdegree,       c(1, 2))
+
+    grid <- if(search==TRUE){
+        if(type=="pls"){
+            as.data.frame(generate_grid(bounds=list(
+                ncomp = c(as.integer(plsncomp.vec[1]), as.integer(plsncomp.vec[2]))
+            ), init_points=init_points))
+        } else if(type=="cubist"){
+            as.data.frame(generate_grid(bounds=list(
+                committees = c(as.integer(cubistcommittees.vec[1]), as.integer(cubistcommittees.vec[2])),
+                neighbors  = c(as.integer(cubistneighbors.vec[1]),  as.integer(cubistneighbors.vec[2]))
+            ), init_points=init_points))
+        } else if(type=="glmnet"){
+            as.data.frame(generate_grid(bounds=list(
+                alpha  = c(glmnetalpha.vec[1],  glmnetalpha.vec[2]),
+                lambda = c(glmnetlambda.vec[1], glmnetlambda.vec[2])
+            ), init_points=init_points))
+        } else if(type=="mars" | type=="earth"){
+            as.data.frame(generate_grid(bounds=list(
+                nprune = c(as.integer(marsprune.vec[1]),  as.integer(marsprune.vec[2])),
+                degree = c(as.integer(marsdegree.vec[1]), as.integer(marsdegree.vec[2]))
+            ), init_points=init_points))
+        }
+    } else if(search==FALSE){
+        # A short deterministic grid, in the spirit of CloudCal's calCurves ranges.
+        if(type=="pls"){
+            data.frame(ncomp = seq(max(1L, as.integer(plsncomp.vec[1])),
+                                   max(1L, as.integer(plsncomp.vec[2])), by=1L))
+        } else if(type=="cubist"){
+            expand.grid(
+                committees = unique(round(seq(cubistcommittees.vec[1], cubistcommittees.vec[2],
+                                              length.out=min(4, cubistcommittees.vec[2]-cubistcommittees.vec[1]+1)))),
+                neighbors  = unique(round(seq(cubistneighbors.vec[1], cubistneighbors.vec[2],
+                                              length.out=min(3, cubistneighbors.vec[2]-cubistneighbors.vec[1]+1)))))
+        } else if(type=="glmnet"){
+            expand.grid(
+                alpha  = unique(seq(glmnetalpha.vec[1], glmnetalpha.vec[2], length.out=5)),
+                lambda = unique(10^seq(log10(max(glmnetlambda.vec[1], 1e-6)),
+                                       log10(max(glmnetlambda.vec[2], 1e-5)), length.out=10)))
+        } else if(type=="mars" | type=="earth"){
+            expand.grid(
+                nprune = unique(round(seq(marsprune.vec[1], marsprune.vec[2],
+                                          length.out=min(5, marsprune.vec[2]-marsprune.vec[1]+1)))),
+                degree = seq(as.integer(marsdegree.vec[1]), as.integer(marsdegree.vec[2]), by=1L))
+        }
+    }
+
+    grid <- grid[, !colnames(grid) %in% "Value", drop=FALSE]
+
+    # PLS cannot use more components than the data has rank. Silently searching past
+    # that point is the single most common way to make PLS look worse than it is.
+    if((type=="pls") && !is.null(n.rank)){
+        grid$ncomp <- pmax(1L, pmin(as.integer(grid$ncomp), as.integer(n.rank)))
+        grid <- unique(grid)
+    }
+    # earth's nprune likewise cannot exceed the number of usable terms.
+    if((type=="mars" | type=="earth") && !is.null(n.rank)){
+        grid$nprune <- pmax(2L, pmin(as.integer(grid$nprune), as.integer(n.rank)))
+        grid <- unique(grid)
+    }
+    rownames(grid) <- NULL
+    grid
+}
+
+#' Shared caret engine for the chemometric regressors.
+#'
+#' Mirrors regressSVM's data preparation, split handling and return structure so that
+#' downstream code (autoMLTable, bayesMLTable, the Shiny server) treats these models
+#' identically to the incumbent families.
+regressChemometric <- function(data
+                               , dependent
+                               , predictors=NULL
+                               , reorder=TRUE
+                               , min.n=5
+                               , split=NULL
+                               , split_by_group=NULL
+                               , the_group=NULL
+                               , type="pls"
+                               , plsncomp="1-10"
+                               , cubistcommittees="1-20"
+                               , cubistneighbors="0-5"
+                               , glmnetalpha="0-1"
+                               , glmnetlambda="0.001-1"
+                               , marsprune="2-15"
+                               , marsdegree="1-2"
+                               , preproc=NULL
+                               , metric="RMSE"
+                               , train="repeatedcv"
+                               , cvrepeats=5
+                               , number=100
+                               , save.directory=NULL
+                               , save.name=NULL
+                               , parallelMethod=NULL
+                               , save_plots=FALSE
+                               , scale=FALSE
+                               , seed=NULL
+                               , init_points=100
+                               , search=FALSE
+                               ){
+
+    ###Prepare the data
+    data_list <- dataPrep(data=data, variable=dependent, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
+    data <- data_list$Data
+    if(!is.null(split_by_group)){
+        split_string <- as.vector(data[,split_by_group])
+        data <- data[, !colnames(data) %in% split_by_group]
+    }
+
+    #Use operating system as default if not manually set
+    parallel_method <- if(!is.null(parallelMethod)){
+        parallelMethod
+    } else if(is.null(parallelMethod)){
+        get_os()
+    }
+
+    # MARS always trains single core: caret's earth submodel loop is unreliable inside
+    # forked workers when another OpenMP runtime (xgboost's libomp) is already resident.
+    # Its fits are sub-second, so nothing is lost. Same rule as CloudCal cal types 20/21.
+    if(type=="mars" | type=="earth"){
+        parallel_method <- "minimal"
+    }
+
+    #Boring data frame stuff
+    data <- data[complete.cases(data),]
+    data$Dependent <- as.vector(data[,dependent])
+    data <- data[, !colnames(data) %in% dependent]
+    data$Dependent <- as.numeric(data$Dependent)
+    data.orig <- data
+
+    #This handles data splitting if you choose to cross-validate
+    if(!is.null(split)){
+        a <- data$Sample %in% as.vector(sample(data$Sample, size=(1-split)*length(data$Sample)))
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        y_train <- data.train$Dependent
+        y_test <- data.test$Dependent
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
+    } else if(is.null(split)){
+        data.train <- data
+        y_train <- data$Dependent
+        x_train <- data[, !colnames(data) %in% c("Sample", "Dependent")]
+    }
+
+    if(!is.null(split_by_group)){
+        a <- !split_string %in% the_group
+        data.train <- data[a,]
+        data.test <- data[!a,]
+        y_train <- data.train$Dependent
+        y_test <- data.test$Dependent
+        x_train <- data.train[, !colnames(data) %in% c("Sample", "Dependent")]
+        x_test <- data.test[, !colnames(data) %in% c("Sample", "Dependent")]
+    }
+
+    #Take out the Sample #, this could really cause problems with the machine learning process
+    data.training <- data.train[, !colnames(data.train) %in% "Sample"]
+
+    n.rank <- max(1L, min(nrow(data.training) - 2L,
+                          sum(!colnames(data.training) %in% "Dependent")))
+
+    chemGrid <- chemometricGrid(type=type
+                                , plsncomp=plsncomp
+                                , cubistcommittees=cubistcommittees
+                                , cubistneighbors=cubistneighbors
+                                , glmnetalpha=glmnetalpha
+                                , glmnetlambda=glmnetlambda
+                                , marsprune=marsprune
+                                , marsdegree=marsdegree
+                                , search=search
+                                , init_points=init_points
+                                , n.rank=n.rank)
+
+    # The dependent column was renamed to "Dependent" during prep above, so every later
+    # reference (the KnownSet frames) must use the new name. regressSVM does the same.
+    dependent <- "Dependent"
+
+    caret_method <- if(type %in% names(chemometricMethods)) chemometricMethods[[type]] else type
+
+    #Create tune control for the final model
+    tune_control <- if(train!="repeatedcv" && parallel_method!="linux"){
+        caret::trainControl(
+        method = train
+        , number = number
+        , verboseIter = TRUE
+        , allowParallel = TRUE
+        )
+    } else if(train=="repeatedcv" && parallel_method!="linux"){
+        caret::trainControl(
+        method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
+        , allowParallel = TRUE
+        )
+    } else if(train!="repeatedcv" && parallel_method=="linux"){
+        caret::trainControl(
+        method = train
+        , number = number
+        , verboseIter = TRUE
+        )
+    } else if(train=="repeatedcv" && parallel_method=="linux"){
+        caret::trainControl(
+        method = train
+        , number = number
+        , repeats = cvrepeats
+        , verboseIter = TRUE
+        )
+    }
+
+    if(!is.null(seed)){set.seed(seed)}
+
+    if(parallel_method!="linux" && parallel_method!="minimal"){
+        cl <- if(parallel_method=="windows"){
+            makePSOCKcluster(as.numeric(my.cores)/2)
+        } else if(parallel_method!="windows"){
+            makeForkCluster(as.numeric(my.cores)/2)
+        }
+        registerDoParallel(cl)
+        chem_model <- caret::train(Dependent~.
+                                   , data=data.training
+                                   , trControl = tune_control
+                                   , tuneGrid = chemGrid
+                                   , metric=metric
+                                   , method=caret_method
+                                   , preProcess=preproc
+                                   , na.action=na.omit
+                                   )
+        stopCluster(cl); foreach::registerDoSEQ()
+    } else if(parallel_method=="linux"){
+        parallelStart(mode="multicore", cpu=as.numeric(my.cores), level="mlr.tuneParams")
+        chem_model <- caret::train(Dependent~.
+                                   , data=data.training
+                                   , trControl = tune_control
+                                   , tuneGrid = chemGrid
+                                   , metric=metric
+                                   , method=caret_method
+                                   , preProcess=preproc
+                                   , na.action=na.omit
+                                   )
+        parallelStop()
+    } else if(parallel_method=="minimal"){
+        chem_model <- caret::train(Dependent~.
+                                   , data=data.training
+                                   , trControl = tune_control
+                                   , tuneGrid = chemGrid
+                                   , metric=metric
+                                   , method=caret_method
+                                   , preProcess=preproc
+                                   , na.action=na.omit
+                                   )
+    }
+
+    if(!is.null(save.directory)){
+        modelpack <- chem_model
+        saveRDS(object=modelpack, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
+    }
+
+    y_predict_train <- predict(object=chem_model, newdata=x_train, na.action = na.pass)
+    if(scale==TRUE){
+        y_predict_train <- (y_predict_train*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        data.train$Dependent <- (data.train$Dependent*(data_list$YMax-data_list$YMin)) + data_list$YMin
+    }
+    results.frame_train <- data.frame(Sample=data.train$Sample
+                                      , Known=data.train$Dependent
+                                      , Predicted=as.numeric(y_predict_train)
+                                      )
+    accuracy.rate_train <- lm(Known~Predicted, data=results.frame_train)
+
+    if(!is.null(split) | !is.null(split_by_group)){
+        y_predict <- predict(object=chem_model, newdata=x_test, na.action = na.pass)
+        if(scale==TRUE){
+            y_predict <- (y_predict*(data_list$YMax-data_list$YMin)) + data_list$YMin
+            data.test$Dependent <- (data.test$Dependent*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
+        results.frame <- data.frame(Sample=data.test$Sample
+                                    , Known=data.test$Dependent
+                                    , Predicted=as.numeric(y_predict)
+                                    )
+        accuracy.rate <- lm(Known~Predicted, data=results.frame)
+
+        all.data <- data.orig
+        if(scale==TRUE){
+            all.data[,dependent] <- (all.data[,dependent]*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
+        train.frame <- all.data[!all.data$Sample %in% results.frame$Sample,]
+        train.predictions <- predict(chem_model, train.frame, na.action = na.pass)
+        if(scale==TRUE){
+            train.predictions <- (train.predictions*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
+        KnownSet <- data.frame(Sample=train.frame$Sample
+                               , Known=train.frame[,dependent]
+                               , Predicted=as.numeric(train.predictions)
+                               , stringsAsFactors=FALSE
+                               )
+        KnownSet$Type <- rep("1. Train", nrow(KnownSet))
+        results.frame$Type <- rep("2. Test", nrow(results.frame))
+        All <- rbind(KnownSet, results.frame)
+
+        ResultPlot <- ggplot(All, aes(Known, Predicted, colour=Type, shape=Type)) +
+        geom_point(alpha=0.5) +
+        stat_smooth(method="lm") +
+        theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
+
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , Data=data_list
+                                          , Predictors=predictors
+                                          )
+                           , Model=chem_model
+                           , ImportancePlot=importanceBar(chem_model)
+                           , ValidationSet=results.frame
+                           , PlotData=All
+                           , ResultPlot=ResultPlot
+                           , trainAccuracy=accuracy.rate_train
+                           , testAccuracy=accuracy.rate
+                           )
+    } else if(is.null(split) | is.null(split_by_group)){
+        all.data <- data.orig
+        if(scale==TRUE){
+            all.data[,dependent] <- (all.data[,dependent]*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
+        train.frame <- all.data
+        train.predictions <- predict(chem_model, train.frame, na.action = na.pass)
+        if(scale==TRUE){
+            train.predictions <- (train.predictions*(data_list$YMax-data_list$YMin)) + data_list$YMin
+        }
+        KnownSet <- data.frame(Sample=train.frame$Sample
+                               , Known=train.frame[,dependent]
+                               , Predicted=as.numeric(train.predictions)
+                               , stringsAsFactors=FALSE
+                               )
+        KnownSet$Type <- rep("1. Train", nrow(KnownSet))
+        All <- KnownSet
+
+        ResultPlot <- ggplot(All, aes(Known, Predicted, colour=Type, shape=Type)) +
+        geom_point(alpha=0.5) +
+        stat_smooth(method="lm") +
+        theme_light()
+        tryCatch(ResultPlot$plot_env <- butcher::axe_env(ResultPlot$plot_env), error=function(e) NULL)
+        tryCatch(ResultPlot$layers <- butcher::axe_env(ResultPlot$layers), error=function(e) NULL)
+        tryCatch(ResultPlot$mapping <- butcher::axe_env(ResultPlot$mapping), error=function(e) NULL)
+
+        model.list <- list(ModelData=list(Model.Data=data.train
+                                          , Data=data_list
+                                          , Predictors=predictors
+                                          )
+                           , Model=chem_model
+                           , ImportancePlot=importanceBar(chem_model)
+                           , PlotData=All
+                           , ResultPlot=ResultPlot
+                           , trainAccuracy=accuracy.rate_train
+        )
+    }
+
+    if(save_plots==FALSE){
+        model.list$ImportancePlot <- NULL
+        model.list$ResultPlot <- NULL
+    }
+
+    chemGrid <- NULL
+    return(model.list)
+}
+
+#' Shared caret engine for the chemometric classifiers.
+#'
+#' Cubist is a regression-only rule/committee model and has no classification analogue,
+#' so it is rejected here rather than silently substituted.
+classifyChemometric <- function(data
+                                , class
+                                , predictors=NULL
+                                , reorder=TRUE
+                                , min.n=5
+                                , split=NULL
+                                , split_by_group=NULL
+                                , the_group=NULL
+                                , type="pls"
+                                , plsncomp="1-10"
+                                , cubistcommittees="1-20"
+                                , cubistneighbors="0-5"
+                                , glmnetalpha="0-1"
+                                , glmnetlambda="0.001-1"
+                                , marsprune="2-15"
+                                , marsdegree="1-2"
+                                , preproc=NULL
+                                , metric="ROC"
+                                , train="repeatedcv"
+                                , cvrepeats=5
+                                , number=100
+                                , save.directory=NULL
+                                , save.name=NULL
+                                , parallelMethod=NULL
+                                , PositiveClass=NULL
+                                , NegativeClass=NULL
+                                , save_plots=FALSE
+                                , scale=FALSE
+                                , seed=NULL
+                                , init_points=100
+                                , search=FALSE
+                                ){
+
+    if(type=="cubist"){
+        stop("Cubist is a regression-only model - no classification analogue exists. Use MARS (earth), Elastic Net (glmnet) or PLS for classification.", call.=FALSE)
+    }
+
+    data_list <- dataPrep(data=data, variable=class, predictors=predictors, reorder=reorder, scale=scale, seed=seed, split_by_group=split_by_group)
+    data <- data_list$Data
+    if(!is.null(split_by_group)){
+        split_string <- as.vector(data[,split_by_group])
+        data <- data[, !colnames(data) %in% split_by_group]
+    }
+
+    parallel_method <- if(!is.null(parallelMethod)) parallelMethod else get_os()
+    if(type=="mars" | type=="earth"){ parallel_method <- "minimal" }
+
+    data <- data[complete.cases(data),]
+    data$Class <- as.factor(make.names(as.vector(data[,class])))
+    data <- data[, !colnames(data) %in% class]
+    data.orig <- data
+
+    if(!is.null(split)){
+        a <- data$Sample %in% as.vector(sample(data$Sample, size=(1-split)*length(data$Sample)))
+        data.train <- data[a,]; data.test <- data[!a,]
+    } else {
+        data.train <- data; data.test <- NULL
+    }
+    if(!is.null(split_by_group)){
+        a <- !split_string %in% the_group
+        data.train <- data[a,]; data.test <- data[!a,]
+    }
+    x_train <- data.train[, !colnames(data.train) %in% c("Sample", "Class"), drop=FALSE]
+    data.training <- data.train[, !colnames(data.train) %in% "Sample"]
+
+    n.rank <- max(1L, min(nrow(data.training) - 2L,
+                          sum(!colnames(data.training) %in% "Class")))
+
+    chemGrid <- chemometricGrid(type=type, plsncomp=plsncomp, cubistcommittees=cubistcommittees
+                                , cubistneighbors=cubistneighbors, glmnetalpha=glmnetalpha
+                                , glmnetlambda=glmnetlambda, marsprune=marsprune
+                                , marsdegree=marsdegree, search=search
+                                , init_points=init_points, n.rank=n.rank)
+
+    caret_method <- if(type %in% names(chemometricMethods)) chemometricMethods[[type]] else type
+
+    tune_control <- if(train=="repeatedcv"){
+        caret::trainControl(method=train, number=number, repeats=cvrepeats
+                            , classProbs=TRUE, verboseIter=TRUE
+                            , allowParallel=(parallel_method!="minimal"))
+    } else {
+        caret::trainControl(method=train, number=number
+                            , classProbs=TRUE, verboseIter=TRUE
+                            , allowParallel=(parallel_method!="minimal"))
+    }
+
+    if(!is.null(seed)){set.seed(seed)}
+
+    chem_model <- caret::train(Class~., data=data.training, trControl=tune_control
+                               , tuneGrid=chemGrid, metric=metric
+                               , method=caret_method, preProcess=preproc, na.action=na.omit)
+
+    if(!is.null(save.directory)){
+        saveRDS(object=chem_model, file=paste0(save.directory, save.name, ".qualpart"), compress="xz")
+    }
+
+    y_predict_train <- predict(object=chem_model, newdata=x_train, na.action=na.pass)
+    accuracy.rate_train <- caret::confusionMatrix(data=y_predict_train, reference=data.train$Class)
+
+    model.list <- list(ModelData=list(Model.Data=data.train, Data=data_list, Predictors=predictors)
+                       , Model=chem_model
+                       , ImportancePlot=importanceBar(chem_model)
+                       , trainAccuracy=accuracy.rate_train)
+
+    if(!is.null(data.test) && nrow(data.test) > 0){
+        x_test <- data.test[, !colnames(data.test) %in% c("Sample", "Class"), drop=FALSE]
+        y_predict <- predict(object=chem_model, newdata=x_test, na.action=na.pass)
+        model.list$ValidationSet <- data.frame(Sample=data.test$Sample
+                                               , Known=data.test$Class
+                                               , Predicted=y_predict)
+        model.list$testAccuracy <- caret::confusionMatrix(data=y_predict, reference=data.test$Class)
+    }
+
+    if(save_plots==FALSE){ model.list$ImportancePlot <- NULL }
+    return(model.list)
+}
+
+######################################################################################################################################
+## Named model families - these keep the regress*/classify*/auto* API consistent with the
+## Forest, SVM, XGBoost and Bayes families.
+######################################################################################################################################
+
+regressPLS    <- function(...) regressChemometric(type="pls",    ...)
+regressCubist <- function(...) regressChemometric(type="cubist", ...)
+regressGlmnet <- function(...) regressChemometric(type="glmnet", ...)
+regressMARS   <- function(...) regressChemometric(type="mars",   ...)
+
+classifyPLS    <- function(...) classifyChemometric(type="pls",    ...)
+classifyCubist <- function(...) classifyChemometric(type="cubist", ...)
+classifyGlmnet <- function(...) classifyChemometric(type="glmnet", ...)
+classifyMARS   <- function(...) classifyChemometric(type="mars",   ...)
+
+#' Chemometric wrapper - dispatches to classification or regression the same way
+#' autoSVM / autoForest / autoBayes do.
+autoChemometric <- function(data
+                            , variable
+                            , predictors=NULL
+                            , reorder=TRUE
+                            , min.n=5
+                            , split=NULL
+                            , split_by_group=NULL
+                            , the_group=NULL
+                            , type="pls"
+                            , plsncomp="1-10"
+                            , cubistcommittees="1-20"
+                            , cubistneighbors="0-5"
+                            , glmnetalpha="0-1"
+                            , glmnetlambda="0.001-1"
+                            , marsprune="2-15"
+                            , marsdegree="1-2"
+                            , preproc=NULL
+                            , metric=NULL
+                            , train="repeatedcv"
+                            , cvrepeats=5
+                            , number=30
+                            , save.directory=NULL
+                            , save.name=NULL
+                            , parallelMethod=NULL
+                            , PositiveClass=NULL
+                            , NegativeClass=NULL
+                            , save_plots=FALSE
+                            , scale=FALSE
+                            , seed=NULL
+                            , init_points=100
+                            , search=FALSE
+                            ){
+
+    if(is.null(save.name)){
+        save.name <- if(!isDataNumeric(data, variable)){
+            "classifyChemometricModel"
+        } else if(isDataNumeric(data, variable)){
+            "regressChemometricModel"
+        }
+    }
+
+    metric <- if(!is.null(metric)){
+        metric
+    } else {
+        if(!isDataNumeric(data, variable)) "ROC" else "RMSE"
+    }
+
+    model <- if(!isDataNumeric(data, variable)){
+        classifyChemometric(data=data
+                            , class=variable
+                            , predictors=predictors
+                            , reorder=reorder
+                            , min.n=min.n
+                            , split=split
+                            , split_by_group=split_by_group
+                            , the_group=the_group
+                            , type=type
+                            , plsncomp=plsncomp
+                            , cubistcommittees=cubistcommittees
+                            , cubistneighbors=cubistneighbors
+                            , glmnetalpha=glmnetalpha
+                            , glmnetlambda=glmnetlambda
+                            , marsprune=marsprune
+                            , marsdegree=marsdegree
+                            , preproc=preproc
+                            , metric=metric
+                            , train=train
+                            , cvrepeats=cvrepeats
+                            , number=number
+                            , save.directory=save.directory
+                            , save.name=save.name
+                            , parallelMethod=parallelMethod
+                            , PositiveClass=PositiveClass
+                            , NegativeClass=NegativeClass
+                            , save_plots=save_plots
+                            , scale=scale
+                            , seed=seed
+                            , init_points=init_points
+                            , search=search
+                            )
+    } else if(isDataNumeric(data, variable)){
+        regressChemometric(data=data
+                           , dependent=variable
+                           , predictors=predictors
+                           , reorder=reorder
+                           , min.n=min.n
+                           , split=split
+                           , split_by_group=split_by_group
+                           , the_group=the_group
+                           , type=type
+                           , plsncomp=plsncomp
+                           , cubistcommittees=cubistcommittees
+                           , cubistneighbors=cubistneighbors
+                           , glmnetalpha=glmnetalpha
+                           , glmnetlambda=glmnetlambda
+                           , marsprune=marsprune
+                           , marsdegree=marsdegree
+                           , preproc=preproc
+                           , metric=metric
+                           , train=train
+                           , cvrepeats=cvrepeats
+                           , number=number
+                           , save.directory=save.directory
+                           , save.name=save.name
+                           , parallelMethod=parallelMethod
+                           , save_plots=save_plots
+                           , scale=scale
+                           , seed=seed
+                           , init_points=init_points
+                           , search=search
+                           )
+    }
+
+    return(model)
+}
+
+autoPLS    <- function(...) autoChemometric(type="pls",    ...)
+autoCubist <- function(...) autoChemometric(type="cubist", ...)
+autoGlmnet <- function(...) autoChemometric(type="glmnet", ...)
+autoMARS   <- function(...) autoChemometric(type="mars",   ...)
+
+
 autoMLTable <- function(data
                         , variable
                         , predictors=NULL
@@ -8236,6 +8946,14 @@ autoMLTable <- function(data
                         , bartk="1-2"
                         , bartbeta="1-2"
                         , bartnu="1-2"
+                        , plsncomp="1-10"
+                        , cubistcommittees="1-20"
+                        , cubistneighbors="0-5"
+                        , glmnetalpha="0-1"
+                        , glmnetlambda="0.001-1"
+                        , marsprune="2-15"
+                        , marsdegree="1-2"
+                        , preproc=NULL
                         , missing=missing
                         , metric=metric # Metric Options for regressions: "RMSE" "Rsquared"
                                         # Metric Options for Classifiers: "ROC" "Sens" "Spec" "AUC" "Precision" "Recall" "F" "Accuracy" "Kappa"
@@ -8495,7 +9213,41 @@ autoMLTable <- function(data
                   , init_points=init_points
                   , search=search
         )
-         
+
+    } else if(type=="pls" | type=="cubist" | type=="glmnet" | type=="mars" | type=="earth"){
+        autoChemometric(data=data
+                        , variable=variable
+                        , predictors=predictors
+                        , reorder=reorder
+                        , min.n=min.n
+                        , split=split
+                        , split_by_group=split_by_group
+                        , the_group=the_group
+                        , type=type
+                        , plsncomp=plsncomp
+                        , cubistcommittees=cubistcommittees
+                        , cubistneighbors=cubistneighbors
+                        , glmnetalpha=glmnetalpha
+                        , glmnetlambda=glmnetlambda
+                        , marsprune=marsprune
+                        , marsdegree=marsdegree
+                        , preproc=preproc
+                        , metric=metric
+                        , train=train
+                        , cvrepeats=cvrepeats
+                        , number=number
+                        , save.directory=save.directory
+                        , save.name=save.name
+                        , parallelMethod=parallelMethod
+                        , PositiveClass= PositiveClass
+                        , NegativeClass = NegativeClass
+                        , save_plots=save_plots
+                        , scale=scale
+                        , seed=seed
+                        , init_points=init_points
+                        , search=search
+        )
+
     }
     
     qualpart$Basics <- list(Variable=variable, Predictors=predictors, MinN=min.n, Split=split, AddSplit=additional_split, SplitByGroup=split_by_group, TheGroup=the_group, type=type, Scale=scale, Seed=seed)
@@ -8714,6 +9466,14 @@ bayesMLTable <- function(data
                         , bartk="1-2"
                         , bartbeta="1-2"
                         , bartnu="1-2"
+                        , plsncomp="1-10"
+                        , cubistcommittees="1-20"
+                        , cubistneighbors="0-5"
+                        , glmnetalpha="0-1"
+                        , glmnetlambda="0.001-1"
+                        , marsprune="2-15"
+                        , marsdegree="1-2"
+                        , preproc=NULL
                         , missing=missing
                         , metric=metric # Metric Options for regressions: "RMSE" "Rsquared"
                                         # Metric Options for Classifiers: "ROC" "Sens" "Spec" "AUC" "Precision" "Recall" "F" "Accuracy" "Kappa"
@@ -10072,10 +10832,10 @@ bayesMLTable <- function(data
                             , split_by_group=split_by_group
                             , the_group=the_group
                             , trees=OPT_Res$Best_Par["trees_val"]
-                            , xgbalpha=paste0(OPT_Res$Best_Par["xgbalpha_val"], "-", PT_Res$Best_Par["xgbalpha_val"])
-                            , bartbeta=paste0(OPT_Res$Best_Par["bartbeta_val"], "-", PT_Res$Best_Par["bartbeta_val"])
-                            , bartnu=paste0(OPT_Res$Best_Par["bartnu_val"], "-", PT_Res$Best_Par["bartnu_val"])
-                            , bartk=paste0(OPT_Res$Best_Par["bartk_val"], "-", PT_Res$Best_Par["bartk_val"])
+                            , xgbalpha=paste0(OPT_Res$Best_Par["xgbalpha_val"], "-", OPT_Res$Best_Par["xgbalpha_val"])
+                            , bartbeta=paste0(OPT_Res$Best_Par["bartbeta_val"], "-", OPT_Res$Best_Par["bartbeta_val"])
+                            , bartnu=paste0(OPT_Res$Best_Par["bartnu_val"], "-", OPT_Res$Best_Par["bartnu_val"])
+                            , bartk=paste0(OPT_Res$Best_Par["bartk_val"], "-", OPT_Res$Best_Par["bartk_val"])
                             , metric=metric
                             #, summary_function=summary_function
                             , train=train
@@ -10093,6 +10853,111 @@ bayesMLTable <- function(data
                             )
                 
             }
+    } else if(type=="pls" | type=="cubist" | type=="glmnet" | type=="mars" | type=="earth"){
+
+        # Chemometric families (CloudCal cal types 14-21) under Bayesian optimisation.
+        # Each family exposes its own tuning bounds; the objective is metricGen() on a
+        # single-point refit, identical to how the XGBoost and Bayes families are driven.
+        rng2 <- function(x, default){
+            v <- tryCatch(as.numeric(unlist(strsplit(as.character(x), "-"))), error=function(e) default)
+            if(length(v) < 2 || any(is.na(v))) v <- default
+            sort(v[1:2])
+        }
+
+        chem_call <- function(pls_v, cub_c, cub_n, glm_a, glm_l, mars_p, mars_d, the_seed, the_search=FALSE){
+            autoChemometric(data=data
+                            , variable=variable
+                            , predictors=predictors
+                            , reorder=reorder
+                            , min.n=min.n
+                            , type=type
+                            , split=split
+                            , split_by_group=split_by_group
+                            , the_group=the_group
+                            , plsncomp=paste0(pls_v, "-", pls_v)
+                            , cubistcommittees=paste0(cub_c, "-", cub_c)
+                            , cubistneighbors=paste0(cub_n, "-", cub_n)
+                            , glmnetalpha=paste0(glm_a, "-", glm_a)
+                            , glmnetlambda=paste0(glm_l, "-", glm_l)
+                            , marsprune=paste0(mars_p, "-", mars_p)
+                            , marsdegree=paste0(mars_d, "-", mars_d)
+                            , preproc=preproc
+                            , metric=metric
+                            , train=train
+                            , cvrepeats=cvrepeats
+                            , number=number
+                            , save.directory=save.directory
+                            , save.name=save.name
+                            , parallelMethod=parallelMethod
+                            , PositiveClass= PositiveClass
+                            , NegativeClass = NegativeClass
+                            , save_plots=save_plots
+                            , scale=scale
+                            , seed=the_seed
+                            , search=the_search
+                            )
+        }
+
+        if(type=="pls"){
+            plsncomp.vec <- rng2(plsncomp, c(1, 10))
+            param_list <- list(plsncomp_val = c(as.integer(plsncomp.vec[1]), as.integer(plsncomp.vec[2])))
+            qualpart_function <- function(plsncomp_val){
+                cv <- chem_call(plsncomp_val, 1, 0, 1, 0.01, 5, 1, cv_seed)
+                metricGen(cv=cv, bayes_metric=bayes_metric)
+            }
+        } else if(type=="cubist"){
+            cubistcommittees.vec <- rng2(cubistcommittees, c(1, 20))
+            cubistneighbors.vec  <- rng2(cubistneighbors,  c(0, 5))
+            param_list <- list(
+                cubistcommittees_val = c(as.integer(cubistcommittees.vec[1]), as.integer(cubistcommittees.vec[2])),
+                cubistneighbors_val  = c(as.integer(cubistneighbors.vec[1]),  as.integer(cubistneighbors.vec[2])))
+            qualpart_function <- function(cubistcommittees_val, cubistneighbors_val){
+                cv <- chem_call(2, cubistcommittees_val, cubistneighbors_val, 1, 0.01, 5, 1, cv_seed)
+                metricGen(cv=cv, bayes_metric=bayes_metric)
+            }
+        } else if(type=="glmnet"){
+            glmnetalpha.vec  <- rng2(glmnetalpha,  c(0, 1))
+            glmnetlambda.vec <- rng2(glmnetlambda, c(0.001, 1))
+            param_list <- list(
+                glmnetalpha_val  = c(glmnetalpha.vec[1],  glmnetalpha.vec[2]),
+                glmnetlambda_val = c(glmnetlambda.vec[1], glmnetlambda.vec[2]))
+            qualpart_function <- function(glmnetalpha_val, glmnetlambda_val){
+                cv <- chem_call(2, 1, 0, glmnetalpha_val, glmnetlambda_val, 5, 1, cv_seed)
+                metricGen(cv=cv, bayes_metric=bayes_metric)
+            }
+        } else if(type=="mars" | type=="earth"){
+            marsprune.vec  <- rng2(marsprune,  c(2, 15))
+            marsdegree.vec <- rng2(marsdegree, c(1, 2))
+            param_list <- list(
+                marsprune_val  = c(as.integer(marsprune.vec[1]),  as.integer(marsprune.vec[2])),
+                marsdegree_val = c(as.integer(marsdegree.vec[1]), as.integer(marsdegree.vec[2])))
+            qualpart_function <- function(marsprune_val, marsdegree_val){
+                cv <- chem_call(2, 1, 0, 1, 0.01, marsprune_val, marsdegree_val, cv_seed)
+                metricGen(cv=cv, bayes_metric=bayes_metric)
+            }
+        }
+
+        OPT_Res <- BayesianOptimization(qualpart_function,
+                                        bounds = param_list
+                                        , init_grid_dt = NULL
+                                        , init_points = init_points
+                                        , n_iter = n_iter
+                                        , acq = "ei"
+                                        , kappa = 2.576
+                                        , eps = 0.0
+                                        , verbose = verbose
+                                        )
+
+        bp <- function(nm, fallback) if(nm %in% names(OPT_Res$Best_Par)) OPT_Res$Best_Par[[nm]] else fallback
+        qualpart <- chem_call(bp("plsncomp_val", 2)
+                              , bp("cubistcommittees_val", 1)
+                              , bp("cubistneighbors_val", 0)
+                              , bp("glmnetalpha_val", 1)
+                              , bp("glmnetlambda_val", 0.01)
+                              , bp("marsprune_val", 5)
+                              , bp("marsdegree_val", 1)
+                              , seed)
+        qualpart$Opt_Res <- OPT_Res
         }
         
         qualpart$Basics <- list(Variable=variable, Predictors=predictors, MinN=min.n, Split=split, AddSplit=additional_split, SplitByGroup=split_by_group, TheGroup=the_group, type=type, Scale=scale, Seed=seed)
