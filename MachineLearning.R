@@ -5798,7 +5798,7 @@ classifyForest <- function(data
                              , metric=metric
                              , method = "rf"
                              , type="Classification"
-                             , ntrees=trees
+                             , ntree=trees
                              , importance=TRUE
                              , na.action=na.omit
                              )
@@ -5810,7 +5810,7 @@ classifyForest <- function(data
                              , metric=metric
                              , method = "rf"
                              , type="Classification"
-                             , ntrees=trees
+                             , ntree=trees
                              , importance=TRUE
                              ,  na.action=na.omit
                              )
@@ -5827,7 +5827,7 @@ classifyForest <- function(data
                          , metric=metric
                          , method = "rf"
                          , type="Classification"
-                         , ntrees=trees
+                         , ntree=trees
                          , importance=TRUE
                          , prox=TRUE
                          , na.action=na.omit
@@ -5841,7 +5841,7 @@ classifyForest <- function(data
                          , metric=metric
                          , method = "rf"
                          , type="Classification"
-                         , ntrees=trees
+                         , ntree=trees
                          , importance=TRUE
                          , prox=TRUE
                          , na.action=na.omit
@@ -6080,7 +6080,17 @@ regressForest <- function(data
             parallel::makeForkCluster(as.numeric(my.cores)/2)
         }
         registerDoParallel(cl)
-        
+
+        # caret passes ... straight to randomForest(), whose own ... silently
+        # absorbs anything misnamed. `ntree` was spelt `ntrees` here, so the
+        # trees argument never arrived and every forest was built at the
+        # randomForest default of 500 regardless of what the caller asked for.
+        #
+        # `type` and `prox` are misnamed the same way and are therefore inert.
+        # They are deliberately left as-is: randomForest infers regression from
+        # a numeric y, so `type` is redundant, and correcting `prox` to
+        # `proximity` would start materialising an n x n matrix that nothing
+        # downstream reads. Do not "fix" them.
         forest_model <- caret::train(x_train
                                      , y_train
                                      , trControl = tune_control
@@ -6090,7 +6100,7 @@ regressForest <- function(data
                                      , type="Regression"
                                      , importance=TRUE
                                      , prox=TRUE
-                                     , ntrees=trees
+                                     , ntree=trees
                                      , na.action=na.omit
                                      )
 
@@ -6106,7 +6116,7 @@ regressForest <- function(data
                                      , type="Regression"
                                      , importance=TRUE
                                      , prox=TRUE
-                                     , ntrees=trees
+                                     , ntree=trees
                                      , na.action=na.omit
                                      , allowParallel=TRUE
                                      )
