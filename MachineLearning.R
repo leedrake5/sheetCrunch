@@ -5727,15 +5727,24 @@ classifyForest <- function(data
      #     }
      # }
 
+     # Same mtry range handling as regressForest: scalar upper bound or "lo-hi".
+     mtry.vec <- {
+         v <- suppressWarnings(as.numeric(unlist(strsplit(as.character(try), "-"))))
+         v <- v[!is.na(v)]
+         if(length(v) >= 2) sort(v[1:2]) else c(1, if(length(v)) v[1] else 10)
+     }
+     mtry.lo <- max(1L, as.integer(mtry.vec[1]))
+     mtry.hi <- max(mtry.lo, as.integer(mtry.vec[2]))
+
      forestGrid <- if(search==TRUE){
-         if(init_points < try){
-             as.data.frame(generate_grid(bounds=list(mtry=as.integer(c(1, try))), init_points=init_points))
+         if(init_points < (mtry.hi - mtry.lo + 1L)){
+             as.data.frame(generate_grid(bounds=list(mtry=c(mtry.lo, mtry.hi)), init_points=init_points))
          } else {
-             data.frame(mtry=seq(1, try, 1))
+             data.frame(mtry=seq(mtry.lo, mtry.hi, 1L))
          }
-         
+
      } else if(search==FALSE){
-         data.frame(mtry=try)
+         data.frame(mtry=mtry.hi)
      }
      forestGrid <- forestGrid[ , "mtry", drop = FALSE]
 
@@ -6030,10 +6039,31 @@ regressForest <- function(data
     data.testing <- if (exists("data.test", inherits = FALSE))
         data.test[, !colnames(data.test) %in% "Sample"] else NULL
 
+    # mtry accepts either a scalar upper bound (try=50 searches 1..50, which is
+    # the historical behaviour and still works) or a range string like "10-100",
+    # matching how every other tuning parameter in this file is specified. mtry
+    # is the parameter that matters most for a random forest, so being able to
+    # bound it from below — away from the degenerate near-1 fits that dominate a
+    # 1..p draw when p is in the hundreds — is worth having.
+    mtry.vec <- {
+        v <- suppressWarnings(as.numeric(unlist(strsplit(as.character(try), "-"))))
+        v <- v[!is.na(v)]
+        if(length(v) >= 2) sort(v[1:2]) else c(1, if(length(v)) v[1] else 10)
+    }
+    mtry.lo <- max(1L, as.integer(mtry.vec[1]))
+    mtry.hi <- max(mtry.lo, as.integer(mtry.vec[2]))
+
     forestGrid <- if(search==TRUE){
-        as.data.frame(generate_grid(bounds=list(mtry=as.integer(c(1, try))), init_points=init_points))
+        # One low-cardinality integer: when the budget already covers the whole
+        # range, sweep it rather than spending draws on duplicates. classifyForest
+        # has always done this; regressForest did not.
+        if(init_points < (mtry.hi - mtry.lo + 1L)){
+            as.data.frame(generate_grid(bounds=list(mtry=c(mtry.lo, mtry.hi)), init_points=init_points))
+        } else {
+            data.frame(mtry=seq(mtry.lo, mtry.hi, 1L))
+        }
     } else if(search==FALSE){
-        data.frame(mtry=try)
+        data.frame(mtry=mtry.hi)
     }
     forestGrid <- forestGrid[ , "mtry", drop = FALSE]
     dependent <- "Dependent"
